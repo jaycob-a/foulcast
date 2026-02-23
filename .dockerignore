@@ -1,0 +1,35 @@
+# Test and dev files
+tests/
+*.png
+*.parquet
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Research scripts
+01_*.py
+02_*.py
+03_*.py
+04_*.py
+backtest.py
+game_backtest.py
+predict.py
+webapp.py
+
+# Cache (except spray_profiles.json, handled explicitly in Dockerfile)
+.cache/game_backtest/
+.cache/shadow_runs/
+.cache/spray_profiles.json.bak_pitcher_keyed
+.cache/statcast_*.parquet
+
+# Docs and audits
+*.md
+*.txt
+!requirements.txt
+CHATGPT_AUDIT*
+AUDIT_*
+audit_*
+
+# Git
+.git/
+.gitignore

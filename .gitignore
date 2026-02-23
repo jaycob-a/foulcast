@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Large data files
+*.parquet
+.cache/game_backtest/
+.cache/shadow_runs/
+.cache/spray_profiles.json.bak_pitcher_keyed
+
+# Research output
+*.png
+
+# Environment
+.env
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
