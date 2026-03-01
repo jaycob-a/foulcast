@@ -19,4 +19,4 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-CMD gunicorn webapp_v2:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+CMD ["sh", "-c", "gunicorn webapp_v2:app --bind 0.0.0.0:${PORT:-8080} --workers 2 --timeout 120"]
