@@ -248,6 +248,16 @@ def enrich_with_spray_profiles(profiles: dict[int, 'BatterFoulProfile']) -> dict
             fpa = sp.get('fouls_per_pa', 0)
             if fpa > 0 and prof.fouls_per_pa <= 0:
                 prof.fouls_per_pa = fpa
+            # Per-batter exit velocity and launch angle from real Statcast foul data.
+            # Overrides league-average defaults (76.0/23.0) with actual batter stats.
+            if sp.get('ev_mean') is not None:
+                prof.ev_mean = sp['ev_mean']
+            if sp.get('ev_std') is not None:
+                prof.ev_std = sp['ev_std']
+            if sp.get('la_mean') is not None:
+                prof.la_mean = sp['la_mean']
+            if sp.get('la_std') is not None:
+                prof.la_std = sp['la_std']
             enriched += 1
 
     return profiles

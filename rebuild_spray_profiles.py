@@ -117,12 +117,20 @@ def main():
         batter_foul_count = (batter_foul_mask & ~batter_tip_mask).sum()
         fouls_per_pa = round(batter_foul_count / batter_pas, 3) if batter_pas >= 20 else 0.0
 
+        # Per-batter exit velocity and launch angle from real foul ball data
+        ev_data = group['launch_speed'].dropna()
+        la_data = group['launch_angle'].dropna()
+
         profiles[str(batter_id)] = {
             'name': name,
             'stand': stand,
             'n_fouls': len(group),
             'fair_pull_pct': fair_pull_pct,
             'fouls_per_pa': fouls_per_pa,
+            'ev_mean': round(float(ev_data.mean()), 1) if len(ev_data) >= 10 else None,
+            'ev_std': round(float(ev_data.std()), 1) if len(ev_data) >= 10 else None,
+            'la_mean': round(float(la_data.mean()), 1) if len(la_data) >= 10 else None,
+            'la_std': round(float(la_data.std()), 1) if len(la_data) >= 10 else None,
         }
 
     print(f"\nBuilt {len(profiles)} batter spray profiles")
@@ -131,7 +139,9 @@ def main():
     out_path = os.path.join(CACHE_DIR, 'spray_profiles.json')
     # Backup old file
     if os.path.exists(out_path):
-        backup = out_path + '.bak_pitcher_keyed'
+        backup = out_path + '.bak'
+        if os.path.exists(backup):
+            os.remove(backup)
         os.rename(out_path, backup)
         print(f"Backed up old file to {backup}")
 
@@ -144,7 +154,8 @@ def main():
     for pid, prof in list(profiles.items())[:5]:
         print(f"  {pid}: {prof['name']} ({prof['stand']}) "
               f"n={prof['n_fouls']} pull={prof['fair_pull_pct']}% "
-              f"fouls/pa={prof['fouls_per_pa']}")
+              f"fouls/pa={prof['fouls_per_pa']} "
+              f"ev={prof.get('ev_mean', 'N/A')} la={prof.get('la_mean', 'N/A')}")
 
 
 if __name__ == '__main__':
