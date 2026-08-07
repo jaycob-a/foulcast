@@ -48,9 +48,164 @@ class Stadium:
 
     sections: list[SeatSection] = field(default_factory=list)
 
-    # Section matching is done in matchup_engine.py which uses trajectory
-    # position interpolation for height estimation (more accurate than a
-    # single height value). See matchup_engine.py lines 160-176.
+    # Section matching: matchup_engine.py calls find_landing_section() below,
+    # which intersects the trajectory with the exposed deck surfaces.
+
+
+# ============================================================
+# Landing-section geometry
+# ============================================================
+
+def _deck_mid_height(sec: SeatSection) -> float:
+    """Sort key height for a deck. NaN-height sections (distance-only
+    matching) sort in front of everything so they claim their band."""
+    if np.isnan(sec.height_min) or np.isnan(sec.height_max):
+        return -1.0
+    return 0.5 * (sec.height_min + sec.height_max)
+
+
+def _surface_heights(sec: SeatSection, dists: np.ndarray) -> np.ndarray:
+    """Height of a section's sloped deck surface at each horizontal distance.
+
+    The deck rises linearly from (distance_min, height_min) to
+    (distance_max, height_max). NaN-height sections match at any height,
+    modeled as an infinitely tall surface.
+    """
+    if np.isnan(sec.height_min) or np.isnan(sec.height_max):
+        return np.full_like(dists, np.inf, dtype=float)
+    span = sec.distance_max - sec.distance_min
+    if span <= 0:
+        return np.full_like(dists, 0.5 * (sec.height_min + sec.height_max), dtype=float)
+    frac = np.clip((dists - sec.distance_min) / span, 0.0, 1.0)
+    return sec.height_min + frac * (sec.height_max - sec.height_min)
+
+
+def exposed_bands(
+    sections: list[SeatSection], angle: float,
+) -> list[tuple[SeatSection, float, float]]:
+    """Partition the distance axis into non-overlapping exposed deck bands.
+
+    Candidates are the sections whose angle range contains the ball's
+    spray angle; balls behind the plate (angle > 90) belong to the
+    sections that reach the backstop (angle_max >= 90).
+
+    Section footprints overlap heavily in the raw data. Where they do,
+    the lowest deck owns the ground: a ball cannot come straight down
+    onto an upper deck at a horizontal position where a lower deck sits
+    beneath it. Each section keeps only the parts of its distance range
+    not claimed by a lower deck, so the result is a true partition.
+
+    Returns (section, start, end) bands sorted by start, non-overlapping.
+    """
+    def _contains(s: SeatSection) -> bool:
+        return (s.angle_min <= angle <= s.angle_max) \
+            or (angle > 90 and s.angle_max >= 90)
+
+    candidates = [s for s in sections if _contains(s)]
+
+    # The bowl wraps around the foul corner continuously, but raw zone data
+    # can leave angular gaps within a deck level (e.g. main level ends at 45
+    # degrees while behind-plate main starts at 55). A ball in the gap still
+    # comes down on that deck level, so admit the angularly nearest section
+    # of each uncovered level, within a modest tolerance.
+    ANGLE_GAP_TOLERANCE = 15.0
+    covered_levels = {s.level for s in candidates}
+    fillers: dict[str, tuple[float, str, SeatSection]] = {}
+    for s in sections:
+        if s.level in covered_levels:
+            continue
+        gap = s.angle_min - angle if angle < s.angle_min else angle - s.angle_max
+        if gap <= ANGLE_GAP_TOLERANCE:
+            cur = fillers.get(s.level)
+            if cur is None or (gap, s.section_id) < (cur[0], cur[1]):
+                fillers[s.level] = (gap, s.section_id, s)
+    candidates.extend(s for _, _, s in fillers.values())
+
+    candidates.sort(key=lambda s: (_deck_mid_height(s), s.distance_min, s.section_id))
+    if not candidates:
+        return []
+
+    # The lowest deck is the front of the bowl: no stands exist nearer to the
+    # plate than where it begins. Elevated decks whose raw distance ranges
+    # start in front of it (data noise) are clipped back to the bowl front,
+    # otherwise upper decks claim balls that come down over foul ground.
+    bowl_front = float(candidates[0].distance_min)
+
+    bands: list[tuple[SeatSection, float, float]] = []
+    for sec in candidates:
+        gaps = [(max(float(sec.distance_min), bowl_front), float(sec.distance_max))]
+        for _, b0, b1 in bands:
+            remaining = []
+            for g0, g1 in gaps:
+                if b1 <= g0 or b0 >= g1:
+                    remaining.append((g0, g1))
+                    continue
+                if g0 < b0:
+                    remaining.append((g0, b0))
+                if b1 < g1:
+                    remaining.append((b1, g1))
+            gaps = remaining
+        for g0, g1 in gaps:
+            if g1 - g0 > 1e-9:
+                bands.append((sec, g0, g1))
+
+    bands.sort(key=lambda b: b[1])
+    return bands
+
+
+def find_landing_section(
+    sections: list[SeatSection],
+    angle: float,
+    horiz_dists: np.ndarray,
+    heights: np.ndarray,
+) -> SeatSection | None:
+    """Assign a foul ball to the section its trajectory actually comes down in.
+
+    Walks the trajectory from its apex to find the contact point: the first
+    moment the ball is at or below the exposed deck surface at its horizontal
+    position. Mid-flight altitude never matches a section — only where the
+    ball comes down counts. The contact point is then assigned to the nearest
+    exposed deck surface, so a ball that dives under a deck facade belongs to
+    the section in front of it, not the deck overhead.
+
+    Returns None if the ball never reaches any stands surface.
+    """
+    bands = exposed_bands(sections, angle)
+    if not bands:
+        return None
+
+    apex = int(np.argmax(heights))
+    d = horiz_dists[apex:]
+    z = heights[apex:]
+
+    contact_idx = None
+    for sec, b0, b1 in bands:
+        in_band = (d >= b0) & (d <= b1)
+        if not in_band.any():
+            continue
+        hit = in_band & (z <= _surface_heights(sec, d))
+        if hit.any():
+            first = int(np.argmax(hit))
+            if contact_idx is None or first < contact_idx:
+                contact_idx = first
+    if contact_idx is None:
+        return None
+
+    cd = float(d[contact_idx])
+    cz = float(z[contact_idx])
+    best = None
+    best_dist = np.inf
+    for sec, b0, b1 in bands:
+        nd = min(max(cd, b0), b1)
+        if np.isnan(sec.height_min) or np.isnan(sec.height_max):
+            nz = cz  # distance-only section: no vertical component
+        else:
+            nz = float(_surface_heights(sec, np.array([nd]))[0])
+        dist = float(np.hypot(cd - nd, cz - nz))
+        if dist < best_dist:
+            best = sec
+            best_dist = dist
+    return best
 
 
 # ============================================================

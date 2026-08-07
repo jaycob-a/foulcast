@@ -56,52 +56,52 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
     }
 
 
-# ========== Baselines (locked 2026-02-22 after p_pitch_given_foul fix) ==========
+# ========== Baselines (locked 2026-08-07 after P1 landing-intersection fix) ==========
 _BASELINES = {
     'yanks_vs_cole_yankee': {
         'total': 2503,
-        'top10': ['1B-UB', '3B-UB', '1B-DUG', '3B-DUG', '3B-FB1', '3B-LR', '1B-FB1', '1B-LB1', '3B-LB1', '1B-LR'],
+        'top10': ['1B-DUG', '1B-LR', '3B-LR', '1B-LB1', '3B-DUG', '3B-LB1', '1B-FB1', '3B-FB1', '1B-UB', '3B-UB'],
         'mean_dist': 154.4,
         'mean_angle': 72.9,
         'n_1b': 1317,
         'n_3b': 1186,
-        'no_section': 1792,
+        'no_section': 899,
     },
     'sox_vs_bello_fenway': {
         'total': 2501,
-        'top10': ['3B-LB1', '1B-LB1', '1B-DUG', '3B-DUG', '1B-FB1', '3B-FB1', '1B-UB', '3B-UB', 'HOME-F', 'HOME-B'],
+        'top10': ['3B-LB1', '1B-LB1', '1B-DUG', '3B-DUG', '1B-FB1', '3B-FB1', 'HOME-F', 'HOME-B', 'HOME-U'],
         'mean_dist': 149.9,
         'mean_angle': 69.4,
         'n_1b': 1215,
         'n_3b': 1286,
-        'no_section': 1939,
+        'no_section': 1206,
     },
     'yanks_vs_houck_fenway': {
         'total': 2499,
-        'top10': ['3B-DUG', '1B-LB1', '1B-DUG', '3B-LB1', '1B-FB1', '3B-FB1', '1B-UB', '3B-UB', 'HOME-F', 'HOME-U'],
+        'top10': ['1B-LB1', '3B-LB1', '1B-DUG', '3B-DUG', '3B-FB1', '1B-FB1', 'HOME-B', 'HOME-F', 'HOME-U'],
         'mean_dist': 154.2,
         'mean_angle': 69.5,
         'n_1b': 1311,
         'n_3b': 1188,
-        'no_section': 1968,
+        'no_section': 1275,
     },
     'sox_vs_cortes_yankee': {
         'total': 2483,
-        'top10': ['3B-DUG', '1B-DUG', '3B-UB', '1B-UB', '1B-FB1', '3B-FB1', '1B-LR', '1B-LB1', '3B-LB1', '3B-LR'],
+        'top10': ['3B-DUG', '1B-DUG', '1B-LR', '1B-FB1', '1B-LB1', '3B-LB1', '3B-LR', '3B-FB1', '1B-UB', '3B-UB'],
         'mean_dist': 148.4,
         'mean_angle': 70.2,
         'n_1b': 1209,
         'n_3b': 1274,
-        'no_section': 1728,
+        'no_section': 893,
     },
     'yanks_vs_bello_dodger': {
         'total': 2533,
-        'top10': ['1B-DUG', '1B-FB1', '3B-DUG', '3B-FB1', '1B-UB', '3B-UB', '1B-LB1', '3B-LB1', 'HOME-DC', 'HOME-U'],
+        'top10': ['1B-FB1', '3B-FB1', '1B-DUG', '3B-DUG', '1B-UB', '3B-UB', 'HOME-DC', '3B-LB1', 'HOME-B', '1B-LB1'],
         'mean_dist': 155.7,
         'mean_angle': 71.1,
         'n_1b': 1327,
         'n_3b': 1206,
-        'no_section': 1841,
+        'no_section': 1003,
     },
 }
 

@@ -9,7 +9,7 @@ import numpy as np
 from dataclasses import dataclass, field
 from .batter_profiles import BatterFoulProfile
 from .trajectory import simulate_foul_ball, TrajectoryResult
-from .stadium import Stadium, SeatSection
+from .stadium import Stadium, SeatSection, find_landing_section
 from .log import get_logger, _warn_once
 from .validators import validate_trajectory, validate_sample, validate_monte_carlo_completeness, validate_side_consistency
 
@@ -246,28 +246,12 @@ def predict_game_fouls(
                 # Ball behind plate: 90 + arctan(|x| / |y|) gives 90-180 range
                 angle = 90.0 + np.degrees(np.arctan2(-lx, max(ly, 0.01)))
 
-            # Find section height using actual trajectory positions (not a parabolic estimate).
+            # Assign the section whose exposed deck surface the trajectory
+            # actually comes down on. Search only matching-side + HOME sections.
             horiz_dists = np.sqrt(traj.positions[:, 0]**2 + traj.positions[:, 1]**2)
-
-            # Search only matching-side sections + HOME sections
-            section = None
             candidates = sections_by_side.get(side, []) + sections_by_side.get('HOME', [])
-            for candidate in candidates:
-                if not (candidate.distance_min <= distance <= candidate.distance_max and
-                        candidate.angle_min <= angle <= candidate.angle_max):
-                    continue
-                sec_dist = (candidate.distance_min + candidate.distance_max) / 2
-                idx = np.argmin(np.abs(horiz_dists - sec_dist))
-                est_height = max(0.0, float(traj.positions[idx, 2]))
-                # If section has NaN heights, match by distance only
-                if np.isnan(candidate.height_min) or np.isnan(candidate.height_max):
-                    _warn_once(logger, f"nan_height_{candidate.section_id}",
-                               f"Section {candidate.section_id} has NaN heights, matching by distance only")
-                    section = candidate
-                    break
-                if candidate.height_min <= est_height <= candidate.height_max:
-                    section = candidate
-                    break
+            section = find_landing_section(candidates, angle, horiz_dists,
+                                           traj.positions[:, 2])
 
             # Is it catchable? (reasonable speed and in the stands)
             is_catchable = (
