@@ -1,7 +1,7 @@
 Flask==3.1.2
 Werkzeug==3.1.5
-numpy==2.2.3
-pandas==2.2.3
+numpy==2.3.3
+pandas==2.3.3
 MLB-StatsAPI==1.9.0
 pybaseball==2.2.7
 gunicorn==23.0.0
