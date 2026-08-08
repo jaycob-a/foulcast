@@ -72,7 +72,13 @@ def predict_game_fouls(
     plate_appearances_per_batter: float = 4.0,
 ) -> GamePrediction:
     """
-    Simulate a full game's worth of foul balls.
+    Simulate one lineup's worth of foul balls.
+
+    This is HALF A GAME. It takes a single lineup, so its expected_fouls totals
+    cover one team's plate appearances. Anything compared against a real-world
+    per-game figure (~30-40 fouls into the stands) has to sum both halves, the
+    way webapp_v2 does. Reading one call's total as a game total is a 2x error,
+    and was part of what AUDIT.md P2 recorded as a 4x shortfall.
 
     Args:
         lineup: List of 9 BatterFoulProfile objects
@@ -265,7 +271,9 @@ def predict_game_fouls(
                 batter_name=batter.player_name,
                 batter_side=batter.batter_side,
                 pitch_type=pitch_type,
-                exit_velocity=sample['exit_velocity'],
+                # The speed the ball actually came off the bat at, which is
+                # below the sampled value for fouls deflected backward.
+                exit_velocity=traj.exit_velocity,
                 launch_angle=sample['launch_angle'],
                 trajectory=traj,
                 landing_side=side,

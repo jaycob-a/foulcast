@@ -1,5 +1,5 @@
 """
-Physical plausibility tests for section assignment.
+Physical plausibility tests for section assignment and foul volume.
 
 These encode the real-world foul ball distribution that the original
 mid-flight matching inverted (AUDIT.md P1): the lower bowl and the area
@@ -9,16 +9,16 @@ few. Any regression that re-inverts the geometry fails here.
 Configuration matches the BEFORE.md baseline: Yankee Stadium, the standard
 Yankees lineup, a league-average RHP pitch mix, seed 42, 400 sims/batter.
 
-Known limitation (do not "fix" by weakening these tests): the spray model
-currently produces no balls in the straight-back wedge (angle > 90), so the
-behind-home group is structurally under-populated. The behind-home
-assertions below are group-level for that reason. Once the spray model
-generates straight-back fouls, tighten them to per-section comparisons.
+Note on units: predict_game_fouls() takes ONE lineup, so a single call is
+half a game. Anything compared against the real-world 30-40 fouls per game
+has to sum both halves — see the `yankee_game` fixture.
 """
+import collections
+
 import numpy as np
 import pytest
 
-from foulball.batter_profiles import YANKEES_2024_PROFILES
+from foulball.batter_profiles import YANKEES_2024_PROFILES, RED_SOX_2024_PROFILES
 from foulball.stadium import STADIUMS
 from foulball.matchup_engine import predict_game_fouls
 
@@ -40,6 +40,22 @@ def yankee_prediction():
     lineup = list(YANKEES_2024_PROFILES.values())
     return predict_game_fouls(lineup, 'Standard RHP', STANDARD_RHP_MIX,
                               stadium, simulations_per_batter=400)
+
+
+@pytest.fixture(scope='module')
+def yankee_game():
+    """A whole game at Yankee Stadium: both lineups, summed the way webapp_v2
+    sums them. This is the object to compare against real-world foul counts."""
+    np.random.seed(42)
+    stadium = STADIUMS['yankee_stadium']()
+    totals: collections.Counter = collections.Counter()
+    for lineup in (list(RED_SOX_2024_PROFILES.values()),
+                   list(YANKEES_2024_PROFILES.values())):
+        pred = predict_game_fouls(lineup, 'Standard RHP', STANDARD_RHP_MIX,
+                                  stadium, simulations_per_batter=400)
+        for sp in pred.section_predictions:
+            totals[sp.section.section_id] += sp.expected_fouls
+    return totals
 
 
 def _fouls_by_section(pred):
@@ -81,15 +97,69 @@ class TestLowerBowlDominates:
         )
 
 
-class TestBehindHomeReceivesFouls:
-    """Behind-home seating must draw real foul traffic (it was ~0.2 pre-fix)."""
+class TestGameTotalIsRealistic:
+    """AUDIT.md P2: absolute foul counts must be usable, not just rankings.
 
-    def test_behind_home_gets_meaningful_share(self, yankee_prediction):
-        fouls = _fouls_by_section(yankee_prediction)
-        home_total = sum(fouls.get(sid, 0.0) for sid in BEHIND_HOME)
-        assert home_total > 0.5, (
-            f"Behind-home sections received only {home_total:.2f} expected fouls "
-            f"— behind-plate assignment is broken"
+    A real MLB game puts roughly 30-40 foul balls into the stands. These bound
+    the model to that, wide enough that ordinary run-to-run variation and a
+    change of park or lineup will not trip them, tight enough that another 4x
+    error cannot hide.
+    """
+
+    def test_total_fouls_into_stands_in_realistic_range(self, yankee_game):
+        total = sum(yankee_game.values())
+        assert 25.0 <= total <= 45.0, (
+            f"A full game predicts {total:.1f} fouls into the stands. Real games "
+            f"put 30-40 there. Below 25 means balls are being dropped (unmatched "
+            f"sections, over-tight filters); above 45 means they are being "
+            f"double-counted or the geometry is claiming balls that never "
+            f"reached the seats."
+        )
+
+    def test_each_half_is_about_half_the_game(self, yankee_game):
+        """Guards the units: one predict_game_fouls() call is half a game, and
+        anyone reading its total as a game total is off by 2x."""
+        np.random.seed(42)
+        stadium = STADIUMS['yankee_stadium']()
+        pred = predict_game_fouls(list(YANKEES_2024_PROFILES.values()),
+                                  'Standard RHP', STANDARD_RHP_MIX, stadium,
+                                  simulations_per_batter=400)
+        half = sum(sp.expected_fouls for sp in pred.section_predictions)
+        assert 12.0 <= half <= 23.0, (
+            f"One lineup produced {half:.1f} fouls into the stands; a half-game "
+            f"should be roughly half of 30-40"
+        )
+
+
+class TestBehindHomeReceivesFouls:
+    """Behind-home seating must draw real foul traffic (it was ~0.2 pre-fix).
+
+    The seats behind the plate take the straight-back fouls — foul tips, nicks
+    and late swings — which is the single busiest direction a foul goes. Before
+    the spray model could produce backward fouls at all these sections ranked
+    last; they belong at the top.
+    """
+
+    def test_behind_home_is_the_busiest_group(self, yankee_game):
+        home_total = sum(yankee_game.get(sid, 0.0) for sid in BEHIND_HOME)
+        lower_total = sum(yankee_game.get(sid, 0.0) for sid in LOWER_BOWL)
+        upper_total = sum(yankee_game.get(sid, 0.0) for sid in UPPER_DOWN_LINES)
+        assert home_total > upper_total, (
+            f"Behind home ({home_total:.2f}) drew fewer fouls than the upper "
+            f"decks down the lines ({upper_total:.2f})"
+        )
+        # The lower bowl is eight sections against four, so it can out-total
+        # behind-home; it must not dwarf it.
+        assert home_total > lower_total * 0.4, (
+            f"Behind home ({home_total:.2f}) is small next to the lower bowl "
+            f"({lower_total:.2f}) — the straight-back wedge is under-populated"
+        )
+
+    def test_a_behind_home_section_ranks_in_the_top_three(self, yankee_game):
+        top3 = [sid for sid, _ in yankee_game.most_common(3)]
+        assert any(sid in BEHIND_HOME for sid in top3), (
+            f"No behind-home section in the top three ({top3}) — the busiest "
+            f"seats in the park are behind the plate"
         )
 
     def test_behind_home_beats_grandstand_down_lines(self, yankee_prediction):

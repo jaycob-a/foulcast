@@ -56,52 +56,58 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
     }
 
 
-# ========== Baselines (locked 2026-08-07 after P1 landing-intersection fix) ==========
+# ===== Baselines (relocked 2026-08-07 after the straight-back spray mode) =====
+# Previous lock was taken right after the P1 landing-intersection fix, when the
+# spray model still clamped every foul in front of the plate. Adding the
+# backward-deflection mode moved roughly a fifth of all fouls into the backstop
+# wedge, so every metric here shifted: mean distance dropped (backward fouls
+# come off the bat slower and land nearer the plate) and the behind-home
+# sections moved from the bottom of the rankings to the top.
 _BASELINES = {
     'yanks_vs_cole_yankee': {
-        'total': 2503,
-        'top10': ['1B-DUG', '1B-LR', '3B-LR', '1B-LB1', '3B-DUG', '3B-LB1', '1B-FB1', '3B-FB1', '1B-UB', '3B-UB'],
-        'mean_dist': 154.4,
-        'mean_angle': 72.9,
-        'n_1b': 1317,
-        'n_3b': 1186,
-        'no_section': 899,
+        'total': 2504,
+        'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-LR', '1B-DUG', '3B-DUG', '1B-LB1', '1B-FB1', '3B-FB1', '3B-LB1'],
+        'mean_dist': 131.0,
+        'mean_angle': 73.3,
+        'n_1b': 1329,
+        'n_3b': 1175,
+        'no_section': 921,
     },
     'sox_vs_bello_fenway': {
-        'total': 2501,
-        'top10': ['3B-LB1', '1B-LB1', '1B-DUG', '3B-DUG', '1B-FB1', '3B-FB1', 'HOME-F', 'HOME-B', 'HOME-U'],
-        'mean_dist': 149.9,
-        'mean_angle': 69.4,
-        'n_1b': 1215,
-        'n_3b': 1286,
-        'no_section': 1206,
+        'total': 2476,
+        'top10': ['HOME-F', 'HOME-B', '3B-LB1', '1B-LB1', '1B-DUG', '3B-DUG', 'HOME-U', '1B-FB1', '3B-FB1'],
+        'mean_dist': 129.4,
+        'mean_angle': 71.0,
+        'n_1b': 1204,
+        'n_3b': 1272,
+        'no_section': 1060,
     },
     'yanks_vs_houck_fenway': {
-        'total': 2499,
-        'top10': ['1B-LB1', '3B-LB1', '1B-DUG', '3B-DUG', '3B-FB1', '1B-FB1', 'HOME-B', 'HOME-F', 'HOME-U'],
-        'mean_dist': 154.2,
-        'mean_angle': 69.5,
-        'n_1b': 1311,
-        'n_3b': 1188,
-        'no_section': 1275,
+        'total': 2487,
+        'top10': ['HOME-F', 'HOME-B', '3B-LB1', '1B-LB1', '3B-DUG', '1B-DUG', 'HOME-U', '3B-FB1', '1B-FB1'],
+        'mean_dist': 134.2,
+        'mean_angle': 73.3,
+        'n_1b': 1279,
+        'n_3b': 1208,
+        'no_section': 1144,
     },
     'sox_vs_cortes_yankee': {
-        'total': 2483,
-        'top10': ['3B-DUG', '1B-DUG', '1B-LR', '1B-FB1', '1B-LB1', '3B-LB1', '3B-LR', '3B-FB1', '1B-UB', '3B-UB'],
-        'mean_dist': 148.4,
-        'mean_angle': 70.2,
-        'n_1b': 1209,
-        'n_3b': 1274,
-        'no_section': 893,
+        'total': 2502,
+        'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-LR', '3B-DUG', '1B-FB1', '1B-DUG', '1B-LB1', '3B-LB1', '3B-FB1'],
+        'mean_dist': 128.9,
+        'mean_angle': 72.2,
+        'n_1b': 1207,
+        'n_3b': 1295,
+        'no_section': 878,
     },
     'yanks_vs_bello_dodger': {
-        'total': 2533,
-        'top10': ['1B-FB1', '3B-FB1', '1B-DUG', '3B-DUG', '1B-UB', '3B-UB', 'HOME-DC', '3B-LB1', 'HOME-B', '1B-LB1'],
-        'mean_dist': 155.7,
-        'mean_angle': 71.1,
-        'n_1b': 1327,
-        'n_3b': 1206,
-        'no_section': 1003,
+        'total': 2477,
+        'top10': ['HOME-B', '3B-FB1', 'HOME-DC', '1B-FB1', 'HOME-F', '1B-DUG', '3B-DUG', '1B-UB', '3B-UB', 'HOME-U'],
+        'mean_dist': 137.4,
+        'mean_angle': 75.1,
+        'n_1b': 1253,
+        'n_3b': 1224,
+        'no_section': 876,
     },
 }
 
@@ -146,10 +152,6 @@ GOLDEN_GAMES = {
         'stadium': 'dodger_stadium',
     },
 }
-
-
-def pytest_addoption(parser):
-    parser.addoption("--regen-golden", action="store_true", default=False)
 
 
 @pytest.fixture(scope="session")

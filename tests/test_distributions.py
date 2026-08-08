@@ -67,6 +67,63 @@ class TestSprayAngleDistributions:
             f"Breaking ball spray ({brk_mean:.1f}) not higher than fastball ({fb_mean:.1f})"
 
 
+class TestStraightBackFouls:
+    """The straight-back wedge must be populated.
+
+    Before this mode existed the spray model clamped every foul to a launch
+    direction of 0-85 degrees off the foul line, so no ball ever crossed behind
+    the plane of home plate and the seats behind the plate sat nearly empty.
+    """
+
+    def test_some_fouls_go_behind_the_plate(self, large_sim_events):
+        events, _ = large_sim_events
+        back = sum(1 for e in events if e.trajectory.landing_x < 0)
+        share = back / len(events)
+        assert 0.15 < share < 0.45, (
+            f"{share*100:.1f}% of fouls landed behind the plane of home plate "
+            f"— expected roughly a fifth to a third of them"
+        )
+
+    def test_back_fouls_fill_the_wedge_not_a_single_line(self, large_sim_events):
+        """Backward fouls must spread across the backstop, peaking dead-back."""
+        events, _ = large_sim_events
+        angles = np.array([
+            np.degrees(np.arctan2(abs(e.trajectory.landing_y), e.trajectory.landing_x))
+            for e in events if e.trajectory.landing_x < 0
+        ])
+        assert len(angles) > 50, "Too few backward fouls to check the spread"
+        assert angles.max() <= 135.5, \
+            f"Foul at {angles.max():.1f} deg crossed into the other side's territory"
+        assert angles.min() < 110, "Backward fouls never reach the backstop corners"
+        assert np.median(angles) > 110, \
+            f"Backward fouls peak at {np.median(angles):.1f} deg, not near dead-back (135)"
+
+    def test_back_fouls_are_near_symmetric_across_sides(self, large_sim_events):
+        """A deflected ball barely knows which way the bat was going, so pull
+        tendency should mostly wash out on backward fouls.
+
+        Compared per handedness, not over the whole lineup: a mixed lineup's
+        left- and right-handed pull tendencies cancel in aggregate and would
+        hide the effect either way.
+        """
+        events, _ = large_sim_events
+        for hand in ('R', 'L'):
+            back = [e for e in events
+                    if e.batter_side == hand and e.trajectory.landing_x < 0]
+            fwd = [e for e in events
+                   if e.batter_side == hand and e.trajectory.landing_x >= 0]
+            if len(back) < 50 or len(fwd) < 50:
+                continue
+            back_1b = sum(1 for e in back if e.landing_side == '1B') / len(back)
+            fwd_1b = sum(1 for e in fwd if e.landing_side == '1B') / len(fwd)
+            assert abs(back_1b - 0.5) < abs(fwd_1b - 0.5), (
+                f"{hand}HB backward fouls split {back_1b*100:.0f}/"
+                f"{(1-back_1b)*100:.0f} vs forward {fwd_1b*100:.0f}/"
+                f"{(1-fwd_1b)*100:.0f} — pull tendency should wash out on "
+                f"deflections, not strengthen"
+            )
+
+
 class TestDistanceDistribution:
     """Distance distributions should match expected foul ball ranges."""
 
@@ -98,13 +155,39 @@ class TestFrequencyValidation:
                 assert 0.3 <= fpa <= 2.0, \
                     f"{name}: fouls_per_pa={fpa} out of range [0.3, 2.0]"
 
-    def test_ev_sample_mean_near_profile(self, large_sim_events):
-        """EV sample mean should be within 2 mph of profile ev_mean for each batter."""
+    def test_ev_sampler_matches_profile(self):
+        """The EV sampler should draw within 3 mph of each batter's profile mean."""
+        np.random.seed(42)
+        for name, batter in YANKEES_2024_PROFILES.items():
+            evs = [batter.sample_foul()['exit_velocity'] for _ in range(2000)]
+            sample_mean = np.mean(evs)
+            assert abs(sample_mean - batter.ev_mean) < 3.0, \
+                f"{name}: sampler EV mean {sample_mean:.1f} vs profile {batter.ev_mean:.1f}"
+
+    def test_forward_foul_ev_mean_near_profile(self, large_sim_events):
+        """Fouls hit out in front leave the bat at the sampled speed, so their EV
+        mean should still track the profile. (Fouls deflected backward do not —
+        see oblique_contact_speed_factor — so they are excluded here.)"""
         events, lineup = large_sim_events
         for batter in lineup:
-            batter_evs = [e.exit_velocity for e in events if e.batter_name == batter.player_name]
+            batter_evs = [e.exit_velocity for e in events
+                          if e.batter_name == batter.player_name
+                          and e.trajectory.landing_x >= 0]
             if len(batter_evs) < 30:
                 continue
             sample_mean = np.mean(batter_evs)
             assert abs(sample_mean - batter.ev_mean) < 3.0, \
-                f"{batter.player_name}: sample EV mean {sample_mean:.1f} vs profile {batter.ev_mean:.1f}"
+                f"{batter.player_name}: forward-foul EV mean {sample_mean:.1f} " \
+                f"vs profile {batter.ev_mean:.1f}"
+
+    def test_back_fouls_come_off_the_bat_slower(self, large_sim_events):
+        """A ball deflected back over the catcher was hit a glancing blow, so it
+        must leave the bat measurably slower than one driven into foul ground."""
+        events, _ = large_sim_events
+        back = [e.exit_velocity for e in events if e.trajectory.landing_x < 0]
+        fwd = [e.exit_velocity for e in events if e.trajectory.landing_x >= 0]
+        assert len(back) > 50, f"Only {len(back)} backward fouls — mode missing?"
+        assert np.mean(back) < np.mean(fwd) * 0.85, (
+            f"Backward fouls averaged {np.mean(back):.1f} mph vs {np.mean(fwd):.1f} "
+            f"forward — glancing-contact penalty not applied"
+        )

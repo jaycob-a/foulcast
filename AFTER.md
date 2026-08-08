@@ -48,12 +48,20 @@ shadowed by the decks in front of it).
   of the remainder are short fouls that legitimately come down in foul ground
   (d < 60 ft) — relevant to the Step 3 calibration work.
 
-## Known limitation
+## Known limitation — RESOLVED IN STEP 3, see NOTES.md
 
-The behind-home group (0.74 total) still trails the two 300-level sections
-(~0.9 each) because the spray model produces **zero** balls in the
-straight-back wedge (angle > 90° never occurs in simulation). Real games send
-a large share of fouls straight back. That is a trajectory/spray issue, not a
-section-matching issue, and is left for the calibration steps; the
-plausibility tests document it and enforce behind-home dominance at the group
-level in the meantime.
+> The behind-home group (0.74 total) still trails the two 300-level sections
+> (~0.9 each) because the spray model produces **zero** balls in the
+> straight-back wedge (angle > 90° never occurs in simulation). Real games send
+> a large share of fouls straight back. That is a trajectory/spray issue, not a
+> section-matching issue, and is left for the calibration steps; the
+> plausibility tests document it and enforce behind-home dominance at the group
+> level in the meantime.
+
+Step 3 added the missing backward-deflection spray mode. Behind-home now leads
+the rankings and the numbers in this file are superseded — `NOTES.md` carries
+the current before/after distribution.
+
+Note also that the ~16.6 total above is **one lineup**, which is half a game.
+The full game (both lineups, the way `webapp_v2` sums them) was already 32.7 at
+the time this snapshot was taken.
