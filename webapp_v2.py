@@ -382,12 +382,25 @@ def _run_prediction(away_id, home_id):
                 'median_error_ft': 10.1,
                 'note': 'Validated against 19,558 real Statcast foul balls (Aug 2024). Median prediction error: 10.1 feet.',
             },
+            # Regenerated 2026-08-08 from game_backtest.py over 20 July 2026
+            # games (see NOTES_STEP5_6.md). 'mean_side_error' used to sit here;
+            # the side-split metric was deleted because Statcast does not record
+            # which side a foul lands on, so its "actual" value was an
+            # assumption, not an observation.
+            # total_foul_r is reported precisely because it is bad: predicted
+            # totals land near the right level but do not track game-to-game
+            # variation. Do not present this block as section-level validation.
             'game_backtest': {
                 'games': 20,
-                'median_ks': 0.194,
-                'mean_side_error': 4.4,
-                'mean_pitch_cosine': 0.938,
-                'mean_dist_bias': 0.8,
+                'season': '2026',
+                'total_foul_r': -0.045,
+                'total_foul_mae': 9.5,
+                'total_foul_bias': -4.8,
+                'batter_corr': 0.093,
+                'median_ks': 0.189,
+                'dist_quantile_mae': 28.5,
+                'mean_pitch_cosine': 0.920,
+                'mean_dist_bias': -3.9,
             },
         },
     }

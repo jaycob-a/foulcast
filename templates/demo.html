@@ -428,7 +428,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     </div>
   </div>
 
-  <div class="site-footer">FoulCast — Powered by Statcast data and physics-based trajectory modeling<br><span class="footer-stat">Validated against 20 real MLB games with r=0.986 physics correlation</span></div>
+  <div class="site-footer">FoulCast — Powered by Statcast data and physics-based trajectory modeling<br><span class="footer-stat">Backtested against 20 real MLB games (2026). Section-level accuracy is not independently validated.</span></div>
 </div>
 
 <script>
@@ -1107,16 +1107,19 @@ function renderAccuracy(d) {
   const gb = m.game_backtest || {};
   const gameBacktestHTML = gb.games ? `
     <div style="margin-top:14px;padding:14px 18px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:8px;">
-      <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:6px">Game-Level Validation</div>
-      <p style="font-size:13px;color:var(--text);line-height:1.5">Validated against <strong>${gb.games} real MLB games</strong> (Aug 2024) —
-        distance distributions match reality (KS=${gb.median_ks}),
-        side prediction within ${gb.mean_side_error}pp,
-        near-zero distance bias (+${gb.mean_dist_bias}ft)</p>
+      <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:6px">Game-Level Backtest</div>
+      <p style="font-size:13px;color:var(--text);line-height:1.5">Tested against <strong>${gb.games} real MLB games</strong> (${gb.season} season).
+        Predicted foul totals land within <strong>${gb.total_foul_mae} fouls</strong> of the real count on average,
+        and the shape of the distance distribution matches (KS=${gb.median_ks}).</p>
+      <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:6px">What this does <strong>not</strong> show:
+        the model does not predict which games produce more fouls than others (r=${gb.total_foul_r}) —
+        its totals are close to constant while real games range from 37 to 77 fouls.
+        Which section a foul lands in is unvalidated in any form: no public dataset records foul landing locations.</p>
       <div class="acc-stats" style="margin-top:8px">
-        <div class="acc-stat"><strong>KS = ${gb.median_ks}</strong> distribution match</div>
-        <div class="acc-stat"><strong>${gb.mean_side_error}pp</strong> side error</div>
+        <div class="acc-stat"><strong>${gb.total_foul_mae}</strong> fouls/game avg error</div>
+        <div class="acc-stat"><strong>KS = ${gb.median_ks}</strong> distance distribution</div>
         <div class="acc-stat"><strong>cosine = ${gb.mean_pitch_cosine}</strong> pitch-type accuracy</div>
-        <div class="acc-stat"><strong>+${gb.mean_dist_bias}ft</strong> distance bias</div>
+        <div class="acc-stat"><strong>r = ${gb.total_foul_r}</strong> game-to-game totals</div>
       </div>
     </div>
   ` : '';

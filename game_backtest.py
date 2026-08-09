@@ -9,8 +9,25 @@ For each real game:
   1. Extract actual lineups + pitchers from Statcast
   2. Build batter profiles from data BEFORE the game (no lookahead)
   3. Run predict_game_fouls()
-  4. Compare predicted vs actual: distance distribution, side split,
+  4. Compare predicted vs actual: total foul count, distance distribution,
      per-batter foul count, pitch-type distribution
+
+What can and cannot be validated here:
+
+  CAN — total fouls per game. Statcast logs every foul, so the predicted total
+  (sum of per-batter weights = fouls_per_pa x PA) has a real observed
+  counterpart. This is the only external check on the volume model.
+
+  CAN — per-batter foul counts, joined on MLB player ID.
+
+  CAN — the distance distribution of tracked fouls, with the caveat that
+  hit_distance_sc is itself partly a model output (AUDIT.md P3).
+
+  CANNOT — which side (1B/3B/behind the plate) a foul landed on, and which
+  section it reached. Statcast records neither. A side-split metric used to
+  live here; it manufactured its "actual" value by assuming RHB fouls go 72%
+  to 3B, which compared the model against an assumption rather than data.
+  It has been deleted. Section-level accuracy needs hand-logged ground truth.
 
 Usage:
     python game_backtest.py              # Full backtest (~20 games)
@@ -49,12 +66,39 @@ logger = get_logger(__name__)
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cache', 'game_backtest')
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Statcast data range for backtest
-DATA_START = '2024-04-01'
-DATA_END = '2024-08-31'
-# Games are selected from Aug; profiles are built from Apr 1 to day before game
-GAME_MONTH_START = '2024-08-01'
-GAME_MONTH_END = '2024-08-31'
+# Simulation settings. PLATE_APPEARANCES_PER_BATTER is the model's assumption
+# about game length; it is passed to predict_game_fouls and also reported so a
+# total-foul error can be attributed to it rather than to the foul rate.
+SIMS_PER_BATTER = 300
+PLATE_APPEARANCES_PER_BATTER = 4.0
+
+# The model's own floor: matchup_engine drops any simulation landing under 5 ft
+# as "didn't go anywhere meaningful", so it cannot produce a foul below this.
+# Statcast can and does — 17% of tracked fouls carry hit_distance_sc <= 5 ft,
+# and those rows have a mean launch angle of -36 degrees: balls chopped straight
+# into the ground. Comparing the model against them scores it on a category it
+# deliberately excludes, and inflated the mean distance error by ~28 ft.
+# The floor is applied to BOTH sides or neither.
+MIN_DISTANCE_FT = 5.0
+
+# Statcast data range for backtest. Covers the 2025 season and 2026 to date, so
+# the same cached pull also feeds rebuild_spray_profiles.py.
+DATA_START = '2025-04-01'
+DATA_END = '2026-08-08'
+# Games are selected from July 2026; profiles are built from DATA_START to the
+# day before each game, so there are 15 months of pre-game data and no lookahead.
+GAME_MONTH_START = '2026-07-01'
+GAME_MONTH_END = '2026-07-31'
+
+# Columns actually used downstream. Statcast returns 119; keeping all of them
+# makes a 1.4M-row pull cost several GB of RAM for no benefit.
+KEEP_COLUMNS = [
+    'game_pk', 'game_date', 'game_type', 'home_team', 'away_team',
+    'inning_topbot', 'at_bat_number', 'batter', 'pitcher', 'player_name',
+    'description', 'type', 'events', 'pitch_type', 'release_speed',
+    'stand', 'p_throws', 'plate_x', 'plate_z', 'hc_x', 'hc_y',
+    'launch_speed', 'launch_angle', 'hit_distance_sc', 'bat_speed',
+]
 
 # Map Statcast home_team abbreviations to our team IDs
 # Statcast uses slightly different abbreviations than statsapi
@@ -65,6 +109,12 @@ _SC_ABBREV_MAP = {
     'MIL': 158, 'MIN': 142, 'NYM': 121, 'NYY': 147, 'OAK': 133,
     'PHI': 143, 'PIT': 134, 'SD': 135, 'SF': 137, 'SEA': 136,
     'STL': 138, 'TB': 139, 'TEX': 140, 'TOR': 141, 'WSH': 120,
+    # Statcast renamed two clubs. From 2025 the Athletics are 'ATH' (they
+    # dropped the city when they left Oakland) and Arizona is 'AZ'. The old
+    # codes are kept so pre-2025 pulls still map; an unmapped home team is
+    # dropped silently by select_games, which would have removed every
+    # Athletics and Diamondbacks home game from a 2025-26 backtest.
+    'ATH': 133, 'AZ': 109,
 }
 
 
@@ -94,8 +144,16 @@ def pull_statcast_data(start: str, end: str) -> pd.DataFrame:
         try:
             chunk = statcast(start_dt=s, end_dt=e)
             if chunk is not None and len(chunk) > 0:
-                all_chunks.append(chunk)
-                print(f"    Got {len(chunk):,} pitches")
+                # Regular season only. A 2025-2026 window would otherwise pull
+                # spring training and postseason, which do not belong in either
+                # the game sample or the batter profiles.
+                if 'game_type' in chunk.columns:
+                    chunk = chunk[chunk['game_type'] == 'R']
+                keep = [c for c in KEEP_COLUMNS if c in chunk.columns]
+                chunk = chunk[keep]
+                if len(chunk) > 0:
+                    all_chunks.append(chunk)
+                print(f"    Got {len(chunk):,} regular-season pitches")
         except Exception as exc:
             print(f"    Failed: {exc}")
         current = chunk_end + timedelta(days=1)
@@ -112,18 +170,68 @@ def pull_statcast_data(start: str, end: str) -> pd.DataFrame:
     return data
 
 
+def foul_flag(df: pd.DataFrame) -> pd.Series:
+    """Boolean mask of fouls, excluding foul tips (caught by the catcher).
+
+    Uses the precomputed `is_foul` column when present. Over a 1.4M-row pull the
+    str.contains pair costs a couple of seconds, and build_profiles_for_game
+    would otherwise redo it once per lineup.
+    """
+    if 'is_foul' in df.columns:
+        return df['is_foul']
+    desc = df['description']
+    return (desc.str.contains('foul', case=False, na=False) &
+            ~desc.str.contains('foul_tip|foul tip', case=False, na=False))
+
+
+def add_foul_flag(data: pd.DataFrame) -> pd.DataFrame:
+    """Compute the foul mask once for the whole dataset."""
+    if 'is_foul' not in data.columns:
+        data['is_foul'] = foul_flag(data)
+    return data
+
+
+def neutral_site_game_pks(start: str, end: str) -> set[int]:
+    """game_pks played somewhere other than the home team's usual park.
+
+    MLB schedules a handful of these every year — Mexico City, the Little
+    League Classic, Field of Dreams — and Statcast still labels one club as the
+    home team. Simulating them against that club's home geometry would be
+    plainly wrong, so they are dropped from the sample.
+
+    Detected by comparing each game's venue against the home team's modal venue
+    for the season, which is robust to sponsorship renames (the Dodgers' park
+    is listed as "UNIQLO Field at Dodger Stadium" in 2026).
+    """
+    try:
+        import statsapi as _statsapi
+        games = _statsapi.schedule(start_date=start, end_date=end)
+    except Exception as exc:
+        print(f"  WARNING: could not check for neutral-site games ({exc}); keeping all")
+        return set()
+
+    from collections import Counter, defaultdict
+    by_team: dict[int, Counter] = defaultdict(Counter)
+    rows = []
+    for g in games:
+        if g.get('game_type') != 'R':
+            continue
+        venue = g.get('venue_name', '?')
+        by_team[g['home_id']][venue] += 1
+        rows.append((g['game_id'], g['home_id'], venue))
+
+    home_venue = {tid: c.most_common(1)[0][0] for tid, c in by_team.items()}
+    return {gpk for gpk, tid, venue in rows if venue != home_venue.get(tid)}
+
+
 def select_games(data: pd.DataFrame, max_games: int = 20) -> list[dict]:
     """Select diverse games from Statcast data for backtesting."""
-    # Filter to August games
-    aug_data = data[
+    # Filter to the game-selection month
+    month_data = data[
         (data['game_date'] >= GAME_MONTH_START) &
         (data['game_date'] <= GAME_MONTH_END)
-    ].copy()
-
-    # Get foul balls with tracking
-    foul_mask = aug_data['description'].str.contains('foul', case=False, na=False)
-    tip_mask = aug_data['description'].str.contains('foul_tip|foul tip', case=False, na=False)
-    fouls = aug_data[foul_mask & ~tip_mask]
+    ]
+    fouls = month_data[foul_flag(month_data)]
     tracked_fouls = fouls[
         fouls['launch_speed'].notna() &
         fouls['launch_angle'].notna() &
@@ -137,10 +245,18 @@ def select_games(data: pd.DataFrame, max_games: int = 20) -> list[dict]:
 
     print(f"Games with >=30 tracked fouls: {len(eligible_games)}")
 
+    neutral = neutral_site_game_pks(GAME_MONTH_START, GAME_MONTH_END)
+    dropped_neutral = [g for g in eligible_games if int(g) in neutral]
+    if dropped_neutral:
+        print(f"Dropping {len(dropped_neutral)} neutral-site game(s): {dropped_neutral}")
+    eligible_games = [g for g in eligible_games if int(g) not in neutral]
+
+    unmapped = set()
+
     # Get game metadata
     games = []
     for gpk in eligible_games:
-        game_pitches = aug_data[aug_data['game_pk'] == gpk]
+        game_pitches = month_data[month_data['game_pk'] == gpk]
         game_date = str(game_pitches['game_date'].iloc[0])
         home_team = game_pitches['home_team'].iloc[0]
         away_team = game_pitches['away_team'].iloc[0]
@@ -148,10 +264,15 @@ def select_games(data: pd.DataFrame, max_games: int = 20) -> list[dict]:
         home_id = _SC_ABBREV_MAP.get(home_team)
         away_id = _SC_ABBREV_MAP.get(away_team)
         if home_id is None or away_id is None:
+            # Loudly, not silently: an abbreviation change (OAK -> ATH in 2025)
+            # would otherwise quietly delete a club from every backtest.
+            unmapped.update(t for t in (home_team, away_team)
+                            if t not in _SC_ABBREV_MAP)
             continue
 
         stadium_key = TEAM_STADIUM_MAP.get(home_id)
         if stadium_key is None or stadium_key not in STADIUMS:
+            unmapped.add(f'{home_team} (no stadium geometry)')
             continue
 
         n_fouls = int(game_foul_counts.get(gpk, 0))
@@ -166,6 +287,9 @@ def select_games(data: pd.DataFrame, max_games: int = 20) -> list[dict]:
             'stadium_key': stadium_key,
             'n_tracked_fouls': n_fouls,
         })
+
+    if unmapped:
+        print(f"WARNING: dropped games for unmapped teams: {sorted(unmapped)}")
 
     # Sort by date, then pick diverse spread of stadiums
     games.sort(key=lambda g: (g['game_date'], g['game_pk']))
@@ -223,9 +347,7 @@ def extract_game_data(data: pd.DataFrame, game_pk: int) -> dict:
     away_pitcher_name = _get_pitcher_name(bot, away_pitcher_id) if away_pitcher_id else "Unknown"
 
     # Extract actual foul ball data
-    foul_mask = game['description'].str.contains('foul', case=False, na=False)
-    tip_mask = game['description'].str.contains('foul_tip|foul tip', case=False, na=False)
-    fouls = game[foul_mask & ~tip_mask].copy()
+    fouls = game[foul_flag(game)].copy()
     tracked = fouls[
         fouls['launch_speed'].notna() &
         fouls['launch_angle'].notna() &
@@ -253,6 +375,26 @@ def extract_game_data(data: pd.DataFrame, game_pk: int) -> dict:
     }
 
 
+_BATTER_NAME_CACHE: dict[int, str] = {}
+
+
+def lookup_batter_name(bid: int) -> str:
+    """Resolve a batter's name via statsapi, once per player per run.
+
+    Statcast's `player_name` is the PITCHER's name, so batters have to be looked
+    up. The same nine batters recur across games, and this is a network call.
+    """
+    bid = int(bid)
+    if bid not in _BATTER_NAME_CACHE:
+        try:
+            import statsapi as _statsapi
+            info = _statsapi.get('people', {'personIds': bid})
+            _BATTER_NAME_CACHE[bid] = info['people'][0]['fullName']
+        except Exception:
+            _BATTER_NAME_CACHE[bid] = f'Player {bid}'
+    return _BATTER_NAME_CACHE[bid]
+
+
 def build_profiles_for_game(
     data: pd.DataFrame,
     batter_ids: list[int],
@@ -260,12 +402,10 @@ def build_profiles_for_game(
 ) -> list[BatterFoulProfile]:
     """Build batter profiles from data BEFORE the game date (no lookahead)."""
     cutoff = (pd.to_datetime(game_date) - timedelta(days=1)).strftime('%Y-%m-%d')
-    pre_game = data[data['game_date'] <= cutoff].copy()
-
-    # Filter to foul balls
-    foul_mask = pre_game['description'].str.contains('foul', case=False, na=False)
-    tip_mask = pre_game['description'].str.contains('foul_tip|foul tip', case=False, na=False)
-    all_fouls = pre_game[foul_mask & ~tip_mask]
+    # Read-only slice — no .copy(), which on a 1.4M-row pull duplicates a few
+    # hundred MB once per lineup for nothing.
+    pre_game = data[data['game_date'] <= cutoff]
+    all_fouls = pre_game[foul_flag(pre_game)]
 
     profiles = []
     for bid in batter_ids:
@@ -293,13 +433,7 @@ def build_profiles_for_game(
             if len(sides) > 0:
                 side = sides.mode().iloc[0] if len(sides.mode()) > 0 else 'R'
 
-        # Get batter name from statsapi (one-time lookup)
-        try:
-            import statsapi as _statsapi
-            info = _statsapi.get('people', {'personIds': int(bid)})
-            name = info['people'][0]['fullName']
-        except Exception:
-            name = f'Player {bid}'
+        name = lookup_batter_name(bid)
 
         profile = build_profile_from_data(name, bid, player_fouls, all_pitches=player_all)
 
@@ -338,70 +472,128 @@ def build_pitcher_mix(
     return {k: round(v / total, 3) for k, v in mix.items()}
 
 
-def compare_game(predicted_events, actual_fouls: pd.DataFrame) -> dict:
-    """Compare predicted vs actual foul ball distributions for one game."""
+def safe_pearson(x, y) -> float | None:
+    """Pearson r, or None when it is undefined (too few points, no variance)."""
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    if len(x) < 3 or len(x) != len(y):
+        return None
+    if np.std(x) == 0 or np.std(y) == 0:
+        return None
+    return float(scipy_stats.pearsonr(x, y)[0])
+
+
+def compare_game(
+    predicted_events,
+    tracked_fouls: pd.DataFrame,
+    all_fouls: pd.DataFrame,
+    lineup_batter_ids: list[int],
+    plate_appearances: int | None = None,
+    predicted_pa: float = 72.0,
+) -> dict:
+    """Compare predicted vs actual foul balls for one game.
+
+    Two different actual-foul frames are needed and they are not
+    interchangeable:
+
+      `tracked_fouls` — fouls with launch_speed/launch_angle/hit_distance_sc.
+      Only these have distances, so they drive the distance metrics. They are
+      a biased subset: tracking is worst on exactly the weak contact that
+      disappears into the backstop.
+
+      `all_fouls` — every foul in the game bar foul tips. Counting metrics
+      (game total, per-batter, pitch type) use these, because that is the same
+      population `fouls_per_pa` was built from, so the comparison is like for
+      like.
+
+    `predicted_pa` is what the prediction assumed (9 batters x 4.0 PA x 2
+    lineups), reported alongside the real PA count so a total-foul miss can be
+    split into "wrong fouls per PA" and "wrong number of PAs".
+    """
     # Predicted distances
     pred_dists = np.array([e.landing_distance for e in predicted_events])
 
     # Actual distances (tracked fouls only)
-    actual_tracked = actual_fouls[actual_fouls['hit_distance_sc'].notna()]
-    actual_dists = actual_tracked['hit_distance_sc'].values.astype(float)
-    # Remove zeros/negatives
-    actual_dists = actual_dists[actual_dists > 1]
+    actual_tracked = tracked_fouls[tracked_fouls['hit_distance_sc'].notna()]
+    actual_dists_raw = actual_tracked['hit_distance_sc'].values.astype(float)
+
+    # Same floor on both sides — see MIN_DISTANCE_FT.
+    n_actual_below_floor = int((actual_dists_raw <= MIN_DISTANCE_FT).sum())
+    actual_dists = actual_dists_raw[actual_dists_raw > MIN_DISTANCE_FT]
+    pred_dists = pred_dists[pred_dists > MIN_DISTANCE_FT]
 
     if len(pred_dists) < 10 or len(actual_dists) < 10:
         return {'error': 'Too few fouls for comparison'}
 
-    # 1. Distance KS test
+    # 1. Total fouls per game — the volume-model check.
+    # Each simulated event carries weight = fouls_per_pa * PA / sims, so the
+    # weighted sum is the model's estimate of how many fouls this game
+    # produces. Statcast logs every one of them, so this has a real
+    # counterpart, unlike anything about where the ball came down.
+    pred_total_fouls = float(sum(e.weight for e in predicted_events))
+    actual_total_fouls = int(len(all_fouls))
+    total_foul_error = pred_total_fouls - actual_total_fouls
+
+    # How many of those the model thinks reach a modelled seating zone. There
+    # is no Statcast counterpart — reported as a diagnostic, NOT validated.
+    pred_fouls_into_stands = float(
+        sum(e.weight for e in predicted_events if e.section is not None)
+    )
+
+    actual_pa = int(plate_appearances) if plate_appearances else None
+    actual_per_pa = (actual_total_fouls / actual_pa) if actual_pa else None
+    pred_per_pa = pred_total_fouls / predicted_pa if predicted_pa else None
+
+    # 2. Distance KS test
     ks_stat, ks_pval = scipy_stats.ks_2samp(pred_dists, actual_dists)
 
-    # 2. Distance quantile MAE
+    # 3. Distance quantile MAE
     quantiles = [10, 25, 50, 75, 90]
     pred_q = np.percentile(pred_dists, quantiles)
     actual_q = np.percentile(actual_dists, quantiles)
     quantile_mae = np.mean(np.abs(pred_q - actual_q))
 
-    # 3. Side split comparison
-    # Predicted side split
-    pred_1b = sum(1 for e in predicted_events if e.landing_side == '1B')
-    pred_total = len(predicted_events)
-    pred_1b_pct = pred_1b / pred_total * 100 if pred_total > 0 else 50
-
-    # Actual side split: RHB fouls go predominantly to 3B, LHB to 1B
-    # We infer expected side from batter handedness in fouls
-    if 'stand' in actual_fouls.columns:
-        actual_r = (actual_fouls['stand'] == 'R').sum()
-        actual_l = (actual_fouls['stand'] == 'L').sum()
-        actual_total = actual_r + actual_l
-        # RHB fouls ~72% to 3B (28% to 1B), LHB fouls ~72% to 1B
-        actual_1b_est = (actual_r * 0.28 + actual_l * 0.72) / max(actual_total, 1) * 100
-    else:
-        actual_1b_est = 50.0
-
-    side_error = abs(pred_1b_pct - actual_1b_est)
-
-    # 4. Per-batter foul count correlation
-    pred_batter_counts = {}
+    # 4. Per-batter foul counts, joined on MLB player ID.
+    pred_batter_counts: dict[int, float] = {}
     for e in predicted_events:
-        bid = e.batter_name
-        pred_batter_counts[bid] = pred_batter_counts.get(bid, 0) + e.weight
+        bid = getattr(e, 'batter_id', None)
+        if bid is None:
+            continue
+        pred_batter_counts[int(bid)] = pred_batter_counts.get(int(bid), 0.0) + e.weight
 
-    # Actual per-batter foul counts
-    actual_batter_counts = actual_fouls.groupby('batter').size().to_dict()
+    actual_batter_counts = {
+        int(bid): int(n) for bid, n in all_fouls.groupby('batter').size().items()
+    }
 
-    # Match by batter ID where possible
-    # pred uses names, actual uses IDs — we'll compute correlation if enough overlap
-    batter_corr = np.nan
+    # Score every batter the model was asked to predict, including any that
+    # drew no fouls at all — dropping the zeros would flatter the correlation.
+    pairs = [
+        (int(bid),
+         round(pred_batter_counts.get(int(bid), 0.0), 3),
+         actual_batter_counts.get(int(bid), 0))
+        for bid in dict.fromkeys(int(b) for b in lineup_batter_ids)
+    ]
+    batter_corr = safe_pearson([p for _, p, _ in pairs], [a for _, _, a in pairs])
+    batter_mae = (
+        float(np.mean([abs(p - a) for _, p, a in pairs])) if pairs else None
+    )
+    # Fouls hit by batters outside the predicted lineups (pinch hitters, and
+    # anyone past the ninth distinct batter of a half-inning) are fouls the
+    # model never had a chance at. Track the share it could see.
+    matched_actual = sum(a for _, _, a in pairs)
+    batter_coverage = (
+        matched_actual / actual_total_fouls if actual_total_fouls else None
+    )
 
-    # 5. Pitch-type distribution comparison
+    # 5. Pitch-type distribution comparison (all fouls, not just tracked)
     pred_pitch_counts = {}
     for e in predicted_events:
         pred_pitch_counts[e.pitch_type] = pred_pitch_counts.get(e.pitch_type, 0) + 1
     pred_pitch_total = sum(pred_pitch_counts.values())
 
     actual_pitch_counts = {}
-    if 'pitch_type' in actual_fouls.columns:
-        for pt, cnt in actual_fouls['pitch_type'].value_counts().items():
+    if 'pitch_type' in all_fouls.columns:
+        for pt, cnt in all_fouls['pitch_type'].value_counts().items():
             if pd.notna(pt):
                 actual_pitch_counts[str(pt)] = int(cnt)
     actual_pitch_total = sum(actual_pitch_counts.values())
@@ -420,17 +612,28 @@ def compare_game(predicted_events, actual_fouls: pd.DataFrame) -> dict:
     actual_mean_dist = float(np.mean(actual_dists))
 
     return {
-        'n_pred': len(pred_dists),
-        'n_actual': len(actual_dists),
+        'n_sim_events': len(pred_dists),
+        'n_actual_tracked': len(actual_dists),
+        'n_actual_below_floor': n_actual_below_floor,
+        'pred_total_fouls': round(pred_total_fouls, 1),
+        'actual_total_fouls': actual_total_fouls,
+        'total_foul_error': round(total_foul_error, 1),
+        'pred_fouls_into_stands': round(pred_fouls_into_stands, 1),
+        'actual_pa': actual_pa,
+        'predicted_pa': predicted_pa,
+        'pred_fouls_per_pa': round(pred_per_pa, 3) if pred_per_pa is not None else None,
+        'actual_fouls_per_pa': round(actual_per_pa, 3) if actual_per_pa is not None else None,
         'ks_stat': round(ks_stat, 3),
         'ks_pval': round(ks_pval, 4),
         'quantile_mae': round(quantile_mae, 1),
         'pred_mean_dist': round(pred_mean_dist, 1),
         'actual_mean_dist': round(actual_mean_dist, 1),
         'dist_error': round(pred_mean_dist - actual_mean_dist, 1),
-        'pred_1b_pct': round(pred_1b_pct, 1),
-        'actual_1b_est': round(actual_1b_est, 1),
-        'side_error': round(side_error, 1),
+        'batter_corr': round(batter_corr, 3) if batter_corr is not None else None,
+        'batter_mae': round(batter_mae, 2) if batter_mae is not None else None,
+        'batter_n': len(pairs),
+        'batter_coverage': round(batter_coverage, 3) if batter_coverage is not None else None,
+        'batter_pairs': [[bid, p, a] for bid, p, a in pairs],
         'pitch_cosine': round(pitch_cosine, 3) if not np.isnan(pitch_cosine) else None,
         'pred_quantiles': {str(q): round(float(v), 1) for q, v in zip(quantiles, pred_q)},
         'actual_quantiles': {str(q): round(float(v), 1) for q, v in zip(quantiles, actual_q)},
@@ -483,19 +686,34 @@ def run_game_backtest(data: pd.DataFrame, games: list[dict], seed: int = 42) -> 
         # Away batting (vs home pitcher)
         pred_away = predict_game_fouls(
             away_profiles, game_data['home_pitcher_name'], home_pitcher_mix,
-            stadium, simulations_per_batter=300,
+            stadium, simulations_per_batter=SIMS_PER_BATTER,
+            plate_appearances_per_batter=PLATE_APPEARANCES_PER_BATTER,
         )
         # Home batting (vs away pitcher)
         pred_home = predict_game_fouls(
             home_profiles, game_data['away_pitcher_name'], away_pitcher_mix,
-            stadium, simulations_per_batter=300,
+            stadium, simulations_per_batter=SIMS_PER_BATTER,
+            plate_appearances_per_batter=PLATE_APPEARANCES_PER_BATTER,
         )
 
-        # Combine predictions
+        # Combine predictions. predict_game_fouls() takes one lineup, which is
+        # half a game; summing both halves is what a game is.
         all_pred_events = pred_away.all_events + pred_home.all_events
 
+        # Real plate appearances in the game, for splitting a total-foul miss
+        # into rate error vs PA error. at_bat_number is unique within a game.
+        actual_pa = int(game_data['all_pitches']['at_bat_number'].nunique())
+        predicted_pa = (len(away_profiles) + len(home_profiles)) * PLATE_APPEARANCES_PER_BATTER
+
         # Compare to actuals
-        comparison = compare_game(all_pred_events, game_data['tracked_fouls'])
+        comparison = compare_game(
+            all_pred_events,
+            game_data['tracked_fouls'],
+            game_data['fouls'],
+            game_data['away_batters'] + game_data['home_batters'],
+            plate_appearances=actual_pa,
+            predicted_pa=predicted_pa,
+        )
         elapsed = time.time() - t0
 
         result = {
@@ -511,11 +729,21 @@ def run_game_backtest(data: pd.DataFrame, games: list[dict], seed: int = 42) -> 
         if 'error' in comparison:
             print(f"  ERROR: {comparison['error']}")
         else:
-            print(f"  Pred/Actual fouls: {comparison['n_pred']}/{comparison['n_actual']}")
-            print(f"  Distance: pred={comparison['pred_mean_dist']}ft, actual={comparison['actual_mean_dist']}ft (error={comparison['dist_error']:+.1f}ft)")
+            print(f"  Total fouls: pred={comparison['pred_total_fouls']}, actual={comparison['actual_total_fouls']} "
+                  f"(error={comparison['total_foul_error']:+.1f})")
+            print(f"    fouls/PA: pred={comparison['pred_fouls_per_pa']} over {comparison['predicted_pa']:.0f} assumed PA, "
+                  f"actual={comparison['actual_fouls_per_pa']} over {comparison['actual_pa']} real PA")
+            print(f"    of which predicted to reach a modelled zone: {comparison['pred_fouls_into_stands']} (no Statcast counterpart)")
+            corr_str = comparison['batter_corr'] if comparison['batter_corr'] is not None else 'n/a'
+            cov = comparison['batter_coverage']
+            cov_str = f", lineup covers {cov:.0%} of actual fouls" if cov is not None else ""
+            print(f"  Per-batter fouls: r={corr_str} over {comparison['batter_n']} batters, "
+                  f"MAE={comparison['batter_mae']}{cov_str}")
+            print(f"  Distance ({comparison['n_sim_events']} sim events vs {comparison['n_actual_tracked']} tracked, "
+                  f"{comparison['n_actual_below_floor']} actual below the {MIN_DISTANCE_FT:.0f}ft floor excluded): "
+                  f"pred={comparison['pred_mean_dist']}ft, actual={comparison['actual_mean_dist']}ft (error={comparison['dist_error']:+.1f}ft)")
             print(f"  KS stat: {comparison['ks_stat']} (p={comparison['ks_pval']})")
             print(f"  Quantile MAE: {comparison['quantile_mae']}ft")
-            print(f"  Side split: pred 1B={comparison['pred_1b_pct']}%, actual est={comparison['actual_1b_est']}% (err={comparison['side_error']}pp)")
             print(f"  Pitch-type cosine: {comparison['pitch_cosine']}")
             print(f"  Time: {elapsed:.1f}s")
 
@@ -536,20 +764,94 @@ def print_aggregate_report(results: list[dict]):
     ks_stats = [r['ks_stat'] for r in valid]
     q_maes = [r['quantile_mae'] for r in valid]
     dist_errors = [r['dist_error'] for r in valid]
-    side_errors = [r['side_error'] for r in valid]
     cosines = [r['pitch_cosine'] for r in valid if r.get('pitch_cosine') is not None]
 
+    pred_totals = [r['pred_total_fouls'] for r in valid]
+    actual_totals = [r['actual_total_fouls'] for r in valid]
+    total_errors = [r['total_foul_error'] for r in valid]
+    total_abs_errors = [abs(e) for e in total_errors]
+    total_corr = safe_pearson(pred_totals, actual_totals)
+    total_mae = float(np.mean(total_abs_errors))
+
+    # Per-batter pairs pooled across every game. A single game gives 18 points
+    # with counts of 0-6 each, which is mostly Poisson noise; pooling is the
+    # only way to see whether the per-batter rates carry signal.
+    pooled_pred, pooled_actual = [], []
+    for r in valid:
+        for _, p, a in r.get('batter_pairs', []):
+            pooled_pred.append(p)
+            pooled_actual.append(a)
+    pooled_batter_corr = safe_pearson(pooled_pred, pooled_actual)
+    pooled_batter_mae = (
+        float(np.mean([abs(p - a) for p, a in zip(pooled_pred, pooled_actual)]))
+        if pooled_pred else None
+    )
+    per_game_batter_corrs = [r['batter_corr'] for r in valid if r.get('batter_corr') is not None]
+
+    # --- The headline check: total fouls per game -------------------------
+    print(f"\n--- TOTAL FOULS PER GAME (the volume model) ---")
+    print(f"  Games:                    {len(valid)}")
+    print(f"  Predicted, mean:          {np.mean(pred_totals):.1f}  (range {np.min(pred_totals):.1f}-{np.max(pred_totals):.1f})")
+    print(f"  Actual, mean:             {np.mean(actual_totals):.1f}  (range {np.min(actual_totals)}-{np.max(actual_totals)})")
+    print(f"  Correlation (Pearson r):  {total_corr:.3f}" if total_corr is not None
+          else "  Correlation (Pearson r):  n/a (needs 3+ games with variation)")
+    print(f"  Mean absolute error:      {total_mae:.1f} fouls/game")
+    print(f"  Median absolute error:    {np.median(total_abs_errors):.1f} fouls/game")
+    print(f"  Mean bias (pred-actual):  {np.mean(total_errors):+.1f} fouls/game")
+    pa_rows = [r for r in valid if r.get('actual_pa')]
+    if pa_rows:
+        print(f"  Assumed PA vs real PA:    {np.mean([r['predicted_pa'] for r in pa_rows]):.0f} vs "
+              f"{np.mean([r['actual_pa'] for r in pa_rows]):.1f}")
+        print(f"  Fouls/PA, pred vs actual: {np.mean([r['pred_fouls_per_pa'] for r in pa_rows]):.3f} vs "
+              f"{np.mean([r['actual_fouls_per_pa'] for r in pa_rows]):.3f}")
+    print(f"  Predicted into modelled zones: {np.mean([r['pred_fouls_into_stands'] for r in valid]):.1f}/game "
+          f"— NOT validated, Statcast does not record whether a foul reached the seats")
+
+    # --- Per-batter foul counts ------------------------------------------
+    print(f"\n--- PER-BATTER FOUL COUNTS (joined on MLB player ID) ---")
+    print(f"  Batter-games pooled:      {len(pooled_pred)}")
+    if pooled_batter_corr is not None:
+        print(f"  Pooled correlation:       {pooled_batter_corr:.3f}")
+    else:
+        print(f"  Pooled correlation:       n/a")
+    if pooled_batter_mae is not None:
+        print(f"  Pooled MAE:               {pooled_batter_mae:.2f} fouls/batter/game")
+    if per_game_batter_corrs:
+        print(f"  Per-game r, median:       {np.median(per_game_batter_corrs):.3f} "
+              f"(range {np.min(per_game_batter_corrs):.3f}-{np.max(per_game_batter_corrs):.3f})")
+    coverages = [r['batter_coverage'] for r in valid if r.get('batter_coverage') is not None]
+    if coverages:
+        print(f"  Lineup coverage:          {np.mean(coverages):.0%} of actual fouls came from predicted batters")
+
+    # --- Distance and pitch mix ------------------------------------------
+    below = sum(r.get('n_actual_below_floor', 0) for r in valid)
+    kept = sum(r['n_actual_tracked'] for r in valid)
+    print(f"\n--- DISTANCE ---")
+    print(f"  Excluded {below} of {below + kept} tracked fouls ({below / max(below + kept, 1):.0%}) "
+          f"under the {MIN_DISTANCE_FT:.0f}ft floor the model itself applies")
     print(f"\n{'Metric':<30} {'Mean':>8} {'Median':>8} {'Min':>8} {'Max':>8}")
     print("-" * 66)
     print(f"{'KS statistic':<30} {np.mean(ks_stats):>8.3f} {np.median(ks_stats):>8.3f} {np.min(ks_stats):>8.3f} {np.max(ks_stats):>8.3f}")
     print(f"{'Quantile MAE (ft)':<30} {np.mean(q_maes):>8.1f} {np.median(q_maes):>8.1f} {np.min(q_maes):>8.1f} {np.max(q_maes):>8.1f}")
     print(f"{'Mean distance error (ft)':<30} {np.mean(dist_errors):>+8.1f} {np.median(dist_errors):>+8.1f} {np.min(dist_errors):>+8.1f} {np.max(dist_errors):>+8.1f}")
-    print(f"{'Side split error (pp)':<30} {np.mean(side_errors):>8.1f} {np.median(side_errors):>8.1f} {np.min(side_errors):>8.1f} {np.max(side_errors):>8.1f}")
+    print(f"{'Total foul error (count)':<30} {np.mean(total_errors):>+8.1f} {np.median(total_errors):>+8.1f} {np.min(total_errors):>+8.1f} {np.max(total_errors):>+8.1f}")
     if cosines:
         print(f"{'Pitch-type cosine sim':<30} {np.mean(cosines):>8.3f} {np.median(cosines):>8.3f} {np.min(cosines):>8.3f} {np.max(cosines):>8.3f}")
 
     # Interpretation
     print(f"\n--- Interpretation ---")
+    if total_corr is not None:
+        if total_corr > 0.5:
+            verdict = "the model tracks which games produce more fouls"
+        elif total_corr > 0.2:
+            verdict = "weak signal; the model barely distinguishes high- from low-foul games"
+        else:
+            verdict = "no signal; predicted totals do not track actual totals"
+        print(f"  Total foul count: r = {total_corr:.3f}, MAE = {total_mae:.1f} fouls/game — {verdict}")
+    else:
+        print(f"  Total foul count: MAE = {total_mae:.1f} fouls/game "
+              f"(correlation undefined — needs 3+ games with variation in both series)")
+
     median_ks = np.median(ks_stats)
     if median_ks < 0.15:
         print(f"  Distance distributions: EXCELLENT (median KS = {median_ks:.3f})")
@@ -560,14 +862,6 @@ def print_aggregate_report(results: list[dict]):
     else:
         print(f"  Distance distributions: POOR (median KS = {median_ks:.3f})")
 
-    mean_side_err = np.mean(side_errors)
-    if mean_side_err < 5:
-        print(f"  Side split accuracy: EXCELLENT (mean error = {mean_side_err:.1f}pp)")
-    elif mean_side_err < 10:
-        print(f"  Side split accuracy: GOOD (mean error = {mean_side_err:.1f}pp)")
-    else:
-        print(f"  Side split accuracy: FAIR (mean error = {mean_side_err:.1f}pp)")
-
     if cosines:
         mean_cos = np.mean(cosines)
         if mean_cos > 0.95:
@@ -577,12 +871,18 @@ def print_aggregate_report(results: list[dict]):
         else:
             print(f"  Pitch-type matching: FAIR (mean cosine = {mean_cos:.3f})")
 
+    print(f"  NOT VALIDATED by any number above: which side a foul goes to, which")
+    print(f"  section it lands in, and what share reaches the seats. Statcast does")
+    print(f"  not record foul landing locations. That needs hand-logged ground truth.")
+
     # Per-game table
-    print(f"\n{'Game':<45} {'KS':>6} {'Q-MAE':>7} {'DistErr':>8} {'Side':>6} {'PtCos':>6}")
-    print("-" * 80)
+    print(f"\n{'Game':<45} {'Pred':>6} {'Actual':>7} {'Err':>6} {'KS':>6} {'Q-MAE':>7} {'DistErr':>8} {'PtCos':>6}")
+    print("-" * 100)
     for r in valid:
         cos_str = f"{r['pitch_cosine']:.3f}" if r.get('pitch_cosine') is not None else "  N/A"
-        print(f"  {r['label'][:43]:<43} {r['ks_stat']:>6.3f} {r['quantile_mae']:>6.1f}ft {r['dist_error']:>+7.1f} {r['side_error']:>5.1f}% {cos_str:>6}")
+        print(f"  {r['label'][:43]:<43} {r['pred_total_fouls']:>6.1f} {r['actual_total_fouls']:>7} "
+              f"{r['total_foul_error']:>+6.1f} {r['ks_stat']:>6.3f} {r['quantile_mae']:>6.1f}ft "
+              f"{r['dist_error']:>+7.1f} {cos_str:>6}")
 
 
 def generate_visualizations(results: list[dict]):
@@ -612,33 +912,43 @@ def generate_visualizations(results: list[dict]):
     ax = axes[0][1]
     pred_means = [r['pred_mean_dist'] for r in valid]
     actual_means = [r['actual_mean_dist'] for r in valid]
-    ax.scatter(actual_means, pred_means, s=60, c='steelblue', edgecolors='black', linewidths=0.5, zorder=5)
+    # Label each artist where it is drawn — passing a bare list to legend()
+    # binds labels in artist order, which had them the wrong way round.
+    corr = safe_pearson(pred_means, actual_means)
+    corr_txt = f"r={corr:.3f}" if corr is not None else "r=n/a"
+    ax.scatter(actual_means, pred_means, s=60, c='steelblue', edgecolors='black',
+               linewidths=0.5, zorder=5, label=f'Games ({corr_txt})')
     lo = min(min(pred_means), min(actual_means)) - 10
     hi = max(max(pred_means), max(actual_means)) + 10
     ax.plot([lo, hi], [lo, hi], 'r--', linewidth=2, label='Perfect')
     ax.set_xlabel('Actual Mean Distance (ft)')
     ax.set_ylabel('Predicted Mean Distance (ft)')
     ax.set_title('Mean Foul Ball Distance: Predicted vs Actual')
-    corr = np.corrcoef(pred_means, actual_means)[0, 1] if len(pred_means) > 2 else 0
-    ax.legend([f'Perfect', f'Games (r={corr:.3f})'], fontsize=8)
+    ax.legend(fontsize=8)
     ax.set_aspect('equal')
     ax.set_xlim(lo, hi)
     ax.set_ylim(lo, hi)
 
-    # 3. Side split comparison
+    # 3. Total fouls per game: predicted vs actual (the volume-model check)
     ax = axes[1][0]
-    pred_sides = [r['pred_1b_pct'] for r in valid]
-    actual_sides = [r['actual_1b_est'] for r in valid]
-    x = range(len(valid))
-    width = 0.35
-    ax.bar([i - width/2 for i in x], pred_sides, width, label='Predicted 1B%', color='steelblue')
-    ax.bar([i + width/2 for i in x], actual_sides, width, label='Actual Est 1B%', color='coral')
-    ax.set_xticks(list(x))
-    ax.set_xticklabels([r['label'][:15] for r in valid], rotation=45, ha='right', fontsize=6)
-    ax.set_ylabel('1B Side %')
-    ax.set_title('Side Split: Predicted vs Estimated Actual')
+    pred_totals = [r['pred_total_fouls'] for r in valid]
+    actual_totals = [r['actual_total_fouls'] for r in valid]
+    r_tot = safe_pearson(pred_totals, actual_totals)
+    mae_tot = np.mean([abs(p - a) for p, a in zip(pred_totals, actual_totals)])
+    r_txt = f"r={r_tot:.3f}" if r_tot is not None else "r=n/a"
+    ax.scatter(actual_totals, pred_totals, s=60, c='seagreen', edgecolors='black',
+               linewidths=0.5, zorder=5, label=f'Games ({r_txt}, MAE={mae_tot:.1f})')
+    lo = min(min(pred_totals), min(actual_totals)) - 5
+    hi = max(max(pred_totals), max(actual_totals)) + 5
+    ax.plot([lo, hi], [lo, hi], 'r--', linewidth=2, label='Perfect')
+    ax.set_xlabel('Actual Fouls in Game')
+    ax.set_ylabel('Predicted Fouls in Game')
+    ax.set_title('Total Fouls per Game: Predicted vs Actual')
     ax.legend(fontsize=8)
-    ax.set_ylim(0, 100)
+    ax.set_xlim(lo, hi)
+    ax.set_ylim(lo, hi)
+    ax.set_aspect('equal')
+    ax.grid(True, alpha=0.3)
 
     # 4. Quantile comparison (aggregate)
     ax = axes[1][1]
@@ -686,6 +996,9 @@ def main():
 
     # Normalize game_date to string format for fast comparisons
     data['game_date'] = pd.to_datetime(data['game_date']).dt.strftime('%Y-%m-%d')
+    # Classify fouls once for the whole dataset rather than per lineup
+    add_foul_flag(data)
+    print(f"Foul balls in dataset: {int(data['is_foul'].sum()):,}")
 
     # Select games
     games = select_games(data, max_games=args.games)

@@ -4,7 +4,7 @@ Rebuild spray_profiles.json with correct BATTER IDs.
 The previous version was keyed by pitcher ID (fouls hit OFF those pitchers).
 This version keys by BATTER ID (each batter's own foul ball spray tendencies).
 """
-import sys, os, json
+import sys, os, json, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
@@ -17,19 +17,29 @@ warnings.filterwarnings('ignore')
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cache')
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-def main():
-    print("=" * 60)
-    print("REBUILDING SPRAY PROFILES (Batter-keyed)")
-    print("=" * 60)
+# Default window: the 2025 season plus 2026 to date. The old default was
+# Jun-Aug 2024, which by 2026 returned largely retired players.
+DEFAULT_MONTHS = (
+    [(f'2025-{m:02d}-01', f'2025-{m:02d}-28') for m in range(4, 10)] +
+    [(f'2026-{m:02d}-01', f'2026-{m:02d}-28') for m in range(4, 9)]
+)
 
-    # Pull 3 months of 2024 data (Jun-Aug for good sample size)
+
+def load_data(parquet: str | None, months) -> pd.DataFrame:
+    """Load pitches from a cached parquet if given, else pull from Statcast.
+
+    game_backtest.py caches exactly the columns this script needs, so pointing
+    at that file avoids a second multi-minute pull of the same window.
+    """
+    if parquet:
+        print(f"Loading cached pitches from {parquet}")
+        data = pd.read_parquet(parquet)
+        if 'game_type' in data.columns:
+            data = data[data['game_type'] == 'R']
+        print(f"  {len(data):,} regular-season pitches")
+        return data
+
     all_data = []
-    months = [
-        ('2024-06-01', '2024-06-30'),
-        ('2024-07-01', '2024-07-31'),
-        ('2024-08-01', '2024-08-31'),
-    ]
-
     for start, end in months:
         print(f"\nPulling {start} to {end}...")
         try:
@@ -52,8 +62,25 @@ def main():
                     print(f"    {d.strftime('%m/%d')}-{w_end.strftime('%m/%d')}: SKIP ({e2})")
                 d = w_end + timedelta(days=1)
 
-    data = pd.concat(all_data, ignore_index=True)
+    return pd.concat(all_data, ignore_index=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Rebuild batter spray profiles')
+    parser.add_argument('--parquet', help='Cached Statcast parquet to use instead of pulling')
+    parser.add_argument('--min-fouls', type=int, default=10,
+                        help='Minimum tracked fouls for a batter to get a profile')
+    args = parser.parse_args()
+
+    print("=" * 60)
+    print("REBUILDING SPRAY PROFILES (Batter-keyed)")
+    print("=" * 60)
+
+    data = load_data(args.parquet, DEFAULT_MONTHS)
     print(f"\nTotal pitches: {len(data):,}")
+    if 'game_date' in data.columns:
+        dates = data['game_date'].astype(str)
+        print(f"Date range: {dates.min()} to {dates.max()}")
 
     # Filter to foul balls with tracking data (exclude foul tips — caught by catcher)
     foul_mask = data['description'].str.contains('foul', case=False, na=False)
@@ -72,33 +99,51 @@ def main():
     batter_groups = tracked.groupby('batter')
     print(f"Unique batters with foul data: {len(batter_groups)}")
 
-    # Look up batter names via statsapi (player_name in Statcast = pitcher name)
+    # Look up batter names via statsapi (player_name in Statcast = pitcher name).
+    # Batched: one request per 100 players rather than ~700 sequential calls.
     import statsapi
     _name_cache = {}
+    _all_ids = [int(b) for b in batter_groups.groups]
+    for i in range(0, len(_all_ids), 100):
+        batch = _all_ids[i:i + 100]
+        try:
+            info = statsapi.get('people', {'personIds': ','.join(str(b) for b in batch)})
+            for person in info.get('people', []):
+                _name_cache[int(person['id'])] = person['fullName']
+        except Exception as e:
+            print(f"  Name batch {i}-{i+len(batch)} failed ({e}); falling back per player")
+    print(f"Resolved {len(_name_cache)}/{len(_all_ids)} batter names")
+
     def _get_batter_name(bid):
+        bid = int(bid)
         if bid not in _name_cache:
             try:
-                info = statsapi.get('people', {'personIds': int(bid)})
+                info = statsapi.get('people', {'personIds': bid})
                 _name_cache[bid] = info['people'][0]['fullName']
             except Exception:
                 _name_cache[bid] = f'Player {bid}'
         return _name_cache[bid]
 
+    # Partition once. Scanning the full frame per batter was two passes over
+    # 1.2M rows each for ~700 batters.
+    all_by_batter = {bid: g for bid, g in data.groupby('batter')}
+
     for batter_id, group in batter_groups:
-        if len(group) < 10:
+        if len(group) < args.min_fouls:
             continue
 
         name = _get_batter_name(batter_id)
         stand_mode = group['stand'].mode()
         stand = stand_mode.iloc[0] if len(stand_mode) > 0 else 'R'
 
+        batter_all_pitches = all_by_batter[batter_id]
+
         # Compute fair ball pull tendency from hc_x/hc_y (real directional data).
         # This is the primary input to the spray angle model.
         # hc_x: 0=left, 125=center, 250=right (catcher's view)
-        fair_balls = data[
-            (data['batter'] == batter_id) &
-            (data['type'] == 'X') &
-            data['hc_x'].notna()
+        fair_balls = batter_all_pitches[
+            (batter_all_pitches['type'] == 'X') &
+            batter_all_pitches['hc_x'].notna()
         ]
         fair_pull_pct = 50.0
         if len(fair_balls) >= 20:
@@ -110,7 +155,6 @@ def main():
 
         # Compute real fouls per plate appearance from actual PA counts.
         # A PA = unique (game_pk, at_bat_number) for this batter.
-        batter_all_pitches = data[data['batter'] == batter_id]
         batter_pas = batter_all_pitches.groupby(['game_pk', 'at_bat_number']).ngroups
         batter_foul_mask = batter_all_pitches['description'].str.contains('foul', case=False, na=False)
         batter_tip_mask = batter_all_pitches['description'].str.contains('foul_tip|foul tip', case=False, na=False)
@@ -121,8 +165,14 @@ def main():
         ev_data = group['launch_speed'].dropna()
         la_data = group['launch_angle'].dropna()
 
+        # Last appearance in the window, so a stale profile is visible rather
+        # than having to be inferred. A window spanning two seasons keeps
+        # players who retired after the first one.
+        last_game = str(batter_all_pitches['game_date'].astype(str).max())
+
         profiles[str(batter_id)] = {
             'name': name,
+            'last_game': last_game,
             'stand': stand,
             'n_fouls': len(group),
             'fair_pull_pct': fair_pull_pct,
@@ -134,6 +184,11 @@ def main():
         }
 
     print(f"\nBuilt {len(profiles)} batter spray profiles")
+    latest_season = max(p['last_game'] for p in profiles.values())[:4]
+    current = sum(1 for p in profiles.values() if p['last_game'][:4] == latest_season)
+    print(f"  active in {latest_season}: {current}")
+    print(f"  last seen earlier:  {len(profiles) - current} "
+          f"(kept — harmless, they simply never appear in a live lineup)")
 
     # Save
     out_path = os.path.join(CACHE_DIR, 'spray_profiles.json')

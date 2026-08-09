@@ -31,6 +31,7 @@ class FoulBallEvent:
     landing_height: float
     is_catchable: bool         # did it land in the seats (not too high/far)?
     weight: float = 1.0        # per-batter foul rate scaling
+    batter_id: int | None = None  # MLB player ID, for joining against Statcast
 
 
 @dataclass
@@ -282,6 +283,7 @@ def predict_game_fouls(
                 landing_height=traj.landing_z,
                 is_catchable=is_catchable,
                 weight=batter_weight,
+                batter_id=batter.player_id,
             )
             all_events.append(event)
 
