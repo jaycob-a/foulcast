@@ -507,3 +507,36 @@ no hard edges — and coherence is not accuracy. Every caveat in `AUDIT.md` abou
 section-level accuracy being unvalidated survives this run untouched. The maps
 make it much easier to see *what* the model claims; they add no evidence that
 any of it is right.
+
+---
+
+## Final flag summary
+
+31 parks, seed 42, 400 sims/batter. **4 parks flagged, 27 clean.**
+
+| park | flags |
+|---|---|
+| Las Vegas Ballpark | outlier total (20.8, robust z -29.7); 59% unmatched vs fleet 35% |
+| Sutter Health Park | outlier total (22.7, robust z -25.1); 55% unmatched vs fleet 35% |
+| Fenway Park | outlier total (28.0, robust z -11.9); 45% unmatched vs fleet 35%; 2 dead zones |
+| Yankee Stadium | 2 dead zones (`1B-UR`, `3B-UR`) |
+
+Zero parks flagged for hard edges. Zero flagged for asymmetry. No park has an
+angular blind spot — every angle from 0 to 180 owns at least one band on both
+sides — and no park has an interior radial hole. The white space on the maps is
+real dead area in front of the bowl and beyond the last deck, not a gap in the
+drawing.
+
+Fleet-level, from `section_convention_audit()`:
+
+```
+1B/3B-UB  is 10-55 at yankee_stadium          but 10-45 at 28/31 parks
+1B/3B-UB  is 10-50 at wrigley_field, coors    but 10-45 at 28/31 parks
+1B/3B-DUG is  0-30 at fenway_park             but  0-25 at 30/31 parks
+HOME-U    is 20-55 at yankee_stadium          but 50-90 at 28/31 parks
+HOME-U    is 45-90 at wrigley_field, coors    but 50-90 at 28/31 parks
+```
+
+Only the first has a measured effect (Yankee's handedness swing, 40.77 -> 43.36
+when corrected). The Yankee `HOME-U` case is inert. The rest are untested
+5-degree differences.
