@@ -53,7 +53,10 @@ from pybaseball import statcast
 from foulball.batter_profiles import BatterFoulProfile, build_profile_from_data
 from foulball.matchup_engine import predict_game_fouls
 from foulball.stadium import STADIUMS
-from foulball.mlb_api import TEAM_IDS, TEAM_ID_TO_ABBREV, TEAM_STADIUM_MAP
+from foulball.mlb_api import (
+    TEAM_IDS, TEAM_ID_TO_ABBREV, TEAM_STADIUM_MAP,
+    alternate_home_stadium_key, resolve_stadium_key,
+)
 from foulball.live_profiles import enrich_with_spray_profiles
 from foulball.log import get_logger
 
@@ -191,8 +194,28 @@ def add_foul_flag(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def neutral_site_game_pks(start: str, end: str) -> set[int]:
-    """game_pks played somewhere other than the home team's usual park.
+def game_venues(start: str, end: str) -> dict[int, tuple[int, str]]:
+    """game_pk -> (home_team_id, venue_name) for regular-season games in range.
+
+    Statcast carries no venue column, so the venue each game was actually
+    played at has to come from the schedule API.
+    """
+    try:
+        import statsapi as _statsapi
+        games = _statsapi.schedule(start_date=start, end_date=end)
+    except Exception as exc:
+        print(f"  WARNING: could not fetch venues ({exc}); "
+              f"falling back to each club's primary park")
+        return {}
+
+    return {
+        int(g['game_id']): (g['home_id'], g.get('venue_name', '?'))
+        for g in games if g.get('game_type') == 'R'
+    }
+
+
+def neutral_site_game_pks(start: str, end: str, venues: dict | None = None) -> set[int]:
+    """game_pks played somewhere other than a home park the model can model.
 
     MLB schedules a handful of these every year — Mexico City, the Little
     League Classic, Field of Dreams — and Statcast still labels one club as the
@@ -202,26 +225,31 @@ def neutral_site_game_pks(start: str, end: str) -> set[int]:
     Detected by comparing each game's venue against the home team's modal venue
     for the season, which is robust to sponsorship renames (the Dodgers' park
     is listed as "UNIQLO Field at Dodger Stadium" in 2026).
+
+    A club's *second* home park is not a neutral site and is not dropped: the
+    Athletics played 51 of their 2026 home dates at Sutter Health Park and 6 at
+    Las Vegas Ballpark, and the modal-venue rule alone would have discarded the
+    six. They are kept, and `select_games` resolves each to its own geometry.
+
+    `venues` may be passed in by a caller that already fetched them, to avoid a
+    second schedule request for the same date range.
     """
-    try:
-        import statsapi as _statsapi
-        games = _statsapi.schedule(start_date=start, end_date=end)
-    except Exception as exc:
-        print(f"  WARNING: could not check for neutral-site games ({exc}); keeping all")
+    if venues is None:
+        venues = game_venues(start, end)
+    if not venues:
         return set()
 
     from collections import Counter, defaultdict
     by_team: dict[int, Counter] = defaultdict(Counter)
-    rows = []
-    for g in games:
-        if g.get('game_type') != 'R':
-            continue
-        venue = g.get('venue_name', '?')
-        by_team[g['home_id']][venue] += 1
-        rows.append((g['game_id'], g['home_id'], venue))
+    for _, (tid, venue) in venues.items():
+        by_team[tid][venue] += 1
 
     home_venue = {tid: c.most_common(1)[0][0] for tid, c in by_team.items()}
-    return {gpk for gpk, tid, venue in rows if venue != home_venue.get(tid)}
+    return {
+        gpk for gpk, (tid, venue) in venues.items()
+        if venue != home_venue.get(tid)
+        and alternate_home_stadium_key(tid, venue) is None
+    }
 
 
 def select_games(data: pd.DataFrame, max_games: int = 20) -> list[dict]:
@@ -245,7 +273,8 @@ def select_games(data: pd.DataFrame, max_games: int = 20) -> list[dict]:
 
     print(f"Games with >=30 tracked fouls: {len(eligible_games)}")
 
-    neutral = neutral_site_game_pks(GAME_MONTH_START, GAME_MONTH_END)
+    venues = game_venues(GAME_MONTH_START, GAME_MONTH_END)
+    neutral = neutral_site_game_pks(GAME_MONTH_START, GAME_MONTH_END, venues)
     dropped_neutral = [g for g in eligible_games if int(g) in neutral]
     if dropped_neutral:
         print(f"Dropping {len(dropped_neutral)} neutral-site game(s): {dropped_neutral}")
@@ -270,7 +299,11 @@ def select_games(data: pd.DataFrame, max_games: int = 20) -> list[dict]:
                             if t not in _SC_ABBREV_MAP)
             continue
 
-        stadium_key = TEAM_STADIUM_MAP.get(home_id)
+        # Resolve against the venue actually played at, not the club's primary
+        # park: a second home park (Athletics at Las Vegas Ballpark) is a real
+        # home game against different geometry.
+        venue_name = venues.get(int(gpk), (None, None))[1]
+        stadium_key = resolve_stadium_key(home_id, venue_name, default=None)
         if stadium_key is None or stadium_key not in STADIUMS:
             unmapped.add(f'{home_team} (no stadium geometry)')
             continue
@@ -285,6 +318,7 @@ def select_games(data: pd.DataFrame, max_games: int = 20) -> list[dict]:
             'home_id': home_id,
             'away_id': away_id,
             'stadium_key': stadium_key,
+            'venue_name': venue_name,
             'n_tracked_fouls': n_fouls,
         })
 

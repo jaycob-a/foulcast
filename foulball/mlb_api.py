@@ -38,6 +38,61 @@ TEAM_STADIUM_MAP = {
 }
 
 
+# Second home parks: venues where a club plays real home games that are not its
+# primary park. TEAM_STADIUM_MAP is keyed by team alone and cannot express this,
+# so those games silently simulate against the wrong geometry.
+#
+# The Athletics' 2026 schedule is the live case — 51 home dates at Sutter Health
+# Park, 6 at Las Vegas Ballpark (NOTES_STEP5_6.md). Keys are
+# (team_id, normalized venue substring) so a venue only redirects for the club
+# it belongs to, and matching is on a substring of the normalized name so a
+# sponsorship rename does not break the lookup.
+ALTERNATE_HOME_VENUES = {
+    (133, 'lasvegasballpark'): 'las_vegas_ballpark',
+}
+
+
+def _normalize_venue(name: str) -> str:
+    """Lowercase and strip everything but letters and digits.
+
+    Venue strings carry sponsor prefixes that change between seasons — MLB
+    lists the Dodgers' park as "UNIQLO Field at Dodger Stadium" in 2026 — so
+    matching is done on a normalized substring rather than equality.
+    """
+    return ''.join(ch for ch in name.lower() if ch.isalnum())
+
+
+def alternate_home_stadium_key(home_id: int, venue_name: str | None) -> str | None:
+    """Stadium key if this game is at a club's *second* home park, else None.
+
+    Distinct from a neutral-site game: these are the home team's own dates,
+    played at a park the model has geometry for.
+    """
+    if not venue_name:
+        return None
+    norm = _normalize_venue(venue_name)
+    for (tid, needle), key in ALTERNATE_HOME_VENUES.items():
+        if tid == home_id and needle in norm:
+            return key
+    return None
+
+
+def resolve_stadium_key(
+    home_id: int, venue_name: str | None = None,
+    default: str | None = 'yankee_stadium',
+) -> str | None:
+    """Stadium key for a game, preferring the venue actually played at.
+
+    Falls back to the club's primary park when the venue is unknown or is that
+    primary park under any name. Callers that have a venue string should pass
+    it; callers that do not get the old team-only behaviour.
+    """
+    alt = alternate_home_stadium_key(home_id, venue_name)
+    if alt is not None:
+        return alt
+    return TEAM_STADIUM_MAP.get(home_id, default)
+
+
 @dataclass
 class GameInfo:
     """Information about an upcoming MLB game."""
@@ -75,6 +130,7 @@ def get_todays_games(date: str | None = None) -> list[GameInfo]:
 
     for g in schedule:
         home_id = g.get('home_id', 0)
+        venue_name = g.get('venue_name', 'Unknown')
         games.append(GameInfo(
             game_id=g['game_id'],
             game_date=g.get('game_date', date),
@@ -86,8 +142,8 @@ def get_todays_games(date: str | None = None) -> list[GameInfo]:
             away_team_id=g.get('away_id', 0),
             home_pitcher=g.get('home_probable_pitcher', 'TBD'),
             away_pitcher=g.get('away_probable_pitcher', 'TBD'),
-            stadium_key=TEAM_STADIUM_MAP.get(home_id, 'yankee_stadium'),
-            venue_name=g.get('venue_name', 'Unknown'),
+            stadium_key=resolve_stadium_key(home_id, venue_name),
+            venue_name=venue_name,
         ))
 
     return games

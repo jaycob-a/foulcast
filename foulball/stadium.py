@@ -2295,6 +2295,96 @@ def _make_sutter_health_sections() -> list[SeatSection]:
     return sections
 
 
+def _make_las_vegas_ballpark_sections() -> list[SeatSection]:
+    """Section layout for Las Vegas Ballpark, the Athletics' secondary 2026 home.
+
+    GEOMETRY IS AN ANALOGUE, NOT A SEATING CHART. Las Vegas Ballpark is a
+    ~10,000-seat Triple-A park with the same two-level bowl arrangement as
+    Sutter Health Park, so the deck structure here is Sutter Health's scaled
+    down by the ratio of the two capacities. The field dimensions and the
+    altitude on the factory below are real; these seat boundaries are not
+    digitized from a published chart, and no numbers produced for this park
+    should be read as better than "same class of park, same class of answer."
+
+    This is the same evidence class as the Tropicana Field caveat in
+    NOTES_STEP5_6.md, and it is flagged for the same reason.
+    """
+    sections = []
+
+    # Bowl footprint scaled from Sutter Health (14,000 seats) to Las Vegas
+    # (~10,000): a smaller park brings the stands in toward the plate.
+    S = 0.92
+
+    sections.append(SeatSection(
+        name='1B Field (Sec 111-117)', section_id='1B-DUG',
+        side='1B', level='field',
+        distance_min=85 * S, distance_max=190 * S,
+        angle_min=0, angle_max=25,
+        height_min=0, height_max=8,
+        num_seats=170, avg_ticket_price=55,
+    ))
+    sections.append(SeatSection(
+        name='1B Infield (Sec 105-110)', section_id='1B-FB1',
+        side='1B', level='field',
+        distance_min=50 * S, distance_max=110 * S,
+        angle_min=22, angle_max=55,
+        height_min=0, height_max=10,
+        num_seats=220, avg_ticket_price=95,
+    ))
+    sections.append(SeatSection(
+        name='Behind Plate (Sec 102-104)', section_id='HOME-F',
+        side='HOME', level='field',
+        distance_min=40 * S, distance_max=80 * S,
+        angle_min=55, angle_max=90,
+        height_min=0, height_max=12,
+        num_seats=110, avg_ticket_price=160,
+    ))
+    sections.append(SeatSection(
+        name='3B Infield (Sec 118-123)', section_id='3B-FB1',
+        side='3B', level='field',
+        distance_min=50 * S, distance_max=110 * S,
+        angle_min=22, angle_max=55,
+        height_min=0, height_max=10,
+        num_seats=220, avg_ticket_price=95,
+    ))
+    sections.append(SeatSection(
+        name='3B Field (Sec 124-130)', section_id='3B-DUG',
+        side='3B', level='field',
+        distance_min=85 * S, distance_max=190 * S,
+        angle_min=0, angle_max=25,
+        height_min=0, height_max=8,
+        num_seats=170, avg_ticket_price=55,
+    ))
+
+    # Two levels only, as at Sutter Health.
+    sections.append(SeatSection(
+        name='1B Upper (Sec 205-211)', section_id='1B-UB',
+        side='1B', level='upper',
+        distance_min=40 * S, distance_max=180 * S,
+        angle_min=10, angle_max=45,
+        height_min=15, height_max=42,
+        num_seats=330, avg_ticket_price=30,
+    ))
+    sections.append(SeatSection(
+        name='Behind Plate Upper (Sec 200-204)', section_id='HOME-U',
+        side='HOME', level='upper',
+        distance_min=35 * S, distance_max=100 * S,
+        angle_min=50, angle_max=90,
+        height_min=15, height_max=42,
+        num_seats=250, avg_ticket_price=45,
+    ))
+    sections.append(SeatSection(
+        name='3B Upper (Sec 212-219)', section_id='3B-UB',
+        side='3B', level='upper',
+        distance_min=40 * S, distance_max=180 * S,
+        angle_min=10, angle_max=45,
+        height_min=15, height_max=42,
+        num_seats=330, avg_ticket_price=30,
+    ))
+
+    return sections
+
+
 def _make_pnc_park_sections() -> list[SeatSection]:
     """Real section layout for PNC Park (opened 2001)."""
     sections = []
@@ -3562,6 +3652,19 @@ def sutter_health_park():
     stadium.sections = _make_sutter_health_sections()
     return stadium
 
+def las_vegas_ballpark():
+    """Las Vegas Ballpark — the Athletics' secondary home park in 2026.
+
+    Six of the club's 2026 home dates are here rather than at Sutter Health
+    Park. Field dimensions and altitude are real; the seating geometry is an
+    analogue of Sutter Health Park's — see _make_las_vegas_ballpark_sections.
+    """
+    stadium = Stadium(name='Las Vegas Ballpark', city='Las Vegas', team='Athletics',
+        altitude_ft=2030, avg_temperature_f=88,
+        lf_distance=328, cf_distance=415, rf_distance=328, backstop_distance=52)
+    stadium.sections = _make_las_vegas_ballpark_sections()
+    return stadium
+
 def pnc_park():
     stadium = Stadium(name='PNC Park', city='Pittsburgh', team='Pittsburgh Pirates',
         altitude_ft=730, avg_temperature_f=73,
@@ -3675,7 +3778,11 @@ STADIUMS = {
     'kauffman_stadium': kauffman_stadium,
     'angel_stadium': angel_stadium,
     'citi_field': citi_field,
+    # Key kept as 'oakland_coliseum' for URL and golden-fixture compatibility;
+    # the Athletics have not played in Oakland since 2024. Their primary 2026
+    # home is Sutter Health Park, with six dates at Las Vegas Ballpark below.
     'oakland_coliseum': sutter_health_park,
+    'las_vegas_ballpark': las_vegas_ballpark,
     'pnc_park': pnc_park,
     'petco_park': petco_park,
     'oracle_park': oracle_park,

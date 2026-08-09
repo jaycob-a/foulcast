@@ -13,6 +13,10 @@ import pytest
 import numpy as np
 
 from foulball.stadium import STADIUMS, SeatSection
+from foulball.mlb_api import (
+    TEAM_STADIUM_MAP, ALTERNATE_HOME_VENUES,
+    resolve_stadium_key, alternate_home_stadium_key,
+)
 
 
 ALL_STADIUM_KEYS = list(STADIUMS.keys())
@@ -116,15 +120,33 @@ class TestSectionGeometryValid:
 
 
 class TestStadiumFactory:
-    """Validate that all 30 stadium factories work."""
+    """Validate that every stadium factory works and every club has a park."""
 
-    def test_all_30_stadiums_build(self):
-        assert len(STADIUMS) == 30, f"Expected 30 stadiums, got {len(STADIUMS)}"
+    def test_every_stadium_builds(self):
         for key, factory in STADIUMS.items():
             s = factory()
             assert s.name, f"Stadium '{key}' has no name"
             assert s.team, f"Stadium '{key}' has no team"
             assert len(s.sections) > 0, f"Stadium '{key}' has no sections"
+
+    def test_every_club_maps_to_a_park_with_geometry(self):
+        """The count that matters is coverage, not a magic 30.
+
+        The registry holds one park per club plus any second home park (the
+        Athletics play six 2026 dates at Las Vegas Ballpark), so len(STADIUMS)
+        is 30 + alternates and asserting 30 would fail for the right reason.
+        """
+        assert len(TEAM_STADIUM_MAP) == 30, (
+            f"Expected 30 clubs, got {len(TEAM_STADIUM_MAP)}"
+        )
+        missing = [tid for tid, key in TEAM_STADIUM_MAP.items() if key not in STADIUMS]
+        assert not missing, f"Clubs mapped to a park with no geometry: {missing}"
+
+    def test_no_orphaned_stadium_keys(self):
+        """Every park is reachable: as a club's primary park or as an alternate."""
+        reachable = set(TEAM_STADIUM_MAP.values()) | set(ALTERNATE_HOME_VENUES.values())
+        orphans = sorted(set(STADIUMS) - reachable)
+        assert not orphans, f"Stadium keys nothing maps to: {orphans}"
 
 
 class TestAngleBehindPlate:
@@ -161,3 +183,56 @@ class TestAngleBehindPlate:
         # Both should be near 90
         assert abs(angle_pos - 90) < 5, f"Positive side: {angle_pos}"
         assert abs(angle_neg - 90) < 5, f"Negative side: {angle_neg}"
+
+
+class TestSecondHomeParks:
+    """Venue-aware stadium resolution.
+
+    TEAM_STADIUM_MAP is keyed by club alone, so a club with two home parks
+    simulates its second-park games against the wrong geometry. The Athletics
+    played 51 of their 2026 home dates at Sutter Health Park and 6 at Las Vegas
+    Ballpark (NOTES_STEP5_6.md); these tests pin the fix.
+    """
+
+    ATHLETICS = 133
+
+    def test_primary_park_is_unchanged_without_a_venue(self):
+        assert resolve_stadium_key(self.ATHLETICS) == 'oakland_coliseum'
+        assert STADIUMS[resolve_stadium_key(self.ATHLETICS)]().name == 'Sutter Health Park'
+
+    def test_sutter_health_still_resolves_to_sutter_health(self):
+        key = resolve_stadium_key(self.ATHLETICS, 'Sutter Health Park')
+        assert STADIUMS[key]().name == 'Sutter Health Park'
+
+    def test_las_vegas_resolves_to_las_vegas(self):
+        key = resolve_stadium_key(self.ATHLETICS, 'Las Vegas Ballpark')
+        assert key == 'las_vegas_ballpark'
+        assert STADIUMS[key]().name == 'Las Vegas Ballpark'
+
+    def test_las_vegas_survives_a_sponsorship_rename(self):
+        """Venue strings carry sponsor prefixes that change between seasons."""
+        for name in ('Las Vegas Ballpark', 'las vegas ballpark',
+                     'The Las Vegas Ballpark presented by Somebody'):
+            assert resolve_stadium_key(self.ATHLETICS, name) == 'las_vegas_ballpark', name
+
+    def test_las_vegas_only_redirects_for_the_athletics(self):
+        """A venue name must not hijack another club's park."""
+        yankees = 147
+        assert resolve_stadium_key(yankees, 'Las Vegas Ballpark') == 'yankee_stadium'
+
+    def test_unknown_venue_falls_back_to_the_primary_park(self):
+        assert resolve_stadium_key(self.ATHLETICS, 'Estadio Alfredo Harp Helu') == 'oakland_coliseum'
+
+    def test_alternate_home_key_is_none_for_the_primary_park(self):
+        assert alternate_home_stadium_key(self.ATHLETICS, 'Sutter Health Park') is None
+        assert alternate_home_stadium_key(self.ATHLETICS, None) is None
+
+    def test_las_vegas_geometry_differs_from_sutter_health(self):
+        """A distinct key is pointless if it returns the same park."""
+        lv = STADIUMS['las_vegas_ballpark']()
+        sh = STADIUMS['oakland_coliseum']()
+        assert lv.name != sh.name
+        assert lv.altitude_ft > sh.altitude_ft, (
+            'Las Vegas is ~2000 ft up and Sacramento is at sea level; '
+            'if these match, the factory is returning the wrong park'
+        )

@@ -13,6 +13,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from webapp_v2 import app
+from foulball.stadium import STADIUMS
 
 
 @pytest.fixture
@@ -75,11 +76,19 @@ class TestPredictEndpoint:
 class TestStadiumsEndpoint:
     """Tests for /api/stadiums."""
 
-    def test_returns_30_stadiums(self, client):
+    def test_returns_every_registered_park(self, client):
+        """One park per club, plus any second home park.
+
+        The Athletics play six 2026 dates at Las Vegas Ballpark, so the
+        registry is 30 clubs + alternates and a hardcoded 30 would fail for
+        the right reason.
+        """
         resp = client.get('/api/stadiums')
         assert resp.status_code == 200
         data = resp.get_json()
-        assert len(data) == 30
+        assert len(data) == len(STADIUMS)
+        assert len(data) >= 30
+        assert {s['key'] for s in data} == set(STADIUMS)
 
     def test_stadium_has_required_fields(self, client):
         resp = client.get('/api/stadiums')

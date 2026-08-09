@@ -9,6 +9,8 @@ __pycache__/
 *.parquet
 .cache/game_backtest/
 .cache/shadow_runs/
+.cache/park_sweep/
+.cache/park_sweep_run.log
 .cache/spray_profiles.json.bak_pitcher_keyed
 
 # Research output

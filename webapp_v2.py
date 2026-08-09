@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 
 from foulball.mlb_api import (
     get_projected_lineup, TEAM_IDS,
-    TEAM_ID_TO_ABBREV, TEAM_STADIUM_MAP,
+    TEAM_ID_TO_ABBREV, TEAM_STADIUM_MAP, resolve_stadium_key,
     get_todays_games, get_player_info,
 )
 from foulball.stadium import STADIUMS
@@ -186,9 +186,15 @@ def _get_pitcher_hand(pitcher_name, team_id):
     return 'R'
 
 
-def _run_prediction(away_id, home_id):
-    """Core prediction logic shared by GET and POST endpoints."""
-    stadium_key = TEAM_STADIUM_MAP.get(home_id, 'yankee_stadium')
+def _run_prediction(away_id, home_id, venue_name=None):
+    """Core prediction logic shared by GET and POST endpoints.
+
+    `venue_name` lets a caller that knows where the game is actually being
+    played override the club's primary park — the Athletics have six 2026 home
+    dates at Las Vegas Ballpark. Callers that only have two team IDs (a
+    hypothetical matchup) omit it and get the primary park.
+    """
+    stadium_key = resolve_stadium_key(home_id, venue_name)
     stadium = STADIUMS.get(stadium_key, STADIUMS['yankee_stadium'])()
 
     try:
@@ -546,9 +552,10 @@ def api_live(game_id):
     inning_half = linescore.get('inningHalf', '')
     game_status = game_data.get('status', {}).get('detailedState', 'Unknown')
 
-    # Run standard prediction
+    # Run standard prediction against the venue this game is actually at
+    venue_name = game_data.get('venue', {}).get('name')
     try:
-        result = _run_prediction(away_id, home_id)
+        result = _run_prediction(away_id, home_id, venue_name=venue_name)
     except Exception as e:
         logger.error("Live prediction failed for game %d: %s", game_id, e)
         return jsonify({'error': 'Prediction failed unexpectedly'}), 500
