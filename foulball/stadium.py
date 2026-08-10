@@ -321,11 +321,17 @@ def _make_yankee_stadium_sections() -> list[SeatSection]:
         num_seats=500, avg_ticket_price=75,
     ))
     # 1B Upper (Sec 307-316)
+    # angle_max is 45, not the 55 this entry originally carried. 28 of 31 parks
+    # use 10-45 for *-UB, and the extra 10 degrees put an upper deck into the
+    # 45-55 wedge, which is opposite-field territory. That made Yankee Stadium
+    # the only park whose handedness swing fell outside the fleet range —
+    # 40.77 pp against a median of 43.4 — because sided capture in the
+    # opposite-field wedge dilutes the pull-side share. See NOTES_STEP7.md.
     sections.append(SeatSection(
         name='1B Upper (Sec 307-316)', section_id='1B-UB',
         side='1B', level='upper',
         distance_min=40, distance_max=250,
-        angle_min=10, angle_max=55,
+        angle_min=10, angle_max=45,
         height_min=35, height_max=80,
         num_seats=600, avg_ticket_price=60,
     ))
@@ -334,7 +340,7 @@ def _make_yankee_stadium_sections() -> list[SeatSection]:
         name='3B Upper (Sec 324-331)', section_id='3B-UB',
         side='3B', level='upper',
         distance_min=40, distance_max=250,
-        angle_min=10, angle_max=55,
+        angle_min=10, angle_max=45,
         height_min=35, height_max=80,
         num_seats=600, avg_ticket_price=60,
     ))

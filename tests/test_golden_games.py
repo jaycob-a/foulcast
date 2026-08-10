@@ -56,7 +56,16 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
     }
 
 
-# ===== Baselines (relocked 2026-08-07 after the straight-back spray mode) =====
+# ===== Baselines =====
+# The two Yankee Stadium games were relocked 2026-08-09 after *-UB angle_max
+# was corrected from 55 to 45 to match the 28 parks that use 10-45 (Step 7).
+# Only section assignment moved: total, mean_dist, mean_angle, n_1b and n_3b
+# are byte-identical, which is the signature of a geometry-only change.
+# `no_section` rose (921 -> 957, 878 -> 916) because the 45-55 wedge lost a
+# candidate deck, and 1B-FB1/3B-FB1 swapped ranks with 1B-LB1/3B-LB1, which
+# were already adjacent.
+#
+# ===== Relocked 2026-08-07 after the straight-back spray mode =====
 # Previous lock was taken right after the P1 landing-intersection fix, when the
 # spray model still clamped every foul in front of the plate. Adding the
 # backward-deflection mode moved roughly a fifth of all fouls into the backstop
@@ -66,12 +75,12 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
 _BASELINES = {
     'yanks_vs_cole_yankee': {
         'total': 2504,
-        'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-LR', '1B-DUG', '3B-DUG', '1B-LB1', '1B-FB1', '3B-FB1', '3B-LB1'],
+        'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-LR', '1B-DUG', '3B-DUG', '1B-FB1', '3B-FB1', '1B-LB1', '3B-LB1'],
         'mean_dist': 131.0,
         'mean_angle': 73.3,
         'n_1b': 1329,
         'n_3b': 1175,
-        'no_section': 921,
+        'no_section': 957,
     },
     'sox_vs_bello_fenway': {
         'total': 2476,
@@ -93,12 +102,12 @@ _BASELINES = {
     },
     'sox_vs_cortes_yankee': {
         'total': 2502,
-        'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-LR', '3B-DUG', '1B-FB1', '1B-DUG', '1B-LB1', '3B-LB1', '3B-FB1'],
+        'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-LR', '3B-DUG', '1B-FB1', '1B-DUG', '1B-LB1', '3B-FB1', '3B-LB1'],
         'mean_dist': 128.9,
         'mean_angle': 72.2,
         'n_1b': 1207,
         'n_3b': 1295,
-        'no_section': 878,
+        'no_section': 916,
     },
     'yanks_vs_bello_dodger': {
         'total': 2477,

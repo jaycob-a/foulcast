@@ -229,9 +229,32 @@ moves it to **43.36**, the fleet median almost exactly. The extra 10 degrees put
 an upper deck into the 45–55 wedge, which is opposite-field territory, so it
 captures opposite-field fouls as sided and dilutes the pull-side share.
 
-I did not apply the fix. Yankee Stadium's table is the most detailed in the file
-(16 sections against a norm of 11), so 10–55 could be deliberate rather than a
-slip, and that is the owner's call. It is a one-line change if it is not.
+**Applied 2026-08-09.** `angle_max` is now 45 on both `1B-UB` and `3B-UB`.
+Confirmed after the change:
+
+| | before | after | fleet |
+|---|---:|---:|---:|
+| handedness swing | 40.77 pp | **43.36 pp** | median 43.38 |
+| 1B share of sided fouls | 51.80% | **51.61%** | median 51.61% |
+| total into stands | 33.0 | 32.1 | median 32.7 |
+| rank by swing (1 = lowest of 31) | 1 | **15** | — |
+
+Yankee goes from the extreme outlier to the middle of the pack, and the
+fleet-wide swing range tightens from 40.77–44.63 to 42.59–44.63.
+
+Two golden baselines were relocked (`yanks_vs_cole_yankee`,
+`sox_vs_cortes_yankee`). The relock is the reassuring kind: `total`,
+`mean_dist`, `mean_angle`, `n_1b` and `n_3b` are all byte-identical, which is
+the signature of a change that touched section assignment and nothing else.
+What moved is `no_section` (921 -> 957 and 878 -> 916) and a rank swap between
+`*-FB1` and `*-LB1`, which were already adjacent.
+
+The cost is honest and small: removing a deck from the 45–55 wedge means about
+36 more simulated fouls per run match nothing, so Yankee's total drops 0.9 and
+its unmatched share rises about a point. Yankee is now slightly below the fleet
+median on total rather than slightly above. That is the right trade — the
+alternative is a park keeping an inflated total by claiming balls in a wedge
+where 28 other parks have no deck.
 
 Two smaller convention breaks, both flagged and neither with a measured effect:
 `HOME-U` is angle 20–55 at Yankee against 50–90 at 28 parks, and `1B-DUG` is
@@ -540,3 +563,106 @@ HOME-U    is 45-90 at wrigley_field, coors    but 50-90 at 28/31 parks
 Only the first has a measured effect (Yankee's handedness swing, 40.77 -> 43.36
 when corrected). The Yankee `HOME-U` case is inert. The rest are untested
 5-degree differences.
+
+---
+
+## Where the unmatched third actually goes
+
+`park_coverage.py` now reports the loss breakdown in fouls per game rather than
+percentages, and subdivides both buckets — because neither bucket means one
+thing.
+
+At the average park, out of **50.7** fouls the lineup produces per game:
+
+| | fouls/game | share of losses |
+|---|---:|---:|
+| landed in a modelled zone | 31.9 | — |
+| **short** of the bowl front | **14.8** | **79%** |
+| — unambiguously on the field (>15 ft short) | 12.9 | 69% |
+| — within 15 ft of the bowl front | 1.8 | 10% |
+| **past** the last deck | **3.9** | **21%** |
+| — still inside 330 ft of the plate | 2.9 | 15% |
+| — beyond 330 ft | 1.0 | 5% |
+
+**The short bucket is mostly correct.** 12.9 fouls a game come down well in
+front of where the stands begin — that is foul ground, and crediting them to no
+section is the right answer. The 1.8 that land within 15 ft of the bowl front
+are the ones whose answer depends on the bowl front being in the right place,
+which is exactly what is wrong at Fenway.
+
+**The past bucket is mostly *not* balls leaving the stadium.** Only 1.0 foul per
+game — 2% of all fouls, 5% of the losses — comes down beyond 330 ft, past where
+any real park has seating. The other 2.9 land between the last modelled deck
+and the foul poles, and every real park has stands there. That is `NOTES.md`
+item 5 — no park models the outfield foul-corner sections — and it is now
+sized: about 2.9 fouls per game per park.
+
+### Are the trajectories carrying too far?
+
+Barely, and not enough to matter here. The model's landing distances against
+159,740 tracked Statcast fouls from the cached 2025–26 pull:
+
+| percentile | real | model | diff |
+|---|---:|---:|---:|
+| p50 | 188 ft | 122 ft | −66 |
+| p90 | 267 ft | 274 ft | +7 |
+| p95 | 297 ft | 308 ft | +11 |
+| p99 | 358 ft | 364 ft | +6 |
+| p99.9 | 407 ft | 418 ft | +11 |
+| max | 439 ft | 451 ft | +12 |
+
+| | real | model |
+|---|---:|---:|
+| share beyond 330 ft | 2.15% | 2.73% |
+| share beyond 400 ft | 0.16% | 0.27% |
+
+The tail runs 5–12 ft long between p90 and the maximum, against a typical
+quantile error of 28.5 ft (`NOTES_STEP5_6.md`). If the tail were calibrated
+exactly, the share beyond 330 ft would fall from 2.73% to 2.15% — **0.3 fouls
+per game**, out of 18.7 unmatched. Over-carrying trajectories account for
+roughly 1.6% of the losses.
+
+So the ranking of causes for the unmatched third is:
+
+1. **On the field, correctly dropped** — 12.9 fouls/game (69%)
+2. **Missing foul-corner geometry** — 2.9 fouls/game (15%)
+3. **Bowl front possibly misplaced** — 1.8 fouls/game (10%)
+4. **Genuinely out of the stadium** — 0.7 fouls/game (4%)
+5. **Trajectories carrying too far** — 0.3 fouls/game (2%)
+
+The headline "a third of every park's fouls land nowhere" is real but reads
+worse than it is: about seven tenths of it is the model correctly declining to
+put a ball on the field into a seat.
+
+**The p50 gap is the interesting anomaly, and it points the other way.** The
+model's median foul travels 66 ft shorter than the real median. That is
+dominated by a known measurement bias rather than a model error: Statcast
+tracks 85% of fouls and the missing 15% are disproportionately the weak
+backstop contact the model produces in quantity (`NOTES_STEP5_6.md` caveat 2),
+so the real distribution here is biased long by construction. The comparison
+cannot be taken at face value in the middle — only in the tail, where tracking
+is near-complete and where the question about carrying too far actually lives.
+
+### Per-park variation
+
+The short bucket barely moves: 14.0–15.4 fouls/game across all 31 parks. It is
+a property of the physics and of where bowls start, both of which are nearly
+identical everywhere.
+
+The past bucket is where parks separate, and it is the whole story of the three
+outliers:
+
+| park | past, fouls/game | of which beyond 330 ft |
+|---|---:|---:|
+| Las Vegas Ballpark | 16.1 | 1.4 |
+| Sutter Health Park | 13.9 | 1.4 |
+| Fenway Park | 8.1 | 1.4 |
+| typical park | 2.2–4.0 | 0.7–1.4 |
+| Coors Field (lowest) | 1.8 | 0.7 |
+
+The beyond-330 ft column is essentially constant at 0.7–1.4 across every park,
+which is what it should be — that is the physics tail, and it does not care
+about the seating chart. Everything that distinguishes Las Vegas (16.1) from
+Coors (1.8) is balls coming down inside 330 ft where the park has no modelled
+deck. The outliers are a geometry-coverage problem, start to finish, and not a
+trajectory problem.

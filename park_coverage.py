@@ -109,6 +109,15 @@ def capture_rate(stadium, sample) -> dict:
     }
 
 
+def _envelope(stadium) -> dict:
+    """(side, angle bin) -> (first owned distance, last owned distance)."""
+    env = {}
+    for side in ('1B', '3B'):
+        for angle, first, last, _gap in coverage_profile(stadium, side):
+            env[(side, int(angle))] = (first, last)
+    return env
+
+
 def classify_losses(stadium, lost_points) -> dict:
     """Why each uncaught ball was uncaught, against that ball's own side.
 
@@ -119,13 +128,10 @@ def classify_losses(stadium, lost_points) -> dict:
                which can only be a height/trajectory interaction
     """
     counts = {'short': 0, 'past': 0, 'over': 0, 'no_coverage': 0}
-    envelope = {}
-    for side in ('1B', '3B'):
-        for angle, first, last, _gap in coverage_profile(stadium, side):
-            envelope[(side, int(angle))] = (first, last)
+    env = _envelope(stadium)
 
     for side, angle, dist, _w in lost_points:
-        first, last = envelope.get((side, int(angle)), (None, None))
+        first, last = env.get((side, int(angle)), (None, None))
         if first is None:
             counts['no_coverage'] += 1
         elif dist < first:
@@ -135,6 +141,64 @@ def classify_losses(stadium, lost_points) -> dict:
         else:
             counts['over'] += 1
     return counts
+
+
+# A foul pole is 320-350 ft from the plate, and the stands wrap the foul
+# territory the whole way. A ball coming down inside this radius is somewhere a
+# real park has seats or field; past it, it has left the premises.
+PLAUSIBLE_STANDS_FT = 330.0
+
+# How close to the bowl front counts as "the answer depends on where the bowl
+# front is." Fenway's front is misplaced by roughly this much (NOTES_STEP7.md),
+# so balls inside this band are the ones a geometry correction would flip.
+BOWL_FRONT_MARGIN_FT = 15.0
+
+
+def loss_breakdown(stadium, cap: dict) -> dict:
+    """Weighted fouls per game in each loss bucket, with the sub-splits that
+    decide what the bucket means.
+
+    `short` is subdivided because not all of it is a defect. A ball that comes
+    down well in front of the stands is on the field and the model is right to
+    credit it to nobody; a ball that comes down just short of the bowl front is
+    only "on the field" if the bowl front is in the right place.
+
+    `past` is subdivided because "carried beyond the last modelled deck" and
+    "left the stadium" are different claims. A foul landing 200 ft into foul
+    territory is in the seats at every real park — that is missing geometry.
+    One landing past a foul pole is a trajectory that went too far.
+    """
+    env = _envelope(stadium)
+    out = {k: 0.0 for k in ('short_field', 'short_marginal', 'past_inside',
+                            'past_outside', 'over', 'no_coverage')}
+    past_dists = []
+
+    for side, angle, dist, w in cap['lost_points']:
+        first, last = env.get((side, int(angle)), (None, None))
+        if first is None:
+            out['no_coverage'] += w
+        elif dist < first:
+            if dist < first - BOWL_FRONT_MARGIN_FT:
+                out['short_field'] += w
+            else:
+                out['short_marginal'] += w
+        elif dist > last:
+            past_dists.append(dist)
+            if dist <= PLAUSIBLE_STANDS_FT:
+                out['past_inside'] += w
+            else:
+                out['past_outside'] += w
+        else:
+            out['over'] += w
+
+    out['short'] = out['short_field'] + out['short_marginal']
+    out['past'] = out['past_inside'] + out['past_outside']
+    out['caught'] = cap['caught']
+    out['total'] = cap['total']
+    out['past_median_ft'] = float(np.median(past_dists)) if past_dists else float('nan')
+    out['past_p90_ft'] = float(np.percentile(past_dists, 90)) if past_dists else float('nan')
+    out['past_max_ft'] = float(max(past_dists)) if past_dists else float('nan')
+    return out
 
 
 def main():
@@ -169,7 +233,7 @@ def main():
 
         rows.append({
             'park': pk, 'name': s.name, 'capture_pct': cap['capture_pct'],
-            'loss': loss, 'n_lost': n_lost,
+            'loss': loss, 'n_lost': n_lost, 'lb': loss_breakdown(s, cap),
             'short_pct': loss['short'] / n_lost * 100,
             'past_pct': loss['past'] / n_lost * 100,
             'over_pct': loss['over'] / n_lost * 100,
@@ -213,6 +277,46 @@ def main():
             r['short_pct'], r['past_pct'], r['over_pct'], r['n_sections']))
     print('\nshort = came down in front of the bowl; past = carried beyond the '
           'last deck;\nover  = inside the covered span but still matched nothing.')
+
+    # --- Where the unmatched fouls go, in fouls per game ---
+    print('\n\n' + '=' * 104)
+    print('UNMATCHED FOULS PER GAME, BY CAUSE')
+    print('=' * 104)
+    print('short = on the field per the park\'s own bowl front (correct to drop)')
+    print('  .field    = more than %.0f ft in front of the stands, unambiguously on the field'
+          % BOWL_FRONT_MARGIN_FT)
+    print('  .marginal = within %.0f ft of the bowl front, so a misplaced front flips it'
+          % BOWL_FRONT_MARGIN_FT)
+    print('past  = beyond the outermost modelled deck at that angle')
+    print('  .inside   = still within %.0f ft of the plate, where a real park has seats'
+          % PLAUSIBLE_STANDS_FT)
+    print('  .outside  = past %.0f ft, genuinely out of the stadium'
+          % PLAUSIBLE_STANDS_FT)
+    print()
+    print('%-22s %6s %6s | %6s %6s %6s | %6s %6s %6s | %s' % (
+        'park', 'fouls', 'caught', 'short', '.field', '.marg', 'past',
+        '.insid', '.outsd', 'past dist med/p90/max'))
+    for r in sorted(rows, key=lambda x: -x['lb']['past']):
+        b = r['lb']
+        print('%-22s %6.1f %6.1f | %6.1f %6.1f %6.1f | %6.1f %6.1f %6.1f | %5.0f %5.0f %5.0f'
+              % (r['park'], b['total'], b['caught'], b['short'], b['short_field'],
+                 b['short_marginal'], b['past'], b['past_inside'], b['past_outside'],
+                 b['past_median_ft'], b['past_p90_ft'], b['past_max_ft']))
+
+    agg = {k: sum(r['lb'][k] for r in rows) / len(rows)
+           for k in ('total', 'caught', 'short', 'short_field', 'short_marginal',
+                     'past', 'past_inside', 'past_outside')}
+    print('-' * 104)
+    print('%-22s %6.1f %6.1f | %6.1f %6.1f %6.1f | %6.1f %6.1f %6.1f'
+          % ('MEAN', agg['total'], agg['caught'], agg['short'], agg['short_field'],
+             agg['short_marginal'], agg['past'], agg['past_inside'], agg['past_outside']))
+    lost = agg['total'] - agg['caught']
+    print('\nof the %.1f unmatched fouls per game at the average park: '
+          '%.0f%% short, %.0f%% past.' % (lost, agg['short'] / lost * 100,
+                                          agg['past'] / lost * 100))
+    print('of the "past" fouls, %.0f%% come down inside %.0f ft — where a real '
+          'park has seats.' % (agg['past_inside'] / max(agg['past'], 1e-9) * 100,
+                               PLAUSIBLE_STANDS_FT))
 
     caps = [r['capture_pct'] for r in rows]
     print('\ncapture rate: min %.1f%%  median %.1f%%  max %.1f%%'
