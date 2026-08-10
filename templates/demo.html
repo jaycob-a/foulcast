@@ -1139,16 +1139,22 @@ function renderAccuracy(d) {
       <div class="acc-stat"><strong>Per-batter</strong> pull tendency from Statcast</div>
       <div class="acc-stat"><strong>Per-batter</strong> foul rate weighting</div>
       <div class="acc-stat"><strong>90% CI</strong> bootstrap confidence intervals</div>
-      <div class="acc-stat"><strong>30/30</strong> real stadium section maps</div>
+      <div class="acc-stat"><strong>0/31</strong> parks with surveyed section geometry</div>
     </div>
     ${gameBacktestHTML}
     <p style="margin-top:10px;color:var(--text3)">The r=${m.backtest.r} correlation measures how well our physics model
        predicts foul ball distances vs actual Statcast tracking data (Aug 2024, ${m.backtest.n_fouls.toLocaleString()} fouls).
        Median prediction error is ${m.backtest.median_error_ft} feet with a mean absolute error of ${m.backtest.mae_ft} feet.
-       All 30 MLB stadiums have real section mappings with calibrated geometry.
        90% confidence intervals are computed via bootstrap resampling of batters.
        Spray angle has ~17 degree uncertainty. Relative section rankings
        are more reliable than absolute foul counts.</p>
+    <p style="margin-top:10px;color:var(--text3)"><strong>About the section geometry.</strong>
+       Section names and deck levels are real, and field dimensions and altitudes are
+       published figures, but the seat boundaries every prediction is scored against
+       are estimates, not survey data — no park in the model has measured seat geometry.
+       No public source publishes distance-from-home-plate or angle-off-the-foul-line
+       for stadium sections. Read section results as "this part of the bowl", not
+       "this seat".</p>
   `;
 }
 </script>

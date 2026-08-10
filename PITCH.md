@@ -11,7 +11,7 @@ FoulCast uses trajectory simulation to predict where foul balls will land for an
 - **Every batter in both lineups** (exit velocity, launch angle, handedness, pull tendency)
 - **Starting pitcher pitch mix** (breaking balls foul differently than fastballs)
 - **Per-batter foul rate weighting** (real fouls-per-PA from Statcast plate appearance data)
-- **Stadium geometry** (real section numbers, altitude, temperature, field dimensions)
+- **Stadium geometry** (real altitude, temperature and field dimensions; estimated section boundaries — see Known Limitations)
 - **3D ballistic physics** (gravity, aerodynamic drag, altitude/temperature air density correction)
 
 The output: a stadium heat map showing the best sections to sit in, ranked by catchable foul ball probability.
@@ -23,7 +23,7 @@ The output: a stadium heat map showing the best sections to sit in, ranked by ca
 3. Side determination (1B vs 3B) driven by batter handedness + Statcast pull tendency data
 4. Spray angle (how far into stands) driven by pull tendency, launch angle, pitch type, and pitch location
 5. 3D trajectory simulation with gravity + drag, adjusted for stadium altitude and temperature
-6. Map landing positions to real stadium sections
+6. Map landing positions to stadium sections (real section names, estimated boundaries)
 7. Weight results by per-batter foul rate (contact hitters weighted higher)
 
 ## Validation
@@ -35,10 +35,12 @@ The output: a stadium heat map showing the best sections to sit in, ranked by ca
 | Median prediction error | **10.1 feet** |
 | Validation data | **19,558 real Statcast foul balls** (Aug 2024) |
 | Batter pull profiles | **497 MLB batters** (from real hc_x/hc_y coordinates) |
-| Stadiums modeled | **All 30 MLB parks** |
-| Real section mapping | Yankee Stadium, Fenway Park, Dodger Stadium |
+| Stadiums modeled | **All 30 MLB clubs, 31 parks** |
+| Parks with surveyed section geometry | **0 of 31** — all section boundaries are estimates |
 
 **Important note:** The r=0.986 validates distance prediction (how far the ball travels). Section-level accuracy depends on spray angle and side assignment, which have wider uncertainty (~15 degrees). Relative section rankings (which side is better) are more reliable than absolute foul counts per section.
+
+**Second important note:** No park in the file has surveyed seat geometry. Section names and deck levels are real, and field dimensions and altitudes are published figures, but the distance/angle/height boundaries every prediction is scored against are estimates off a shared template. This is the single biggest gap between what the engine looks like it knows and what it actually knows. See Known Limitations.
 
 ## What Exists Today
 
@@ -49,7 +51,7 @@ The output: a stadium heat map showing the best sections to sit in, ranked by ca
 - Responsive design (mobile + desktop)
 - Per-batter pull tendency from real Statcast fair-ball coordinate data
 - Per-batter foul rate weighting by contact quality
-- All 30 MLB stadiums with real field dimensions
+- All 30 MLB clubs mapped to a park, with real field dimensions and altitudes
 
 **Live demo:** `python webapp_v2.py` then open http://localhost:5000
 
@@ -75,11 +77,11 @@ The output: a stadium heat map showing the best sections to sit in, ranked by ca
 **B2B Licensing:** $50K-$200K annual license to ticket platforms
 - API access to prediction engine
 - White-label embeddable widget
-- Per-stadium section mapping
+- Per-stadium section mapping (contingent on the seat-survey work below)
 
 ## What's Needed to Ship
 
-1. **Real section maps for all 30 stadiums** (3 done, 27 remaining) - 2-3 weeks
+1. **Surveyed section geometry for all 31 parks** (0 done, 31 remaining) - not a 2-3 week task, and not a scraping task. No public source publishes distance-from-home-plate or angle-off-the-foul-line for any stadium section; the search behind that conclusion is in `SOURCED_DATA.md`. Closing it needs a different class of source — a stadium survey, CAD/GIS drawings, or Statcast's park geometry files — which means either a licensing conversation with MLB or field measurement. Scope and cost this before promising section-level precision to anyone.
 2. **Production deployment** (cloud hosting, API rate limiting) - 1 week
 3. **API documentation** for integration partners - 1 week
 
@@ -92,7 +94,8 @@ Transparency on what the model does and doesn't do:
 - **Spray angle has ~15-17 degrees of uncertainty.** The model uses batter pull tendency, pitch type, launch angle, and exit velocity to estimate spray direction, but foul ball spray is inherently noisy. Relative section rankings (which side is better) are more reliable than absolute per-section foul counts.
 - **Side probability is heuristic, not learned from foul-side data.** Statcast doesn't track which side (1B vs 3B) a foul ball lands on. Side probability is derived from batter handedness and fair-ball pull tendency, which is directionally correct but not calibrated to actual foul-side frequencies.
 - **Section-level accuracy is not independently validated.** The r=0.986 metric validates how far the ball travels (distance), not which section it lands in. Section mapping depends on spray angle estimation, which has wider uncertainty.
-- **27 of 30 stadiums use generic section geometry.** Only Yankee Stadium, Fenway Park, and Dodger Stadium have real section-by-section mapping. Other stadiums use parameterized sections based on real field dimensions.
+- **All 31 parks use estimated section geometry. None is surveyed.** This limitation previously read "27 of 30 stadiums use generic section geometry — only Yankee Stadium, Fenway Park, and Dodger Stadium have real section-by-section mapping." That was wrong, and the correction is worth stating plainly: no park in the file has measured seat geometry, including those three. Every `SeatSection` carries six numbers — distance min/max, angle min/max, height min/max — and all of them are analogues off a shared template. The file's own contents show it: 2,064 geometry values across 31 parks are drawn from 62 distinct values, 84% of them multiples of 5; `HOME-F` spans 55-90 degrees in all 31 parks; Busch, Kauffman, Nationals Park and Rate Field are byte-identical to each other, as are Great American and Petco; and every park is exactly mirror-symmetric to the last decimal. What is real: section names, deck levels, field dimensions, and altitudes. What is estimated: everything a prediction is actually scored against.
+- **Park-to-park differences are mostly not about the parks.** The 31-park sweep finds every park landing within 1.7 fouls of every other. Because the geometries are one template, that spread reflects how coarse each park's section table is, not how the parks differ. Sutter Health Park and Las Vegas Ballpark are the two lowest totals and also the two coarsest tables (8 sections each); those two facts are not independent.
 
 ## Technical Stack
 

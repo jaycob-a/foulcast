@@ -1,8 +1,54 @@
 """
 Stadium Geometry Layer.
 
-Models real MLB stadium geometries with seat sections, heights, and distances.
-Maps 3D trajectory landing positions to specific stadium sections.
+Models MLB stadium seating bowls as seat sections with heights, distances and
+angles, and maps 3D trajectory landing positions onto them.
+
+MODULE PROVENANCE — READ BEFORE TRUSTING ANY PER-SECTION NUMBER
+================================================================
+
+**The seat geometry in this file is estimated. None of it is surveyed, and
+none of it is digitized from a published seating chart.** This applies to all
+31 parks equally. Every `SeatSection` carries six numbers — `distance_min`,
+`distance_max`, `angle_min`, `angle_max`, `height_min`, `height_max` — and all
+of them are analogues off a shared template, not measurements.
+
+What the file's own contents show:
+
+- 2,064 geometry numbers across 31 parks are drawn from **62 distinct values**;
+  84% are multiples of 5, and the only non-integers are products of the three
+  scale factors applied in the factories below.
+- `HOME-F` spans `angle 55-90` in **all 31 parks**. `1B-UB` and `3B-UB` span
+  `10-45` in 29 of 31. `1B-DUG` spans `0-25` in 30 of 31.
+- Busch, Kauffman, Nationals Park and Rate Field have **byte-identical**
+  section geometry. So do Great American and Petco. 31 parks resolve to 27
+  distinct geometry signatures.
+- Every park is exactly mirror-symmetric to the last decimal. Real bowls
+  are not.
+
+This is why the park sweep finds 31 parks landing within 1.7 fouls of each
+other (`NOTES_STEP7.md`): that is not 31 parks agreeing, it is one template
+wearing 31 names. Park-to-park differences in output are dominated by how
+coarse each park's section table is, not by the parks.
+
+`SOURCED_DATA.md` records the search that established the gap: no public
+source publishes distance-from-home-plate or angle-off-the-foul-line for any
+stadium section. Team sites, ticket resellers and seat-review sites describe
+seating positionally and give row/seat numbering, but never survey
+coordinates. Closing this properly needs a different class of source — a
+stadium survey, a CAD/GIS drawing, or Statcast's park geometry files.
+
+What *is* real in this file, and can be relied on:
+
+- Outfield wall distances (`lf_distance`, `cf_distance`, `rf_distance`) and
+  `altitude_ft` on the `Stadium` factories. These are published figures.
+- Section *names* and deck levels, which track real seating charts.
+- `backstop_distance` at Fenway (60 ft) only. The other 30 are defaults —
+  21 parks carry exactly 55.
+
+The landing-section geometry helpers below (`exposed_bands`,
+`find_landing_section`) are sound; they are correct machinery operating on
+estimated inputs.
 """
 import numpy as np
 from dataclasses import dataclass, field
@@ -209,11 +255,19 @@ def find_landing_section(
 
 
 # ============================================================
-# Real Stadium Definitions
+# Stadium Definitions (estimated geometry — see MODULE PROVENANCE)
 # ============================================================
 
 def _make_yankee_stadium_sections() -> list[SeatSection]:
-    """Real section layout for Yankee Stadium (opened 2009)."""
+    """Section analogue for Yankee Stadium (opened 2009).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    The most detailed table in the file at 16 sections, but detail is not
+    provenance: the Grandstand and Lower Reserve bands are estimates like
+    everything else. The 1B-UB angle_max note below is an internal
+    consistency fix, not a measurement.
+    """
     sections = []
 
     # === FIELD LEVEL ===
@@ -378,7 +432,14 @@ def _make_yankee_stadium_sections() -> list[SeatSection]:
 
 
 def _make_fenway_park_sections() -> list[SeatSection]:
-    """Real section layout for Fenway Park (opened 1912)."""
+    """Section analogue for Fenway Park (opened 1912).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    The factory below multiplies every distance here by 0.85 to close a gap
+    between decks. That multiplier is a fudge tuned to make section matching
+    behave, not a measured property of Fenway's foul territory.
+    """
     sections = []
 
     # === FIELD BOX LEVEL ===
@@ -490,7 +551,10 @@ def _make_fenway_park_sections() -> list[SeatSection]:
 
 
 def _make_dodger_stadium_sections() -> list[SeatSection]:
-    """Real section layout for Dodger Stadium."""
+    """Section analogue for Dodger Stadium (opened 1962).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     # === FIELD LEVEL ===
@@ -611,7 +675,13 @@ def _make_dodger_stadium_sections() -> list[SeatSection]:
 
 
 def _make_wrigley_field_sections() -> list[SeatSection]:
-    """Real section layout for Wrigley Field (opened 1914)."""
+    """Section analogue for Wrigley Field (opened 1914).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    The factory below multiplies every distance here by 0.88, on the same
+    basis as Fenway's 0.85 — a matching fudge, not a measurement.
+    """
     sections = []
 
     # === FIELD BOX (100s) ===
@@ -752,7 +822,13 @@ def _make_wrigley_field_sections() -> list[SeatSection]:
 
 
 def _make_coors_field_sections() -> list[SeatSection]:
-    """Real section layout for Coors Field (opened 1995). High altitude!"""
+    """Section analogue for Coors Field (opened 1995).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    The 5,200 ft altitude on the factory is real and drives the air-density
+    correction. The section geometry it is paired with is not.
+    """
     sections = []
 
     # === FIELD LEVEL (100s) ===
@@ -864,7 +940,10 @@ def _make_coors_field_sections() -> list[SeatSection]:
 
 
 def _make_citi_field_sections() -> list[SeatSection]:
-    """Real section layout for Citi Field (opened 2009)."""
+    """Section analogue for Citi Field (opened 2009).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     # === FIELD LEVEL (100s) ===
@@ -976,7 +1055,10 @@ def _make_citi_field_sections() -> list[SeatSection]:
 
 
 def _make_citizens_bank_sections() -> list[SeatSection]:
-    """Real section layout for Citizens Bank Park (opened 2004)."""
+    """Section analogue for Citizens Bank Park (opened 2004).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     # === FIELD LEVEL (100s) ===
@@ -1088,7 +1170,10 @@ def _make_citizens_bank_sections() -> list[SeatSection]:
 
 
 def _make_truist_park_sections() -> list[SeatSection]:
-    """Real section layout for Truist Park (opened 2017)."""
+    """Section analogue for Truist Park (opened 2017).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     # === FIELD LEVEL ===
@@ -1200,7 +1285,10 @@ def _make_truist_park_sections() -> list[SeatSection]:
 
 
 def _make_oracle_park_sections() -> list[SeatSection]:
-    """Real section layout for Oracle Park (opened 2000)."""
+    """Section analogue for Oracle Park (opened 2000).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     # === FIELD LEVEL (100s) ===
@@ -1312,7 +1400,10 @@ def _make_oracle_park_sections() -> list[SeatSection]:
 
 
 def _make_daikin_park_sections() -> list[SeatSection]:
-    """Real section layout for Daikin Park (opened 2000, formerly Minute Maid)."""
+    """Section analogue for Daikin Park (opened 2000, formerly Minute Maid).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     # === FIELD LEVEL (100s) ===
@@ -1424,7 +1515,13 @@ def _make_daikin_park_sections() -> list[SeatSection]:
 
 
 def _make_tropicana_field_sections() -> list[SeatSection]:
-    """Real section layout for Tropicana Field (opened 1990). Indoor dome."""
+    """Section analogue for Tropicana Field (opened 1990). Indoor dome.
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    Flagged separately as unverified after the Step 5-6 venue repairs; see
+    NOTES_STEP5_6.md item 6.
+    """
     sections = []
 
     # === LOWER LEVEL (100s) ===
@@ -1536,7 +1633,10 @@ def _make_tropicana_field_sections() -> list[SeatSection]:
 
 
 def _make_chase_field_sections() -> list[SeatSection]:
-    """Real section layout for Chase Field (opened 1998). Retractable roof."""
+    """Section analogue for Chase Field (opened 1998). Retractable roof.
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     # === FIELD LEVEL (100s) ===
@@ -1637,7 +1737,10 @@ def _make_chase_field_sections() -> list[SeatSection]:
 
 
 def _make_camden_yards_sections() -> list[SeatSection]:
-    """Real section layout for Oriole Park at Camden Yards (opened 1992)."""
+    """Section analogue for Oriole Park at Camden Yards (opened 1992).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     # === FIELD LEVEL (lower 0-99) ===
@@ -1738,7 +1841,13 @@ def _make_camden_yards_sections() -> list[SeatSection]:
 
 
 def _make_great_american_sections() -> list[SeatSection]:
-    """Real section layout for Great American Ball Park (opened 2003)."""
+    """Section analogue for Great American Ball Park (opened 2003).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    Section geometry is identical to Petco Park's, number for number. The two
+    share one template instance with no park-specific adjustment.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -1836,7 +1945,10 @@ def _make_great_american_sections() -> list[SeatSection]:
 
 
 def _make_progressive_field_sections() -> list[SeatSection]:
-    """Real section layout for Progressive Field (opened 1994)."""
+    """Section analogue for Progressive Field (opened 1994).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -1934,7 +2046,10 @@ def _make_progressive_field_sections() -> list[SeatSection]:
 
 
 def _make_comerica_park_sections() -> list[SeatSection]:
-    """Real section layout for Comerica Park (opened 2000)."""
+    """Section analogue for Comerica Park (opened 2000).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2032,7 +2147,13 @@ def _make_comerica_park_sections() -> list[SeatSection]:
 
 
 def _make_kauffman_stadium_sections() -> list[SeatSection]:
-    """Real section layout for Kauffman Stadium (opened 1973)."""
+    """Section analogue for Kauffman Stadium (opened 1973).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    Section geometry is identical to Busch, Nationals Park and Rate Field,
+    number for number — one template instance shared across four parks.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2130,7 +2251,10 @@ def _make_kauffman_stadium_sections() -> list[SeatSection]:
 
 
 def _make_angel_stadium_sections() -> list[SeatSection]:
-    """Real section layout for Angel Stadium (opened 1966)."""
+    """Section analogue for Angel Stadium (opened 1966).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2228,7 +2352,19 @@ def _make_angel_stadium_sections() -> list[SeatSection]:
 
 
 def _make_sutter_health_sections() -> list[SeatSection]:
-    """Real section layout for Sutter Health Park (temporary A's home)."""
+    """Section analogue for Sutter Health Park, the Athletics' primary 2026 home.
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    One of the two coarsest tables in the file: 8 sections over two levels,
+    and it produces one of the two lowest game totals in the fleet. Whether
+    that is a real small-park effect or an artefact of the coarse table
+    cannot be separated without a seating chart (NOTES_STEP7.md).
+
+    SOURCED_DATA.md also records an unresolved conflict between MLB.com and
+    A View From My Seat over which sections sit behind home plate, so even
+    the section-to-field-position mapping here is uncertain.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2302,7 +2438,7 @@ def _make_sutter_health_sections() -> list[SeatSection]:
 
 
 def _make_las_vegas_ballpark_sections() -> list[SeatSection]:
-    """Section layout for Las Vegas Ballpark, the Athletics' secondary 2026 home.
+    """Section analogue for Las Vegas Ballpark, the Athletics' secondary 2026 home.
 
     GEOMETRY IS AN ANALOGUE, NOT A SEATING CHART. Las Vegas Ballpark is a
     ~10,000-seat Triple-A park with the same two-level bowl arrangement as
@@ -2314,6 +2450,11 @@ def _make_las_vegas_ballpark_sections() -> list[SeatSection]:
 
     This is the same evidence class as the Tropicana Field caveat in
     NOTES_STEP5_6.md, and it is flagged for the same reason.
+
+    This docstring was written as an exception to a file of supposedly real
+    layouts. It is not an exception — the provenance trace recorded in MODULE
+    PROVENANCE found every park in this file to be an analogue. What is
+    unusual here is only that the analogue was documented at the time.
     """
     sections = []
 
@@ -2392,7 +2533,10 @@ def _make_las_vegas_ballpark_sections() -> list[SeatSection]:
 
 
 def _make_pnc_park_sections() -> list[SeatSection]:
-    """Real section layout for PNC Park (opened 2001)."""
+    """Section analogue for PNC Park (opened 2001).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2490,7 +2634,13 @@ def _make_pnc_park_sections() -> list[SeatSection]:
 
 
 def _make_petco_park_sections() -> list[SeatSection]:
-    """Real section layout for Petco Park (opened 2004)."""
+    """Section analogue for Petco Park (opened 2004).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    Section geometry is identical to Great American Ball Park's, number for
+    number — one template instance shared across both parks.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2588,7 +2738,10 @@ def _make_petco_park_sections() -> list[SeatSection]:
 
 
 def _make_tmobile_park_sections() -> list[SeatSection]:
-    """Real section layout for T-Mobile Park (opened 1999). Retractable roof."""
+    """Section analogue for T-Mobile Park (opened 1999). Retractable roof.
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2686,7 +2839,13 @@ def _make_tmobile_park_sections() -> list[SeatSection]:
 
 
 def _make_busch_stadium_sections() -> list[SeatSection]:
-    """Real section layout for Busch Stadium (opened 2006)."""
+    """Section analogue for Busch Stadium (opened 2006).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    Section geometry is identical to Kauffman, Nationals Park and Rate Field,
+    number for number — one template instance shared across four parks.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2784,7 +2943,10 @@ def _make_busch_stadium_sections() -> list[SeatSection]:
 
 
 def _make_globe_life_sections() -> list[SeatSection]:
-    """Real section layout for Globe Life Field (opened 2020). Retractable roof."""
+    """Section analogue for Globe Life Field (opened 2020). Retractable roof.
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2882,7 +3044,10 @@ def _make_globe_life_sections() -> list[SeatSection]:
 
 
 def _make_rogers_centre_sections() -> list[SeatSection]:
-    """Real section layout for Rogers Centre (opened 1989). Retractable roof."""
+    """Section analogue for Rogers Centre (opened 1989). Retractable roof.
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -2980,7 +3145,10 @@ def _make_rogers_centre_sections() -> list[SeatSection]:
 
 
 def _make_target_field_sections() -> list[SeatSection]:
-    """Real section layout for Target Field (opened 2010)."""
+    """Section analogue for Target Field (opened 2010).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -3078,7 +3246,13 @@ def _make_target_field_sections() -> list[SeatSection]:
 
 
 def _make_rate_field_sections() -> list[SeatSection]:
-    """Real section layout for Rate Field (opened 1991)."""
+    """Section analogue for Rate Field (opened 1991).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    Section geometry is identical to Busch, Kauffman and Nationals Park,
+    number for number — one template instance shared across four parks.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -3176,7 +3350,10 @@ def _make_rate_field_sections() -> list[SeatSection]:
 
 
 def _make_loan_depot_sections() -> list[SeatSection]:
-    """Real section layout for loanDepot park (opened 2012). Retractable roof."""
+    """Section analogue for loanDepot park (opened 2012). Retractable roof.
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -3274,7 +3451,10 @@ def _make_loan_depot_sections() -> list[SeatSection]:
 
 
 def _make_american_family_sections() -> list[SeatSection]:
-    """Real section layout for American Family Field (opened 2001). Retractable roof."""
+    """Section analogue for American Family Field (opened 2001). Retractable roof.
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+    """
     sections = []
 
     sections.append(SeatSection(
@@ -3372,7 +3552,13 @@ def _make_american_family_sections() -> list[SeatSection]:
 
 
 def _make_nationals_park_sections() -> list[SeatSection]:
-    """Real section layout for Nationals Park (opened 2008)."""
+    """Section analogue for Nationals Park (opened 2008).
+
+    Estimated geometry, not a digitized seating chart. See MODULE PROVENANCE.
+
+    Section geometry is identical to Busch, Kauffman and Rate Field, number
+    for number — one template instance shared across four parks.
+    """
     sections = []
 
     sections.append(SeatSection(

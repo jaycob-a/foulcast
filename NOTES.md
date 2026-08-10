@@ -203,3 +203,31 @@ land somewhere sensible, and the rankings are no longer inverted or empty behind
 the plate. Whether the specific split between `HOME-F` and `HOME-B` is right is
 unknown and unknowable from public data. That remains the moat described in
 `AUDIT.md`, and it still needs Step 8.
+
+**8. The section geometry itself is estimated — added 2026-08-09, and it
+outranks everything above it.** Items 1-7 treat `stadium.py` as the fixed
+reference every other number is measured against. It is not one. All 31 parks'
+seat boundaries are analogues off a shared template, not surveyed or digitized
+from seating charts. The provenance trace is recorded in the module docstring
+of `foulball/stadium.py`; the short version is that 2,064 geometry values
+across 31 parks are drawn from 62 distinct values, four parks are byte-identical
+to each other, and every park is exactly mirror-symmetric to the last decimal.
+
+Three things above need re-reading in that light:
+
+- Item 3 calls the behind-home zones "too coarse." They are, but subdividing
+  invented bands produces finer invented bands. That fix raises resolution,
+  not accuracy.
+- Item 4 attributes the Oakland and Fenway outliers to "zone-geometry gaps
+  rather than physics." That is right, and now has a cause: those two parks
+  have the coarsest tables in the file. Fenway's numbers also pass through a
+  blanket 0.85 distance multiplier that exists to make deck matching behave.
+- The 30-park mean of 32.7 in the stability check is a mean over one template,
+  not over 30 parks. It should not be read as evidence that the geometry
+  generalizes.
+
+`SOURCED_DATA.md` records why this is not a quick fix: no public source
+publishes distance-from-home-plate or angle-off-the-foul-line for any stadium
+section. This is a data-acquisition problem, not a modelling one, and it is
+upstream of Step 8 — hand-logged fouls with real section labels cannot
+calibrate section geometry that was never measured.

@@ -159,5 +159,61 @@ into "the only validated dataset in existence."
 8. Build foul ball logging (self-logged from broadcasts, or crowdsourced in-app).
 9. Calibrate against it. *Then* the accuracy claim is real and the B2B conversation is possible.
 
+---
+
+## Correction — 2026-08-09
+
+Appended rather than edited in place: the body above is the record of what was
+believed on 2026-08-07, and rewriting it would hide the error instead of fixing
+it. One claim in it is wrong.
+
+**The Secondary issues row "Pitch overstates granularity" is itself too
+generous.** It reads:
+
+> All 30 parks have hand-built zone geometry — more than the pitch claims — but
+> at zone, not seat, resolution.
+
+Two things in that sentence are false, and one number is off.
+
+**1. The geometry is not hand-built.** A provenance trace run on 2026-08-09
+found no source for any per-section number in `foulball/stadium.py`. All 30
+parks arrived in a single squashed initial commit with no generator script, no
+citations, and no source comments. The file's own contents settle it: 2,064
+geometry values across 31 parks are drawn from **62 distinct values**, 84% of
+them multiples of 5; `HOME-F` spans 55–90 degrees in all 31 parks; Busch,
+Kauffman, Nationals Park and Rate Field are byte-identical to one another, as
+are Great American and Petco; and every park is exactly mirror-symmetric to the
+last decimal. That is one template wearing 31 names, not 31 hand-built parks.
+
+**2. "More than the pitch claims" was backwards.** The pitch claimed three parks
+had real section mapping. The true figure is zero — including those three. The
+audit credited the file with more provenance than the pitch did; both were
+above the real number.
+
+**3. "16 broad zones per park" is the Yankee Stadium figure, not the fleet
+figure.** 28 of 31 parks carry 11 sections; Yankee has 16, Wrigley 14, Dodger
+12, and Sutter Health and Las Vegas 8 each. The resolution concern is right and
+is understated for most of the fleet.
+
+The verdict of that row — *rewrite the pitch* — stands, and has now been done.
+What changes is the reason: the pitch did not merely overstate resolution, it
+misdescribed provenance.
+
+**This does not change the audit's headline verdict.** CONTINUE still holds.
+But it sharpens "What ready to sell actually requires" above. That section
+names one missing asset — ground truth for foul landings. There are two. The
+seating geometry those landings would be scored against is also missing, and it
+is upstream: hand-logged fouls with real section labels cannot calibrate section
+boundaries that were never measured. Both need solving before the section-level
+accuracy question has an answer, and the geometry one cannot be solved by
+logging. `SOURCED_DATA.md` records the search establishing that no public source
+publishes distance-from-home-plate or angle-off-the-foul-line for any stadium
+section; closing it needs a stadium survey, CAD/GIS drawings, or Statcast's park
+geometry files.
+
+Full evidence: the `MODULE PROVENANCE` block at the top of
+`foulball/stadium.py`. Corrected claims: `PITCH.md` Known Limitations,
+`NOTES.md` item 8, `templates/demo.html`.
+
 **Do not** map more stadiums until Phase 1 is done. That work only pays off once the matching
 logic is correct.
