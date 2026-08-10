@@ -12,6 +12,15 @@ __pycache__/
 .cache/park_sweep/
 .cache/park_sweep_run.log
 .cache/spray_profiles.json.bak_pitcher_keyed
+.cache/calibration/
+
+# Foul observation log — the SQLite file itself is not committed (binary, and
+# every write moves it), but the data is irreplaceable after 2026-09-27.
+# Back it up with:  python -m foulball.foul_log --export data/foul_log_export.jsonl
+# and commit that file. See NOTES_STEP8.md.
+data/*.db
+data/*.db-wal
+data/*.db-shm
 
 # Research output
 *.png

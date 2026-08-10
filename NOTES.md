@@ -231,3 +231,20 @@ publishes distance-from-home-plate or angle-off-the-foul-line for any stadium
 section. This is a data-acquisition problem, not a modelling one, and it is
 upstream of Step 8 — hand-logged fouls with real section labels cannot
 calibrate section geometry that was never measured.
+
+**9. The logging feature exists now — added 2026-08-09.** `step-8` ships
+`/log`, `foulball/foul_log.py` and `calibrate_log.py`. Details in
+`NOTES_STEP8.md`. What this changes for the items above:
+
+- Items 1 and 7 name Step 8 as the thing that would settle the back-foul rate
+  and section-level accuracy. The mechanism is now built, but the log is
+  empty. Nothing is settled until observations are in it, and the season ends
+  2026-09-27.
+- Item 8's last paragraph stands unchanged and is the reason the schema stores
+  printed section numbers rather than zone IDs. Logging still cannot calibrate
+  geometry that was never measured. What it can do is bank observations keyed
+  to something that survives a boundary re-cut, so they are still usable when
+  real seating geometry turns up.
+- Item 2 (no netting) now has a data field ahead of the model: entries record
+  whether a ball hit the netting, but the model still assigns those balls to
+  the zone behind the net. Netting comparisons are not meaningful until Step 9.

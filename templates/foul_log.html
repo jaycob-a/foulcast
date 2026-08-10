@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>FoulCast — Log a foul</title>
+<!--
+  Mobile logging form. Designed for one hand, from a seat, at night.
+
+  Layout rule: the four taps that happen while a ball is still in the air —
+  side, zone, outcome, save — live in the lower half of the screen where a
+  thumb reaches. Game, inning and batter sit above; they are set once per
+  half-inning, not per foul.
+
+  Nothing here requires a network connection. Entries queue in localStorage and
+  flush when the phone gets signal back. Each carries a client-generated UUID,
+  so a retry after a dropped response stores nothing twice.
+-->
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --dim: #8b949e;
+    --accent: #f0883e; --accent-dim: #6b3f1d;
+    --ok: #3fb950; --warn: #d29922; --bad: #f85149;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: 108px;
+  }
+  header {
+    position: sticky; top: 0; z-index: 20; background: var(--panel);
+    border-bottom: 1px solid var(--line); padding: 8px 10px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .grow { flex: 1; min-width: 0; }
+  select, input[type=text], input[type=number], textarea {
+    background: #0b0f14; color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px; font-size: 16px; width: 100%;
+  }
+  label.small { color: var(--dim); font-size: 12px; text-transform: uppercase;
+                letter-spacing: .04em; display: block; margin: 12px 0 6px; }
+  main { padding: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line);
+          border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+
+  button { font: inherit; color: var(--text); background: #21262d;
+           border: 1px solid var(--line); border-radius: 10px;
+           padding: 14px 10px; min-height: 52px; }
+  button:active { transform: scale(.98); }
+  button.on { background: var(--accent-dim); border-color: var(--accent);
+              color: #fff; font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .zones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .zones button { text-align: left; line-height: 1.25; padding: 12px 10px; }
+  .zones .zname { font-size: 14px; font-weight: 600; display: block; }
+  .zones .zsec  { font-size: 12px; color: var(--dim); display: block; }
+  .zones button.on .zsec { color: #f7d3b5; }
+
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+           -webkit-overflow-scrolling: touch; }
+  .chips button { white-space: nowrap; padding: 10px 12px; min-height: 44px;
+                  font-size: 14px; }
+
+  .inning { display: flex; align-items: center; gap: 8px; }
+  .inning button.step { width: 56px; font-size: 24px; padding: 8px; }
+  .inning .val { flex: 1; text-align: center; font-size: 20px; font-weight: 700; }
+
+  footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    background: var(--panel); border-top: 1px solid var(--line);
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  }
+  #save { width: 100%; min-height: 62px; font-size: 20px; font-weight: 700;
+          background: var(--accent); border-color: var(--accent); color: #150c05; }
+  #save[disabled] { background: #30363d; border-color: var(--line);
+                    color: var(--dim); }
+  .status { display: flex; justify-content: space-between; font-size: 12px;
+            color: var(--dim); margin-bottom: 6px; }
+  .status b { color: var(--text); }
+  .pending { color: var(--warn); }
+  .hint { color: var(--dim); font-size: 12px; margin: 6px 0 0; }
+  .recent { font-size: 13px; }
+  .recent li { display: flex; justify-content: space-between; gap: 8px;
+               padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .recent li.void { color: var(--dim); text-decoration: line-through; }
+  .recent button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
+  .toast { position: fixed; left: 10px; right: 10px; bottom: 96px; z-index: 40;
+           background: #21262d; border: 1px solid var(--accent);
+           border-radius: 10px; padding: 10px; font-size: 14px;
+           display: none; }
+  details summary { color: var(--dim); font-size: 13px; padding: 6px 0;
+                    cursor: pointer; }
+  .warnbox { border-color: var(--warn); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="row">
+    <select id="game" class="grow" aria-label="Game"></select>
+    <button id="reloadGames" style="min-height:44px;padding:8px 12px;">↻</button>
+  </div>
+  <div class="status" style="margin-top:6px;">
+    <span id="parkName">—</span>
+    <span><b id="sessionCount">0</b> logged · <span id="queueState">synced</span></span>
+  </div>
+</header>
+
+<main>
+
+  <details id="setup">
+    <summary>Setup — who's watching, and what you can see</summary>
+    <div class="card">
+      <label class="small" for="observer">Your name or initials</label>
+      <input type="text" id="observer" placeholder="JA" autocomplete="off">
+
+      <label class="small">Watching from</label>
+      <div class="grid2">
+        <button data-vantage="in_park">At the park</button>
+        <button data-vantage="broadcast">Broadcast</button>
+      </div>
+
+      <label class="small">What you can actually see</label>
+      <div class="grid2" id="scopeBtns">
+        <button data-scope="full_bowl">Whole bowl</button>
+        <button data-scope="1b_side">1B side only</button>
+        <button data-scope="3b_side">3B side only</button>
+        <button data-scope="home_plate">Behind home only</button>
+      </div>
+      <p class="hint">This is not a formality. A zone with no logged fouls only
+      means the model over-predicts it if you could have seen a foul land
+      there. Calibration throws out every zone outside your view rather than
+      scoring it as a zero.</p>
+
+      <label class="small" for="seat">Your section (optional)</label>
+      <input type="text" id="seat" placeholder="e.g. 214" autocomplete="off">
+
+      <label class="small" for="watchDate">Game date</label>
+      <input type="text" id="watchDate" placeholder="YYYY-MM-DD" autocomplete="off">
+      <p class="hint">Leave blank for today. Set it to log from a recording.</p>
+    </div>
+  </details>
+
+  <div class="card">
+    <div class="inning">
+      <button class="step" id="inningDown">−</button>
+      <div class="val"><span id="inningVal">1</span><sup id="halfVal">▲</sup></div>
+      <button class="step" id="inningUp">+</button>
+      <button id="halfToggle" style="width:88px;">TOP</button>
+    </div>
+    <label class="small">Batter <span id="batTeam" style="text-transform:none"></span></label>
+    <div class="chips" id="batters"></div>
+  </div>
+
+  <div class="card">
+    <label class="small">Side</label>
+    <div class="grid3" id="sideBtns">
+      <button data-side="3B">3B side</button>
+      <button data-side="HOME">Behind home</button>
+      <button data-side="1B">1B side</button>
+    </div>
+
+    <label class="small">Where it came down</label>
+    <div class="zones" id="zoneBtns"></div>
+    <p class="hint" id="zoneHint">Pick a side first.</p>
+
+    <label class="small" for="printed">Section number on the sign (best data if you can read it)</label>
+    <div class="row">
+      <input type="text" id="printed" class="grow" inputmode="numeric"
+             placeholder="e.g. 214" autocomplete="off">
+      <button id="confToggle" style="width:104px;">Approx</button>
+    </div>
+    <p class="hint" id="printedHint">The printed number is the only thing here
+    that is a fact about the building. The zone is an estimate.</p>
+  </div>
+
+  <div class="card">
+    <label class="small">What happened</label>
+    <div class="grid2" id="outcomeBtns">
+      <button data-outcome="caught">Caught by a fan</button>
+      <button data-outcome="catchable">Catchable, not caught</button>
+      <button data-outcome="netting">Hit the netting</button>
+      <button data-outcome="nochance">No chance / too high</button>
+    </div>
+  </div>
+
+  <details>
+    <summary>Recent entries</summary>
+    <div class="card">
+      <ul class="recent" id="recent" style="list-style:none;padding:0;margin:0;"></ul>
+    </div>
+  </details>
+
+  <details>
+    <summary>Backup &amp; token</summary>
+    <div class="card">
+      <label class="small" for="token">Write token (if the server requires one)</label>
+      <input type="text" id="token" placeholder="leave blank if unset" autocomplete="off">
+      <p class="hint" style="margin-top:10px;">
+        <a href="/api/log/export.csv" style="color:var(--accent)">Download CSV</a> ·
+        <a href="/api/log/export.jsonl" style="color:var(--accent)">Download JSONL</a><br>
+        Do this after every game. If the server's database is not on a mounted
+        volume, a redeploy destroys it and the season does not come back.
+      </p>
+    </div>
+  </details>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="status">
+    <span id="summary">pick a side and an outcome</span>
+    <span id="queueCount"></span>
+  </div>
+  <button id="save" disabled>LOG FOUL</button>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var LS = 'foulcast_log_v1';
+  var QKEY = 'foulcast_queue_v1';
+  var APP_VERSION = 'log-1.0';
+
+  var state = {
+    game: null, zones: [], lineups: {away: [], home: []},
+    parkKey: '', zoneMapVersion: '',
+    inning: 1, half: 'top',
+    batter: null, side: null, zone: null, outcome: null,
+    confidence: 'approx',
+    observer: '', vantage: 'in_park', scope: 'full_bowl', seat: '',
+    sessionUid: null, games: []
+  };
+
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+    var s = '';
+    for (var i = 0; i < 32; i++) s += Math.floor(Math.random() * 16).toString(16);
+    return s;
+  }
+  function $(id) { return document.getElementById(id); }
+  function token() { return ($('token').value || '').trim(); }
+
+  function headers() {
+    var h = {'Content-Type': 'application/json'};
+    if (token()) h['X-Log-Token'] = token();
+    return h;
+  }
+
+  function toast(msg, ms) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.style.display = 'none'; }, ms || 2200);
+  }
+
+  // --- persistence of form preferences (not of data) ---
+  function savePrefs() {
+    try {
+      localStorage.setItem(LS, JSON.stringify({
+        observer: state.observer, vantage: state.vantage, scope: state.scope,
+        seat: state.seat, gamePk: state.game && state.game.game_pk,
+        inning: state.inning, half: state.half, sessionUid: state.sessionUid,
+        token: token(), date: $('watchDate').value
+      }));
+    } catch (e) { /* private browsing */ }
+  }
+  function loadPrefs() {
+    try { return JSON.parse(localStorage.getItem(LS) || '{}'); }
+    catch (e) { return {}; }
+  }
+
+  // --- offline queue -------------------------------------------------------
+  // Entries live here until the server confirms them. Nothing is dropped on a
+  // failed request; the season is not repeatable.
+  function queue() {
+    try { return JSON.parse(localStorage.getItem(QKEY) || '[]'); }
+    catch (e) { return []; }
+  }
+  function setQueue(q) {
+    try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch (e) {}
+    renderQueue();
+  }
+  function renderQueue() {
+    var n = queue().length;
+    $('queueCount').textContent = n ? n + ' waiting to sync' : '';
+    $('queueState').textContent = n ? 'unsynced' : 'synced';
+    $('queueState').className = n ? 'pending' : '';
+  }
+
+  function flush() {
+    var q = queue();
+    if (!q.length) return Promise.resolve();
+    return fetch('/api/log/foul', {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({entries: q})
+    }).then(function (r) { return r.json().then(function (d) { return {ok: r.ok, d: d}; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          toast('Server rejected the batch: ' + (res.d.error || 'unknown') + ' — kept locally');
+          return;
+        }
+        var done = {};
+        (res.d.accepted || []).forEach(function (u) { done[u] = 1; });
+        // A rejected entry is a bad row, not a network problem. Keeping it in
+        // the queue would retry it forever, so drop it and say so out loud.
+        (res.d.rejected || []).forEach(function (r) {
+          done[r.entry_uid] = 1;
+          console.warn('rejected entry', r);
+        });
+        if ((res.d.rejected || []).length) {
+          toast((res.d.rejected || []).length + ' entr(y/ies) rejected — see console');
+        } else if ((res.d.warnings || []).length) {
+          // Stored, but something disagreed — usually a section number that
+          // belongs to the other side. Worth saying now rather than after nine
+          // innings of the same mistake.
+          toast(res.d.warnings[0].message, 5000);
+        }
+        setQueue(queue().filter(function (e) { return !done[e.entry_uid]; }));
+        if (typeof res.d.total_logged === 'number') {
+          $('sessionCount').textContent = res.d.total_logged;
+        }
+        loadRecent();
+      })
+      .catch(function () { toast('Offline — ' + queue().length + ' entries held locally'); });
+  }
+
+  // --- games ---------------------------------------------------------------
+  function loadGames() {
+    var d = ($('watchDate').value || '').trim();
+    var url = '/api/log/games' + (d ? '?date=' + encodeURIComponent(d) : '');
+    $('game').innerHTML = '<option>loading…</option>';
+    return fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      state.games = data.games || [];
+      var sel = $('game');
+      sel.innerHTML = '';
+      if (!state.games.length) {
+        sel.innerHTML = '<option value="">no games found for ' + (data.date || 'today') + '</option>';
+        return;
+      }
+      state.games.forEach(function (g, i) {
+        var o = document.createElement('option');
+        o.value = i;
+        o.textContent = g.away_abbrev + ' @ ' + g.home_abbrev + ' — ' + (g.time || '');
+        sel.appendChild(o);
+      });
+      var prefs = loadPrefs();
+      var idx = 0;
+      state.games.forEach(function (g, i) { if (g.game_pk === prefs.gamePk) idx = i; });
+      sel.value = idx;
+      selectGame(idx);
+    }).catch(function () {
+      $('game').innerHTML = '<option value="">could not load games (offline?)</option>';
+    });
+  }
+
+  function selectGame(idx) {
+    var g = state.games[idx];
+    if (!g) return;
+    state.game = g;
+    state.parkKey = g.park_key;
+    $('parkName').textContent = g.venue_name || g.park_key || '—';
+    savePrefs();
+    var url = '/api/log/context/' + g.game_pk + '?away=' + g.away_id +
+              '&home=' + g.home_id + '&park=' + encodeURIComponent(g.park_key || '');
+    fetch(url).then(function (r) { return r.json(); }).then(function (ctx) {
+      state.zones = ctx.zones || [];
+      state.zoneMapVersion = ctx.zone_map_version || '';
+      state.parkKey = ctx.park_key || state.parkKey;
+      state.lineups = {away: ctx.away_lineup || [], home: ctx.home_lineup || []};
+      $('parkName').textContent = ctx.park_name || $('parkName').textContent;
+      renderZones();
+      renderBatters();
+      openSession();
+      loadRecent();
+    }).catch(function () {
+      $('zoneHint').textContent = 'Zone list unavailable offline — side and outcome still log fine.';
+    });
+  }
+
+  function openSession() {
+    if (!state.game) return;
+    if (!state.sessionUid) state.sessionUid = uuid();
+    savePrefs();
+    fetch('/api/log/session', {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({
+        session_uid: state.sessionUid,
+        game_pk: state.game.game_pk,
+        game_date: state.game.game_date,
+        park_key: state.parkKey,
+        home_team_id: state.game.home_id, away_team_id: state.game.away_id,
+        home_team: state.game.home_name, away_team: state.game.away_name,
+        observer: state.observer, vantage: state.vantage, scope: state.scope,
+        observer_section: state.seat,
+        first_inning: state.inning, last_inning: state.inning,
+        started_at: new Date().toISOString()
+      })
+    }).catch(function () { /* session syncs again on the next save */ });
+  }
+
+  // --- rendering -----------------------------------------------------------
+  function renderZones() {
+    var wrap = $('zoneBtns');
+    wrap.innerHTML = '';
+    if (!state.side) { $('zoneHint').textContent = 'Pick a side first.'; return; }
+    var list = state.zones.filter(function (z) { return z.side === state.side; });
+    if (!list.length) {
+      $('zoneHint').textContent = 'No zones listed for this side in the park model.';
+      return;
+    }
+    $('zoneHint').textContent = 'Tap the closest one. Skip it if you saw the section number.';
+    list.forEach(function (z) {
+      var b = document.createElement('button');
+      b.innerHTML = '<span class="zname"></span><span class="zsec"></span>';
+      b.querySelector('.zname').textContent = z.name.replace(/\s*\(Sec[^)]*\)/, '');
+      b.querySelector('.zsec').textContent = z.printed + ' · ' + z.level;
+      if (state.zone === z.zone_id) b.className = 'on';
+      b.onclick = function () {
+        state.zone = (state.zone === z.zone_id) ? null : z.zone_id;
+        renderZones(); updateSave();
+      };
+      wrap.appendChild(b);
+    });
+  }
+
+  function battingTeam() {
+    // Top of the inning: the away team bats.
+    return state.half === 'top' ? 'away' : 'home';
+  }
+
+  function renderBatters() {
+    var side = battingTeam();
+    var list = state.lineups[side] || [];
+    var g = state.game || {};
+    $('batTeam').textContent = '— ' + (side === 'away' ?
+      (g.away_abbrev || 'away') : (g.home_abbrev || 'home')) + ' batting';
+    var wrap = $('batters');
+    wrap.innerHTML = '';
+    if (!list.length) {
+      var span = document.createElement('span');
+      span.className = 'hint';
+      span.textContent = 'Lineup not posted — batter stays blank, which is fine.';
+      wrap.appendChild(span);
+      return;
+    }
+    list.forEach(function (p) {
+      var b = document.createElement('button');
+      var last = p.name.split(' ').slice(-1)[0];
+      b.textContent = p.order + '. ' + last + (p.bats ? ' (' + p.bats + ')' : '');
+      if (state.batter && state.batter.mlb_id === p.mlb_id) b.className = 'on';
+      b.onclick = function () {
+        state.batter = (state.batter && state.batter.mlb_id === p.mlb_id) ? null : p;
+        renderBatters();
+      };
+      wrap.appendChild(b);
+    });
+  }
+
+  function setGroup(containerId, attr, value) {
+    var btns = $(containerId).querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].className = (btns[i].getAttribute(attr) === value) ? 'on' : '';
+    }
+  }
+
+  function updateSave() {
+    var ready = !!(state.side && state.outcome);
+    $('save').disabled = !ready;
+    var bits = [];
+    if (state.side) bits.push(state.side === 'HOME' ? 'behind home' : state.side + ' side');
+    var printed = ($('printed').value || '').trim();
+    if (printed) bits.push('sec ' + printed);
+    else if (state.zone) bits.push(state.zone);
+    if (state.outcome) bits.push(state.outcome);
+    $('summary').textContent = bits.length ? bits.join(' · ') : 'pick a side and an outcome';
+  }
+
+  // --- saving --------------------------------------------------------------
+  var OUTCOMES = {
+    caught:    {landing_type: 'seats',   catchable: 1, caught: 1},
+    catchable: {landing_type: 'seats',   catchable: 1, caught: 0},
+    netting:   {landing_type: 'netting', catchable: 0, caught: 0},
+    nochance:  {landing_type: 'seats',   catchable: 0, caught: 0}
+  };
+
+  function save() {
+    if (!state.side || !state.outcome) return;
+    var o = OUTCOMES[state.outcome];
+    var zoneObj = null;
+    state.zones.forEach(function (z) { if (z.zone_id === state.zone) zoneObj = z; });
+
+    var entry = {
+      entry_uid: uuid(),
+      session_uid: state.sessionUid,
+      game_pk: state.game ? state.game.game_pk : null,
+      game_date: state.game ? state.game.game_date : null,
+      park_key: state.parkKey,
+      inning: state.inning,
+      half: state.half,
+      batter_name: state.batter ? state.batter.name : null,
+      batter_mlb_id: state.batter ? state.batter.mlb_id : null,
+      bat_side: state.batter ? state.batter.bats : null,
+      side: state.side,
+      printed_section: ($('printed').value || '').trim() || null,
+      level: zoneObj ? zoneObj.level : null,
+      model_zone_id: state.zone,
+      zone_map_version: state.zoneMapVersion,
+      landing_type: o.landing_type,
+      catchable: o.catchable,
+      caught: o.caught,
+      location_confidence: state.confidence,
+      observed_at: new Date().toISOString(),
+      client_ts: new Date().toString(),
+      app_version: APP_VERSION
+    };
+
+    var outcomeLabel = state.outcome;
+    var q = queue();
+    q.push(entry);
+    setQueue(q);
+
+    // Clear only the per-foul fields. Inning, half, batter and side persist —
+    // consecutive fouls off the same batter are common and re-tapping them
+    // costs time while the next pitch is being thrown.
+    state.zone = null; state.outcome = null;
+    $('printed').value = '';
+    setGroup('outcomeBtns', 'data-outcome', null);
+    renderZones();
+    updateSave();
+    toast('Logged — ' + entry.side + (entry.printed_section ? ' sec ' + entry.printed_section : '')
+          + ' · ' + outcomeLabel);
+
+    // Keep the session's inning span current so calibration knows what was watched.
+    fetch('/api/log/session', {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({session_uid: state.sessionUid, last_inning: state.inning})
+    }).catch(function () {});
+
+    flush();
+  }
+
+  // --- recent list + undo --------------------------------------------------
+  function loadRecent() {
+    if (!state.game) return;
+    fetch('/api/log/entries?game_pk=' + state.game.game_pk + '&limit=15' +
+          (token() ? '&token=' + encodeURIComponent(token()) : ''))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (typeof d.total_logged === 'number') $('sessionCount').textContent = d.total_logged;
+        var ul = $('recent');
+        ul.innerHTML = '';
+        (d.entries || []).forEach(function (e) {
+          var li = document.createElement('li');
+          if (e.voided_at) li.className = 'void';
+          var txt = document.createElement('span');
+          txt.textContent = 'inn ' + (e.inning || '?') + ' · ' +
+            (e.printed_section ? 'sec ' + e.printed_section : (e.model_zone_id || e.side)) +
+            ' · ' + e.landing_type + (e.batter_name ? ' · ' + e.batter_name : '');
+          li.appendChild(txt);
+          if (!e.voided_at) {
+            var b = document.createElement('button');
+            b.textContent = 'undo';
+            b.onclick = function () {
+              fetch('/api/log/void', {
+                method: 'POST', headers: headers(),
+                body: JSON.stringify({entry_uid: e.entry_uid, reason: 'user undo'})
+              }).then(loadRecent);
+            };
+            li.appendChild(b);
+          }
+          ul.appendChild(li);
+        });
+      }).catch(function () {});
+  }
+
+  // --- wiring --------------------------------------------------------------
+  function init() {
+    var p = loadPrefs();
+    state.observer = p.observer || '';
+    state.vantage = p.vantage || 'in_park';
+    state.scope = p.scope || 'full_bowl';
+    state.seat = p.seat || '';
+    state.inning = p.inning || 1;
+    state.half = p.half || 'top';
+    state.sessionUid = p.sessionUid || uuid();
+    $('observer').value = state.observer;
+    $('seat').value = state.seat;
+    $('token').value = p.token || '';
+    $('watchDate').value = p.date || '';
+
+    document.querySelectorAll('[data-vantage]').forEach(function (b) {
+      b.onclick = function () {
+        state.vantage = b.getAttribute('data-vantage');
+        if (state.vantage === 'broadcast') {
+          state.scope = 'broadcast_frame';
+        } else if (state.scope === 'broadcast_frame') {
+          state.scope = 'full_bowl';
+        }
+        setGroup('setup', 'data-vantage', state.vantage);
+        setGroup('scopeBtns', 'data-scope', state.scope);
+        savePrefs(); openSession();
+      };
+    });
+    document.querySelectorAll('[data-scope]').forEach(function (b) {
+      b.onclick = function () {
+        state.scope = b.getAttribute('data-scope');
+        setGroup('scopeBtns', 'data-scope', state.scope);
+        savePrefs(); openSession();
+      };
+    });
+    setGroup('setup', 'data-vantage', state.vantage);
+    setGroup('scopeBtns', 'data-scope', state.scope);
+
+    $('observer').oninput = function () { state.observer = this.value; savePrefs(); };
+    $('seat').oninput = function () { state.seat = this.value; savePrefs(); };
+    $('token').oninput = savePrefs;
+    $('watchDate').onchange = function () { savePrefs(); loadGames(); };
+
+    $('game').onchange = function () { selectGame(parseInt(this.value, 10)); };
+    $('reloadGames').onclick = loadGames;
+
+    function setInning(n) {
+      state.inning = Math.max(1, Math.min(30, n));
+      $('inningVal').textContent = state.inning;
+      savePrefs();
+    }
+    $('inningUp').onclick = function () { setInning(state.inning + 1); };
+    $('inningDown').onclick = function () { setInning(state.inning - 1); };
+    $('halfToggle').onclick = function () {
+      state.half = state.half === 'top' ? 'bot' : 'top';
+      $('halfToggle').textContent = state.half === 'top' ? 'TOP' : 'BOT';
+      $('halfVal').textContent = state.half === 'top' ? '▲' : '▼';
+      state.batter = null;
+      renderBatters(); savePrefs();
+    };
+    setInning(state.inning);
+    $('halfToggle').textContent = state.half === 'top' ? 'TOP' : 'BOT';
+    $('halfVal').textContent = state.half === 'top' ? '▲' : '▼';
+
+    document.querySelectorAll('[data-side]').forEach(function (b) {
+      b.onclick = function () {
+        var v = b.getAttribute('data-side');
+        state.side = (state.side === v) ? null : v;
+        state.zone = null;
+        setGroup('sideBtns', 'data-side', state.side);
+        renderZones(); updateSave();
+      };
+    });
+    document.querySelectorAll('[data-outcome]').forEach(function (b) {
+      b.onclick = function () {
+        var v = b.getAttribute('data-outcome');
+        state.outcome = (state.outcome === v) ? null : v;
+        setGroup('outcomeBtns', 'data-outcome', state.outcome);
+        updateSave();
+      };
+    });
+
+    $('confToggle').onclick = function () {
+      state.confidence = state.confidence === 'exact' ? 'approx' :
+                         (state.confidence === 'approx' ? 'guess' : 'exact');
+      this.textContent = state.confidence === 'exact' ? 'Exact' :
+                         (state.confidence === 'approx' ? 'Approx' : 'Guess');
+      this.className = state.confidence === 'exact' ? 'on' : '';
+    };
+    $('printed').oninput = updateSave;
+    $('save').onclick = save;
+
+    // Re-send the session before draining the queue. A game that started with
+    // no signal has fouls referencing a session the server never received, and
+    // the session is what tells calibration which innings were watched.
+    function resync() { openSession(); flush(); }
+    window.addEventListener('online', resync);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) resync();
+    });
+
+    renderQueue();
+    loadGames();
+    flush();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

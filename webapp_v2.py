@@ -102,9 +102,18 @@ RATE_LIMIT_MAX = 10     # max requests per window
 RATE_LIMIT_MAX_IPS = 10000  # cap tracked IPs to prevent memory growth
 
 
-def _check_rate_limit(ip: str) -> bool:
-    """Return True if request is allowed, False if rate-limited. Thread-safe."""
+def _check_rate_limit(ip: str, bucket: str = '', max_requests: int | None = None) -> bool:
+    """Return True if request is allowed, False if rate-limited. Thread-safe.
+
+    `bucket` gives a caller its own counter under the same IP. Foul logging
+    needs one: a prediction is one request per page view, but a fan clearing a
+    backed-up offline queue in the 8th inning can legitimately fire a dozen
+    writes in a few seconds, and dropping those loses data that cannot be
+    re-collected.
+    """
     now = time.time()
+    limit = RATE_LIMIT_MAX if max_requests is None else max_requests
+    ip = f"{bucket}:{ip}" if bucket else ip
     with _rate_lock:
         # Evict oldest IPs if we hit the cap
         if len(_rate_limits) > RATE_LIMIT_MAX_IPS:
@@ -123,7 +132,7 @@ def _check_rate_limit(ip: str) -> bool:
             _rate_limits[ip] = []
         # Prune old entries
         _rate_limits[ip] = [t for t in _rate_limits[ip] if now - t < RATE_LIMIT_WINDOW]
-        if len(_rate_limits[ip]) >= RATE_LIMIT_MAX:
+        if len(_rate_limits[ip]) >= limit:
             return False
         _rate_limits[ip].append(now)
         return True
@@ -601,16 +610,379 @@ def api_stadiums():
     return jsonify(stadiums_out)
 
 
+# ============================================================
+# FOUL BALL LOGGING (Step 8)
+# ============================================================
+# The only first-party spatial data this project has. See the module docstring
+# in foulball/foul_log.py for why the schema looks the way it does, and
+# AUDIT.md (2026-08-09 correction) for why it is the scarce asset.
+#
+# Writes are guarded by FOULCAST_LOG_TOKEN when set. A public write endpoint
+# with no gate is an invitation to poison the one dataset here that cannot be
+# regenerated; the season ends 2026-09-27 and there is no second attempt.
+
+from contextlib import closing
+
+from foulball import foul_log
+from foulball.seat_map import (
+    zone_catalog, zone_for_printed_section, zone_map_version, normalize_label,
+)
+from foulball.mlb_api import get_lineup
+
+LOG_RATE_LIMIT_MAX = 120   # per minute per IP, for /api/log/* writes
+LOG_TOKEN = os.environ.get('FOULCAST_LOG_TOKEN', '')
+
+log_context_cache = LRUCache(maxsize=60, ttl_seconds=1800)
+
+
+def _log_token_ok() -> bool:
+    """No token configured means open (local dev). Configured means required."""
+    if not LOG_TOKEN:
+        return True
+    supplied = request.headers.get('X-Log-Token') or request.args.get('token', '')
+    return secrets.compare_digest(supplied, LOG_TOKEN)
+
+
+def _log_guard():
+    """Shared precondition check for logging endpoints. Returns a response or None."""
+    if not _log_token_ok():
+        return jsonify({'error': 'invalid or missing log token'}), 403
+    # ProxyFix has already resolved X-Forwarded-For to one trusted hop; reading
+    # the raw header here would let a client pick its own rate-limit bucket.
+    ip = request.remote_addr or '0.0.0.0'
+    if not _check_rate_limit(ip, bucket='log', max_requests=LOG_RATE_LIMIT_MAX):
+        return jsonify({'error': 'rate limited'}), 429
+    return None
+
+
+@app.route('/log')
+def log_page():
+    """Mobile logging form. Bookmark this on the phone."""
+    return LOG_TEMPLATE
+
+
+@app.route('/api/log/games')
+def api_log_games():
+    """Games available to log, with the park key each resolves to.
+
+    Defaults to today. `?date=YYYY-MM-DD` reaches back for a game logged from
+    a recording, which is a normal case — broadcasts work for this.
+    """
+    from datetime import date as _date
+    qdate = request.args.get('date', '').strip()
+    try:
+        if qdate:
+            d = _date.fromisoformat(qdate)
+            games_raw = get_todays_games(d.strftime('%m/%d/%Y'))
+        else:
+            d = _date.today()
+            games_raw = get_todays_games()
+    except Exception as e:
+        logger.error("Log games API error: %s", e)
+        return jsonify({'games': [], 'date': qdate, 'error': str(e)})
+
+    games = []
+    for g in games_raw:
+        games.append({
+            'game_pk': g.game_id,
+            'game_date': g.game_date,
+            'away_id': g.away_team_id,
+            'home_id': g.home_team_id,
+            'away_name': g.away_team,
+            'home_name': g.home_team,
+            'away_abbrev': TEAM_ID_TO_ABBREV.get(g.away_team_id, ''),
+            'home_abbrev': TEAM_ID_TO_ABBREV.get(g.home_team_id, ''),
+            'park_key': g.stadium_key,
+            'venue_name': g.venue_name,
+            'time': g.game_time,
+            'status': g.status,
+        })
+    return jsonify({'games': games, 'date': d.isoformat()})
+
+
+@app.route('/api/log/context/<int:game_pk>')
+def api_log_context(game_pk):
+    """Everything the form needs for one game: park zones and both lineups.
+
+    Lineups are best-effort. A missing lineup degrades to "Unknown batter",
+    which is an acceptable row — batter identity is optional in the schema,
+    section and side are not.
+    """
+    away_id = request.args.get('away', type=int)
+    home_id = request.args.get('home', type=int)
+    park_key = request.args.get('park', '')
+
+    ck = f"ctx_{game_pk}_{away_id}_{home_id}_{park_key}"
+    cached = log_context_cache.get(ck)
+    if cached is not None:
+        return jsonify(cached)
+
+    stadium_key = park_key if park_key in STADIUMS else resolve_stadium_key(home_id or 0, None)
+    stadium = STADIUMS.get(stadium_key, STADIUMS['yankee_stadium'])()
+
+    def _lineup(team_id):
+        if not team_id:
+            return []
+        try:
+            return [{'name': p.name, 'mlb_id': p.mlb_id, 'bats': p.bats,
+                     'order': p.batting_order}
+                    for p in get_lineup(game_pk, team_id)[:9]]
+        except Exception as e:
+            logger.warning("Lineup lookup failed for team %s game %s: %s",
+                           team_id, game_pk, e)
+            return []
+
+    out = {
+        'game_pk': game_pk,
+        'park_key': stadium_key,
+        'park_name': stadium.name,
+        'zone_map_version': zone_map_version(stadium),
+        'zones': zone_catalog(stadium),
+        'away_lineup': _lineup(away_id),
+        'home_lineup': _lineup(home_id),
+    }
+    log_context_cache.set(ck, out)
+    return jsonify(out)
+
+
+@app.route('/api/log/session', methods=['POST'])
+def api_log_session():
+    """Open or update a logging session (who was watching, and what of)."""
+    guard = _log_guard()
+    if guard:
+        return guard
+    payload = request.get_json(silent=True) or {}
+
+    park_key = payload.get('park_key')
+    if park_key in STADIUMS:
+        payload['zone_map_version'] = zone_map_version(STADIUMS[park_key]())
+
+    try:
+        with closing(foul_log.connect()) as conn:
+            uid = foul_log.upsert_session(conn, payload)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error("Session write failed: %s", e)
+        return jsonify({'error': 'storage error'}), 500
+    return jsonify({'session_uid': uid})
+
+
+def _resolve_zone(entry: dict) -> tuple[dict, str | None]:
+    """Fill in model_zone_id from the printed section where possible.
+
+    Returns the entry and an optional warning for the observer. `zone_source`
+    records how the zone was arrived at, and every value is useful:
+
+      printed_section  — the fan read the sign; the mapping is derived
+      tapped_zone      — the fan tapped a zone directly; coarser, still real
+      none             — no zone claims that printed section, which is a
+                         finding about the park model rather than a bad row
+      conflict         — the printed section and the tapped side disagree
+
+    A conflict stores both raw fields and no zone. One of the two taps was
+    wrong and there is no way to tell which, so resolving it either way would
+    put a fabricated location into the only real spatial data here. The
+    printed section still counts toward boundary work, where side is not the
+    unit of analysis.
+    """
+    # Normalize up front so every path below returns the key explicitly rather
+    # than leaving "no zone" as an absent key.
+    entry['model_zone_id'] = entry.get('model_zone_id') or None
+
+    park_key = entry.get('park_key')
+    if park_key not in STADIUMS:
+        return entry, None
+    stadium = STADIUMS[park_key]()
+    entry['zone_map_version'] = zone_map_version(stadium)
+
+    printed = normalize_label(entry.get('printed_section') or '')
+    if not printed:
+        entry['zone_source'] = 'tapped_zone' if entry.get('model_zone_id') else 'none'
+        return entry, None
+
+    entry['printed_section'] = printed
+    side = entry.get('side') if entry.get('side') in ('1B', '3B', 'HOME') else None
+    zone = zone_for_printed_section(
+        stadium, printed, level=entry.get('level') or None, side=side)
+
+    if not zone:
+        # Printed section is real but unmapped. Keep any tapped zone as a
+        # fallback, and flag the source so calibration can separate the two.
+        entry['zone_source'] = 'tapped_zone' if entry.get('model_zone_id') else 'none'
+        return entry, None
+
+    zone_side = next((s.side for s in stadium.sections
+                      if s.section_id == zone), None)
+    if side and zone_side and zone_side != side:
+        entry['model_zone_id'] = None
+        entry['zone_source'] = 'conflict'
+        return entry, (f"Section {printed} is on the {zone_side} side, but you "
+                       f"tapped {side}. Stored without a zone — check the number.")
+
+    entry['model_zone_id'] = zone
+    entry['zone_source'] = 'printed_section'
+    return entry, None
+
+
+@app.route('/api/log/foul', methods=['POST'])
+def api_log_foul():
+    """Store one or more observed fouls.
+
+    Accepts a single entry or `{"entries": [...]}` so the phone can flush a
+    queue built up while offline in one request. Every entry carries a
+    client-generated `entry_uid`, so a retry after a timeout stores nothing
+    twice — `stored` counts new rows, `duplicates` counts recognised retries,
+    and both mean "it is safe to clear this from the queue".
+    """
+    guard = _log_guard()
+    if guard:
+        return guard
+
+    body = request.get_json(silent=True) or {}
+    entries = body.get('entries') if isinstance(body, dict) else None
+    if entries is None:
+        entries = [body]
+    if not isinstance(entries, list) or not entries:
+        return jsonify({'error': 'no entries'}), 400
+    if len(entries) > 200:
+        return jsonify({'error': 'too many entries in one request (max 200)'}), 400
+
+    stored, duplicates, rejected, accepted_uids, warnings = 0, 0, [], [], []
+    try:
+        with closing(foul_log.connect()) as conn:
+            for raw in entries:
+                if not isinstance(raw, dict):
+                    rejected.append({'entry_uid': None, 'errors': ['not an object']})
+                    continue
+                entry, warning = _resolve_zone(dict(raw))
+                if warning:
+                    warnings.append({'entry_uid': entry.get('entry_uid'),
+                                     'message': warning})
+                violations = foul_log.validate_foul(entry)
+                if violations:
+                    rejected.append({'entry_uid': entry.get('entry_uid'),
+                                     'errors': violations})
+                    continue
+                uid, created = foul_log.record_foul(conn, entry)
+                accepted_uids.append(uid)
+                stored += 1 if created else 0
+                duplicates += 0 if created else 1
+            total = foul_log.counts(conn)
+    except Exception as e:
+        logger.error("Foul write failed: %s", e)
+        return jsonify({'error': 'storage error'}), 500
+
+    logger.info("Logged fouls: stored=%d duplicate=%d rejected=%d",
+                stored, duplicates, len(rejected))
+    return jsonify({
+        'stored': stored,
+        'duplicates': duplicates,
+        'accepted': accepted_uids,
+        'rejected': rejected,
+        'warnings': warnings,
+        'total_logged': total['live'],
+    })
+
+
+@app.route('/api/log/void', methods=['POST'])
+def api_log_void():
+    """Undo a mis-tap. Marks the row void; never deletes it."""
+    guard = _log_guard()
+    if guard:
+        return guard
+    body = request.get_json(silent=True) or {}
+    uid = body.get('entry_uid')
+    if not uid:
+        return jsonify({'error': 'entry_uid required'}), 400
+    try:
+        with closing(foul_log.connect()) as conn:
+            ok = foul_log.void_foul(conn, uid, body.get('reason', ''))
+    except Exception as e:
+        logger.error("Void failed: %s", e)
+        return jsonify({'error': 'storage error'}), 500
+    return jsonify({'voided': ok})
+
+
+@app.route('/api/log/entries')
+def api_log_entries():
+    """Recent entries, for the on-screen list and undo.
+
+    Voided rows are included so an undo visibly lands — an entry that silently
+    vanishes invites the observer to undo the wrong one next. `total_logged`
+    still counts only live rows.
+    """
+    if not _log_token_ok():
+        return jsonify({'error': 'invalid or missing log token'}), 403
+    game_pk = request.args.get('game_pk', type=int)
+    limit = min(request.args.get('limit', default=25, type=int), 200)
+    try:
+        with closing(foul_log.connect()) as conn:
+            rows = foul_log.list_fouls(conn, game_pk=game_pk, limit=limit,
+                                       include_voided=True)
+            total = foul_log.counts(conn)
+    except Exception as e:
+        logger.error("Entry list failed: %s", e)
+        return jsonify({'error': 'storage error'}), 500
+    return jsonify({'entries': rows, 'total_logged': total['live'],
+                    'games_logged': total['games']})
+
+
+@app.route('/api/log/export.<fmt>')
+def api_log_export(fmt):
+    """Full dump of the log as CSV or JSONL.
+
+    Deliberately easy to reach. On a container with an ephemeral filesystem the
+    database dies at redeploy unless FOULCAST_LOG_DB points at a mounted
+    volume, and a one-URL backup is the cheapest insurance against that.
+    """
+    if not _log_token_ok():
+        return jsonify({'error': 'invalid or missing log token'}), 403
+    if fmt not in ('csv', 'jsonl'):
+        return jsonify({'error': 'format must be csv or jsonl'}), 400
+    try:
+        with closing(foul_log.connect()) as conn:
+            rows = foul_log.export_rows(conn)
+    except Exception as e:
+        logger.error("Export failed: %s", e)
+        return jsonify({'error': 'storage error'}), 500
+
+    from flask import Response
+    if fmt == 'jsonl':
+        body = "\n".join(json.dumps({k: r.get(k) for k in foul_log.EXPORT_COLUMNS})
+                         for r in rows)
+        return Response(body, mimetype='application/x-ndjson', headers={
+            'Content-Disposition': 'attachment; filename=foul_log.jsonl'})
+
+    import csv
+    import io
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=foul_log.EXPORT_COLUMNS,
+                            extrasaction='ignore')
+    writer.writeheader()
+    for r in rows:
+        writer.writerow(r)
+    return Response(buf.getvalue(), mimetype='text/csv', headers={
+        'Content-Disposition': 'attachment; filename=foul_log.csv'})
+
+
 # === HTML TEMPLATE ===
 # Loaded below from separate string to keep code readable.
 # All visualization is client-side (SVG + Canvas). No matplotlib needed.
 
-HTML_TEMPLATE = open(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'demo.html'),
-    encoding='utf-8'
-).read() if os.path.exists(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'demo.html')
-) else '<h1>Template not found. Create templates/demo.html</h1>'
+def _load_template(filename: str, fallback: str) -> str:
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', filename)
+    if os.path.exists(path):
+        with open(path, encoding='utf-8') as fh:
+            return fh.read()
+    return fallback
+
+
+HTML_TEMPLATE = _load_template(
+    'demo.html', '<h1>Template not found. Create templates/demo.html</h1>')
+
+LOG_TEMPLATE = _load_template(
+    'foul_log.html', '<h1>Template not found. Create templates/foul_log.html</h1>')
 
 
 if __name__ == '__main__':

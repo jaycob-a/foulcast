@@ -14,6 +14,13 @@ COPY webapp_v2.py .
 # Copy spray profiles (needed at runtime for per-batter pull tendency)
 COPY .cache/spray_profiles.json .cache/spray_profiles.json
 
+# Foul observation log lands here by default. THIS DIRECTORY IS EPHEMERAL —
+# it is wiped on every redeploy. Set FOULCAST_LOG_DB to a path on a mounted
+# volume before logging anything you care about, and export after each game
+# (/api/log/export.jsonl). See NOTES_STEP8.md.
+RUN mkdir -p /app/data
+VOLUME ["/app/data"]
+
 ENV FLASK_ENV=production
 
 EXPOSE 8080
