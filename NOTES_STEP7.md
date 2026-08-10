@@ -535,14 +535,21 @@ any of it is right.
 
 ## Final flag summary
 
-31 parks, seed 42, 400 sims/batter. **4 parks flagged, 27 clean.**
+31 parks, seed 42, 400 sims/batter, **after** the Yankee `UB` fix.
+**4 parks flagged, 27 clean.** Fleet median total 32.7.
 
 | park | flags |
 |---|---|
-| Las Vegas Ballpark | outlier total (20.8, robust z -29.7); 59% unmatched vs fleet 35% |
-| Sutter Health Park | outlier total (22.7, robust z -25.1); 55% unmatched vs fleet 35% |
-| Fenway Park | outlier total (28.0, robust z -11.9); 45% unmatched vs fleet 35%; 2 dead zones |
+| Las Vegas Ballpark | outlier total (20.8, robust z -25.9); 59% unmatched vs fleet 35% |
+| Sutter Health Park | outlier total (22.7, robust z -21.8); 55% unmatched vs fleet 35% |
+| Fenway Park | outlier total (28.0, robust z -10.3); 45% unmatched vs fleet 35%; 2 dead zones |
 | Yankee Stadium | 2 dead zones (`1B-UR`, `3B-UR`) |
+
+Yankee's dead zones survive the `UB` fix and are unrelated to it: `1B-UR` and
+`3B-UR` are upper decks whose distance range lies entirely inside a lower
+deck's, so `exposed_bands()` correctly gives the ground below them away and
+they own no area at any angle. They cannot be hit by construction. Yankee no
+longer draws an unmatched flag — 36% against a fleet median of 35%.
 
 Zero parks flagged for hard edges. Zero flagged for asymmetry. No park has an
 angular blind spot — every angle from 0 to 180 owns at least one band on both
