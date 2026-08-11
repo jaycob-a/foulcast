@@ -689,7 +689,7 @@ def _netting_block(n: dict) -> str:
     if not n['checked'] and not n['evidence_in_gaps']:
         add("  No logged observation falls in a park whose netting is mapped, so")
         add("  nothing here is tested yet. Every foul logged with a printed")
-        add("  section at one of the 14 mapped parks tests it.")
+        add("  section at one of the 11 mapped parks tests it.")
         return "\n".join(L)
 
     add(f"  Observations in netting-mapped zones : {n['checked']}")

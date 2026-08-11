@@ -103,15 +103,22 @@ printed section number. See `foulball/netting.py` for the data and
   occupied before; the only thing that changes is what a ball landing there
   means. `zone_map_fingerprint` deliberately does not cover it, so Step 8's
   logged observations keep their stamp.
-- **It found nine parks whose printed labels are wrong.** The join is
+- **It found nineteen parks whose printed labels are suspect.** The join is
   rejected where the club's netting page and this file's section names cannot
   both be true — Yankee Stadium numbers the infield field level 109-131 where
   the Yankees net 011-029; Nationals Park puts the PNC Diamond Club at
-  104-107 where the club puts it at 119-126. Those parks show a netting gap,
-  and their section *names* should be treated as suspect until corrected. The
-  provenance claim above that "section names and deck levels track real
-  seating charts" is the weakest claim in this block, and §5 of
-  NOTES_STEP10.md is the first external test it has failed.
+  104-107 where the club puts it at 119-126. Nine parks fail that way. Ten
+  more fail a check that uses no netting data at all: their field-level
+  labels cannot describe a continuous bowl, because one foul line's numbers
+  straddle the plate's (Angel 103-109 *and* 133-141 with the plate at 110-113,
+  PNC, Comerica, Kauffman, Petco, Busch, Tropicana) or because both lines run
+  the same way from a plate at the end of the series (Globe Life, and the two
+  parks where that shape is corroborated or cannot matter — Dodger and Rate
+  Field). Those parks show a netting gap, and their section *names* should be
+  treated as suspect until corrected. The provenance claim above that "section
+  names and deck levels track real seating charts" is the weakest claim in
+  this block, and §5 and §5a of NOTES_STEP10.md are the first external tests
+  it has failed.
 
 The landing-section geometry helpers below (`exposed_bands`,
 `find_landing_section`) are sound; they are correct machinery operating on

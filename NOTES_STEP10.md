@@ -47,15 +47,15 @@ log keeps its history and no existing row is re-read through the new data.
 
 | | parks | zones |
 |---|---:|---:|
-| Mapped — extent joined onto the zone table | **14** | 154 |
+| Mapped — extent joined onto the zone table | **11** | 121 |
 | Source gap — `SOURCED_DATA.md` has nothing usable | **8** | 106 |
-| Join gap — good club page, irreconcilable labels | **9** | 84 |
+| Join gap — good club page, irreconcilable labels | **12** | 117 |
 
-Of the 344 zones fleet-wide: **52 netted, 13 partially netted, 89 not netted,
-190 unknown.** Every one of the 52 is at field level, which is the right
+Of the 344 zones fleet-wide: **41 netted, 10 partially netted, 70 not netted,
+223 unknown.** Every one of the 41 is at field level, which is the right
 answer for a screen that hangs in front of the first row.
 
-The 14 mapped parks and what came out of them:
+The 11 mapped parks and what came out of them:
 
 | park | netted zones | partially netted |
 |---|---|---|
@@ -66,11 +66,8 @@ The 14 mapped parks and what came out of them:
 | `fenway_park` | 4 | 3B-DUG (FB71-79 of FB71-82) |
 | `truist_park` | 4 | 3B-DUG |
 | `citizens_bank` | 4 | — |
-| `angel_stadium` | 4 | 3B-DUG |
-| `pnc_park` | 4 | 3B-DUG |
 | `dodger_stadium` | 3 | 1B-DUG, 3B-DUG |
 | `coors_field` | 3 | 1B-DUG, 3B-DUG |
-| `globe_life` | 3 | 3B-FB1 |
 | `great_american` | 2 | 1B-DUG, 3B-FB1 |
 | `minute_maid` | 1 | 1B-FB1, 3B-FB1 |
 
@@ -135,9 +132,10 @@ unsourced as ignoring the net.
 
 ## 5. The join is guarded, and the guards found something
 
-A published extent is only applied when it survives three checks. None of
+A published extent is only applied when it survives four checks. None of
 them tests whether the model's labels are *right*; they test whether the club
-page and the labels can both be true at once.
+page and the labels can both be true at once, and whether the answer depends
+on parts of the table that cannot be checked at all.
 
 - **G1 — nothing matched.** Every published label falls outside every zone.
 - **G2 — the plate is left open.** A behind-plate zone at the front of the
@@ -147,9 +145,11 @@ page and the labels can both be true at once.
 - **G3 — coverage rises away from the plate.** Netting starts behind the plate
   and stops somewhere down the line. It cannot skip the near zone and resume
   at the far one.
+- **G4 — the zone table cannot describe a bowl, and the answer depends on it.**
+  Added after the first pass; §5a explains why and what it caught.
 
-Nine parks fail, and in every case the club page is fine and the model's
-printed labels are not:
+Twelve parks fail. In every case the club page is fine and the model's printed
+labels are not. Nine are caught by the extent:
 
 | park | what the club says | what the zone table says | verdict |
 |---|---|---|---|
@@ -163,13 +163,80 @@ printed labels are not:
 | `petco_park` | nets 101-106, 109-116 | behind plate is 106-109 | G2 |
 | `busch_stadium` | nets 132-165 | 127-133 and 157-167 both marked 3B | G3 |
 
-That table is the most useful thing this step produced. It is a list of nine
-parks whose zone tables are wrong about their own printed section numbers,
-found by external data rather than by inspection. Nationals Park is the
-sharpest: the club and the model disagree about where the same *named product*
-is. `seat_map.py` already warned that a printed label is only as good as the
-name it was parsed from; this is the first evidence of how often it is not
-good enough.
+That table is the most useful thing this step produced. It is a list of parks
+whose zone tables are wrong about their own printed section numbers, found by
+external data rather than by inspection. Nationals Park is the sharpest: the
+club and the model disagree about where the same *named product* is.
+`seat_map.py` already warned that a printed label is only as good as the name
+it was parsed from; this is the first evidence of how often it is not good
+enough.
+
+## 5a. Three more, found by pulling on the asymmetry flag
+
+The first pass mapped 14 parks and flagged six of them as "markedly
+asymmetric" — Truist, Citizens Bank, Great American, Angel, PNC and Globe
+Life, every one of them with the 1B field zones fully netted and the 3B side
+only partly. Always that way round. A heuristic that fires six times in the
+same direction is describing something, and it was not netting.
+
+The check that settled it reads only the zone table and asks whether its
+printed labels could describe a continuous seating bowl. A real lower bowl is
+numbered round the ring, so one foul line carries numbers below the plate's
+and the other carries numbers above. Fleet-wide the tables come in three
+shapes:
+
+| shape | what it means | parks |
+|---|---|---|
+| **ring** — sides on opposite sides of the plate's numbers | describes a real bowl | 12, incl. Fenway, Camden, Coors, Truist, Citizens Bank, Great American |
+| **straddle** — one side has numbers both below *and* above the plate's | the numbering wraps at an unpublished point | 7: Angel, PNC, Comerica, Kauffman, Petco, Busch, Tropicana |
+| **plate-at-end** — both sides above the plate's numbers | numbered outward from the plate, not round the bowl | 12, incl. Dodger, Globe Life, Rate Field |
+
+The corroboration is that this test, which never looks at a netting extent,
+independently condemns almost every park the extent-based guards had already
+rejected: five of the seven straddle parks were gaps already, and six of the
+plate-at-end parks were rejected by G2. So the three shapes are not an
+artefact of how I drew them.
+
+Applying it to the six flagged parks:
+
+- **Angel Stadium** and **PNC Park** straddle. Angel's 3B zones are 103-109
+  and 133-141 with the plate at 110-113; PNC's are 101-107 and 130-139 with
+  the plate at 108-111. In both, one 3B zone sits on the far side of the
+  plate's numbers from the other, so the numbering wraps somewhere no source
+  gives. Reading "103-133" or "101 → 130" as an arc then nets the *far* end of
+  the 3B line while leaving the near end open, which cannot be a real
+  installation. **Now gaps** (`labels_wrap_unpublished`).
+- **Globe Life Field** is plate-at-end: the plate zone is 1-5, the 1B zones
+  run 6-19, the 3B zones run 25-37, and 20-24 belongs to nothing. Which block
+  is which side is not established anywhere, and the published extent (1-26)
+  covers only part of the series, so the answer depends entirely on that
+  unestablished split. **Now a gap** (`sides_unverifiable`).
+- **Truist**, **Citizens Bank** and **Great American** are ring-shaped and
+  clean: no straddle, both sides adjacent to the plate zone, numbering
+  monotone outward. Their asymmetry is the published extent's, and they stay
+  mapped.
+
+Two parks share Globe Life's unverifiable shape and keep their mapping for
+reasons recorded on their entries:
+
+- **Rate Field** — the extent (108-156) covers *every* field-level label in
+  the park, so which side each block is on cannot change any answer. That is
+  not luck; the White Sox net pole to pole, and a pole-to-pole net is exactly
+  the case where the sides stop mattering.
+- **Dodger Stadium** — the club itself states the split, "section 40 (1B) and
+  section 41 (3B)", and the zone table splits the same series the same way
+  (FD12-FD24 on 1B, FD11-FD25 on 3B). Two sources agreeing on the parity is
+  the corroboration Globe Life has none of. It is recorded as
+  `series_corroborated` and it is the only one in the file.
+
+What remains on the three still-mapped parks is a smaller, honest doubt. The
+published extent at each is off-centre relative to the plate zone — Truist
+reaches 18 sections one way and 8 the other, Citizens Bank 18 and 7, Great
+American 5 and 16 — where the other ring-numbered parks sit near even (Coors
+15/15, Minute Maid 5/6, Progressive 20/22, Camden 32/27, Fenway 22/30). That
+is either a genuinely lopsided net or a zone table whose plate is a few
+sections off the real one. Nothing in the sources separates the two, so it is
+a flag carrying both numbers, not a gap.
 
 Comerica Park is a tenth failure of a different kind and is recorded as a
 source gap, not a join gap: the club gives two arc endpoints (116 and 142) on
@@ -276,16 +343,19 @@ Nothing is scored yet; the log has no rows at a mapped park.
 
 ## 10. What is still open
 
-1. **Nine parks need their zone tables corrected** against their own club
-   netting pages (§5). Until then those parks exclude nothing, and their
-   printed-section labels should not be trusted for the foul log either.
-2. **Six of the 14 mapped parks flag as markedly asymmetric** — Truist,
-   Citizens Bank, Great American, Angel, PNC and Globe Life all come out with
-   the 1B field zones fully netted and the 3B side partly. Real installations
-   are sometimes asymmetric, so this is reported rather than rejected, but a
-   one-directional pattern across six parks is more likely to be the same
-   label problem as §5 in a milder form. These are the mapped results most
-   likely to be wrong.
+1. **Twelve parks need their zone tables corrected** — nine against their own
+   club netting pages (§5), three because the tables cannot describe a bowl
+   (§5a). Until then those parks exclude nothing, and their printed-section
+   labels should not be trusted for the foul log either. Seven more parks have
+   the same structural defects but are already gaps for source reasons, so the
+   real count of suspect tables is nineteen.
+2. **Three mapped parks are off-centre and still mapped** — Truist (18/8),
+   Citizens Bank (18/7), Great American (5/16), against a ring-numbered fleet
+   that sits near even. Their labels pass every structural check, so this is
+   the extent's asymmetry unless their plate zone is a few sections off. These
+   are the mapped results most likely to be wrong, and the cheapest way to
+   settle them is to read the same club seating maps again for where home
+   plate is.
 3. **Fully-behind vs partially-covered per printed section** is unsourced
    league-wide bar one section. Closing it needs the per-section photo review
    `SOURCED_DATA.md` describes and did not do.

@@ -54,21 +54,33 @@ by `seat_map.parse_printed_ranges`. Joining the two is therefore label
 arithmetic, and it inherits every weakness of the labels. See `seat_map` for
 why printed labels are the right join key.
 
-The join is only accepted for a park when it survives three coherence checks
+The join is only accepted for a park when it survives four coherence checks
 (`_check_join` below). They do not validate the labels — a park that passes
 has merely failed to contradict itself. What they catch is the opposite case:
 a published extent that is flatly incompatible with the printed sections the
-model has written down for that park. When that happens the netting data is
-not what is wrong; the model's labels are. The park is reported as a gap with
-the contradiction attached, because a join the model cannot verify is a gap
-and not a fact.
+model has written down for that park, or a label table that cannot describe a
+seating bowl at all. When either happens the netting data is not what is
+wrong; the model's labels are. The park is reported as a gap with the
+contradiction attached, because a join the model cannot verify is a gap and
+not a fact.
 
-Fourteen of the 31 parks currently pass. Of the 17 that do not, six are the
+Eleven of the 31 parks currently pass. Of the 20 that do not, six are the
 source gaps listed above, one is the Tropicana conflict, one is an unresolved
-arc (Comerica), and **nine are the model's own printed labels contradicting a
-perfectly good club page**. That last group is the most useful thing in this
-file: it is a list of parks whose zone tables need fixing, discovered by
-external data rather than by inspection.
+arc (Comerica), and **twelve are the model's own printed labels failing
+against a perfectly good club page**. That last group is the most useful thing
+in this file: it is a list of parks whose zone tables need fixing, discovered
+by external data rather than by inspection.
+
+Nine of the twelve are caught by the extent itself (G1-G3). The other three —
+Angel Stadium, PNC Park, Globe Life Field — are caught by G4, which reads only
+the zone table and asks whether its printed labels could describe a continuous
+bowl. They came to attention as an asymmetry: six mapped parks were coming out
+with the 1B side fully netted and the 3B side partly, always that way round,
+which is not what a heuristic should be trusted with. Three of the six turned
+out to have structurally impossible tables and are now gaps. The other three —
+Truist, Citizens Bank, Great American — pass every structural check, so their
+asymmetry belongs to the published extent and they stay mapped with the
+numbers attached to the flag.
 
 HOW THIS IS USED, IN TWO OPPOSITE DIRECTIONS
 ============================================
@@ -143,6 +155,14 @@ PDL_RULE_YEAR = 2022
 #                                 behind the plate, with the wrap unpublished
 #   'labels_contradict_model'     extent is fine; the model's printed labels
 #                                 for this park cannot be reconciled with it
+#   'labels_wrap_unpublished'     the model's own labels for one foul line sit
+#                                 both below and above the plate's, so the
+#                                 park's numbering wraps at an unpublished
+#                                 point and no interval can be read as an arc
+#   'sides_unverifiable'          the table numbers outward from the plate
+#                                 rather than round the bowl, nothing
+#                                 establishes which block is 1B and which is
+#                                 3B, and the answer depends on it
 GapKind = str
 
 SourceKind = str        # 'primary' | 'secondary_unverified' | 'none'
@@ -194,6 +214,11 @@ class ParkNetting:
     # Printed labels the club itself marks as only partially covered. One
     # entry league-wide: Target Field 126.
     partial_labels: tuple[str, ...] = ()
+    # Evidence, from the source itself, that the club's numbering and this
+    # park's zone table agree about which side is which. Only needed where the
+    # zone table cannot be checked structurally — see `_check_join` G4b — and
+    # only one park in the file has any.
+    series_corroborated: str = ''
     # Set when the source cannot yield section numbers at all. A park with a
     # gap_kind is never joined, whatever ranges it carries.
     gap_kind: GapKind | None = None
@@ -338,6 +363,16 @@ PARK_NETTING: dict[str, ParkNetting] = {
         source_kind='primary',
         year=2026,
         year_basis=PRIMARY_YEAR_BASIS,
+        series_corroborated=(
+            'the club states which side each endpoint is on — 40 on 1B, 41 on '
+            '3B — and the zone table splits the same series the same way, '
+            'FD12-FD24 on 1B against FD11-FD25 on 3B. Two sources agreeing on '
+            'the parity of the sides is what makes this park\'s '
+            'plate-outward numbering checkable where the others of its shape '
+            'are not. The two outer zones also come out `partially_netted` '
+            'whether the ranges are read as every integer or as their own '
+            'parity, so the result does not rest on that reading either.'
+        ),
         notes=(
             'The Dugout Club (DG series) sits in front of the field boxes '
             'behind the plate and is not named on the netting page, so it is '
@@ -995,6 +1030,106 @@ def _classify_zone(section, park: ParkNetting) -> ZoneNetting:
     )
 
 
+def _field_label_structure(stadium) -> dict:
+    """Where each side's field-level labels sit relative to the plate zone's.
+
+    This asks nothing about netting. It asks whether a park's own zone table
+    can describe a continuous seating bowl, which is a precondition for
+    joining anything shaped like an interval onto it.
+
+    A real lower bowl is numbered continuously round the ring, so the sections
+    on one side of the plate carry numbers below the plate's and the other
+    side's carry numbers above. Two departures from that matter here:
+
+      'straddle'      one side has labels both below *and* above the plate's
+                      range. The numbering must wrap somewhere the source does
+                      not say, so a published range like "103-133" cannot be
+                      turned into an arc.
+      'plate_at_end'  both sides sit on the same side of the plate's range.
+                      That is not a ring at all; it is a numbering that starts
+                      at the plate and runs outward in blocks. Such series do
+                      exist — Dodger Stadium's field boxes are one, and the
+                      club corroborates it — but they are also exactly what a
+                      generated table looks like, and the table alone cannot
+                      tell the two apart.
+
+    Returns {'straddle': [(side, zone_ids)], 'plate_at_end': bool,
+             'field_span': {prefix: (lo, hi)}}.
+    """
+    field = [s for s in stadium.sections if s.level == 'field']
+    home = [s for s in field if s.side == 'HOME']
+
+    home_span: dict[str, tuple[int, int]] = {}
+    for s in home:
+        for prefix, nums in _zone_numbers(s).items():
+            lo, hi = min(nums), max(nums)
+            if prefix in home_span:
+                lo = min(lo, home_span[prefix][0])
+                hi = max(hi, home_span[prefix][1])
+            home_span[prefix] = (lo, hi)
+
+    field_span: dict[str, list[int]] = {}
+    straddle: list[tuple[str, list[str]]] = []
+    side_rels: dict[str, set[str]] = {'1B': set(), '3B': set()}
+
+    for side in ('1B', '3B'):
+        below, above = [], []
+        for s in [z for z in field if z.side == side]:
+            for prefix, nums in _zone_numbers(s).items():
+                field_span.setdefault(prefix, []).extend(nums)
+                span = home_span.get(prefix)
+                if span is None:
+                    continue
+                if max(nums) < span[0]:
+                    below.append(s.section_id)
+                elif min(nums) > span[1]:
+                    above.append(s.section_id)
+        if below:
+            side_rels[side].add('below')
+        if above:
+            side_rels[side].add('above')
+        if below and above:
+            straddle.append((side, sorted(below + above)))
+
+    for prefix, nums in _zone_numbers_of_home(home).items():
+        field_span.setdefault(prefix, []).extend(nums)
+
+    plate_at_end = (
+        bool(side_rels['1B']) and side_rels['1B'] == side_rels['3B']
+        and len(side_rels['1B']) == 1
+    )
+    return {
+        'straddle': straddle,
+        'plate_at_end': plate_at_end,
+        'field_span': {p: (min(v), max(v)) for p, v in field_span.items() if v},
+    }
+
+
+def _zone_numbers_of_home(home_sections) -> dict[str, list[int]]:
+    out: dict[str, list[int]] = {}
+    for s in home_sections:
+        for prefix, nums in _zone_numbers(s).items():
+            out.setdefault(prefix, []).extend(nums)
+    return out
+
+
+def _extent_covers_field_span(park: ParkNetting, field_span: dict) -> bool:
+    """Does the published extent contain every field-level label in the park?
+
+    When it does, which side a label is on stops mattering: every field zone
+    is netted whichever way round the table has them. Rate Field is the case —
+    the White Sox net pole to pole, so the answer survives a label table that
+    cannot be checked.
+    """
+    if not field_span:
+        return False
+    for prefix, (lo, hi) in field_span.items():
+        for n in range(lo, hi + 1):
+            if not any(r.contains(prefix, n) for r in park.ranges):
+                return False
+    return True
+
+
 def _netted_fraction(z: ZoneNetting) -> float | None:
     total = len(z.netted_labels) + len(z.exposed_labels)
     if total == 0:
@@ -1002,12 +1137,14 @@ def _netted_fraction(z: ZoneNetting) -> float | None:
     return len(z.netted_labels) / total
 
 
-def _check_join(stadium, zones: dict[str, ZoneNetting]) -> tuple[str, str]:
-    """Coherence checks on a completed join. Returns (detail, '') if it holds.
+def _check_join(stadium, zones: dict[str, ZoneNetting],
+                park: ParkNetting) -> tuple[str, str]:
+    """Coherence checks on a completed join. Returns ('', '') if it holds.
 
-    Three ways a join is rejected. None of them tests whether the model's
+    Four ways a join is rejected. None of them tests whether the model's
     labels are *right* — they test whether the published extent and the
-    labels can both be true at once.
+    labels can both be true at once, and whether the answer depends on parts
+    of the table that cannot be checked at all.
 
       G1  Nothing matched. Every published label falls outside every zone, so
           the two are numbering different things. Yankee Stadium: the club
@@ -1025,6 +1162,25 @@ def _check_join(stadium, zones: dict[str, ZoneNetting]) -> tuple[str, str]:
           skip the near zone and resume at the far one. When this fires the
           zone table has usually put one label range on the wrong side of the
           park — Busch, where 127-133 and 157-167 are both marked 3B.
+
+      G4  The zone table cannot describe a continuous bowl, and the answer
+          depends on that. Two shapes, in `_field_label_structure`:
+
+          (a) a side straddling the plate's label range. The numbering wraps
+              somewhere unpublished, so a published interval is not an arc.
+              Angel Stadium and PNC Park both put one zone on the far side of
+              the plate's numbers from its own side's other zone.
+          (b) a plate sitting at the end of the series with both sides running
+              outward from it. Real at Dodger Stadium, where the club
+              corroborates the split; unverifiable anywhere else. It is
+              rejected only where the answer *depends* on it — where the
+              extent covers every field-level label in the park, as the White
+              Sox's pole-to-pole netting does, every field zone is netted
+              whichever way round the sides are.
+
+          G4 is the one guard that fires on evidence outside the netting data.
+          It exists because the alternative is a park whose netting looks
+          mapped and whose sides may be swapped.
 
     Returns ('', '') when the join holds, otherwise (gap_kind, detail).
     """
@@ -1072,6 +1228,28 @@ def _check_join(stadium, zones: dict[str, ZoneNetting]) -> tuple[str, str]:
                         f'netting cannot skip the near zone and resume at the '
                         f'far one, so one of these label ranges is on the '
                         f'wrong side')
+
+    structure = _field_label_structure(stadium)
+
+    if structure['straddle']:
+        side, zone_ids = structure['straddle'][0]
+        return ('labels_wrap_unpublished',
+                f'the {side} field zones ({", ".join(zone_ids)}) carry labels '
+                f'both below and above the behind-plate zone\'s, so this '
+                f'park\'s numbering wraps at a point no source gives. A '
+                f'published range is then not an arc, and reading it as one '
+                f'would net the far end of a foul line while leaving the near '
+                f'end open')
+
+    if structure['plate_at_end'] and not park.series_corroborated \
+            and not _extent_covers_field_span(park, structure['field_span']):
+        return ('sides_unverifiable',
+                'both foul-line sides carry labels on the same side of the '
+                'behind-plate zone\'s, so the table numbers outward from the '
+                'plate rather than round the bowl. Nothing in the sources '
+                'says which block is 1B and which is 3B, and the published '
+                'extent does not cover the whole field level, so the answer '
+                'would depend on a split this repo has not established')
 
     return ('', '')
 
@@ -1149,7 +1327,7 @@ def _join_park_uncached(stadium, park_key: str) -> ParkJoin:
                         gap_kind=park.gap_kind, gap_detail=detail)
 
     zones = {s.section_id: _classify_zone(s, park) for s in stadium.sections}
-    gap_kind, detail = _check_join(stadium, zones)
+    gap_kind, detail = _check_join(stadium, zones, park)
     unmatched = _unmatched_published(stadium, park)
 
     if gap_kind:
@@ -1164,6 +1342,38 @@ def _join_park_uncached(stadium, park_key: str) -> ParkJoin:
     return ParkJoin(park_key, 'mapped', park, zones,
                     flags=_join_flags(stadium, zones, park),
                     unmatched_published=unmatched)
+
+
+def _extent_reach_either_side(stadium, park: ParkNetting):
+    """How far the published extent reaches either side of the plate zone.
+
+    Counted in published section numbers, including ones no zone claims, so
+    it measures the source against the one label the table is most likely to
+    have right — where it says home plate is. Returns (below, above), or
+    (None, None) at a park numbered outward from the plate, where the
+    question does not apply.
+    """
+    structure = _field_label_structure(stadium)
+    if structure['plate_at_end']:
+        return (None, None)
+
+    home = [s for s in stadium.sections
+            if s.side == 'HOME' and s.level in _FRONT_LEVELS]
+    spans = _zone_numbers_of_home(home)
+    field_span = structure['field_span']
+    below = above = 0
+    for prefix, nums in spans.items():
+        lo, hi = min(nums), max(nums)
+        f_lo, f_hi = field_span.get(prefix, (lo, hi))
+        for r in park.ranges:
+            # Skip a range that misses this park's field level entirely: it is
+            # a different printed series (Truist's 10-42, Great American's
+            # 1-5 and 22-25), and counting it would measure the wrong ring.
+            if r.prefix != prefix or r.end < f_lo or r.start > f_hi:
+                continue
+            below += sum(1 for n in range(r.start, r.end + 1) if n < lo)
+            above += sum(1 for n in range(r.start, r.end + 1) if n > hi)
+    return (below, above)
 
 
 def _join_flags(stadium, zones: dict[str, ZoneNetting],
@@ -1190,10 +1400,25 @@ def _join_flags(stadium, zones: dict[str, ZoneNetting],
 
     c1, c3 = side_cover('1B'), side_cover('3B')
     if c1 is not None and c3 is not None and abs(c1 - c3) > 0.25:
+        lo, hi = _extent_reach_either_side(stadium, park)
+        centring = ''
+        if lo is not None:
+            centring = (f'. The extent is off-centre in the same direction: '
+                        f'it reaches {lo} published sections below the '
+                        f'behind-plate zone and {hi} above it. The other '
+                        f'ring-numbered parks sit near even — Coors 15/15, '
+                        f'Minute Maid 5/6, Progressive 20/22, Camden 32/27, '
+                        f'Fenway 22/30 — so this is either a genuinely '
+                        f'lopsided net or a zone table whose plate is a few '
+                        f'sections off the real one. Nothing in the sources '
+                        f'separates the two, which is why it is a flag and '
+                        f'not a gap')
         flags.append(
             f'coverage is markedly asymmetric — {c1:.0%} of the 1B field '
-            f'zones against {c3:.0%} of the 3B. Real installations are '
-            f'sometimes asymmetric, so this is reported rather than rejected'
+            f'zones against {c3:.0%} of the 3B. This park\'s labels pass the '
+            f'structural checks (its numbering runs round the bowl with the '
+            f'plate in the middle), so the asymmetry is the published '
+            f'extent\'s and not a wrapped or reversed table{centring}'
         )
 
     if park.partial_labels:

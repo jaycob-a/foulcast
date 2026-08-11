@@ -292,7 +292,8 @@ every souvenir ranking and highlighted in the safety view; the two readings come
 from one field.
 
 **The finding.** The join is only applied where the club page and the model's
-own section names can both be true at once. At **nine parks they cannot**:
+own section names can both be true at once. At **nine parks they cannot**, and
+the club page is the sourced side of every one:
 
 | park | club page | `stadium.py` section names |
 |---|---|---|
@@ -306,18 +307,44 @@ own section names can both be true at once. At **nine parks they cannot**:
 | Petco Park | nets 101-106, 109-116 | behind plate is 106-109 |
 | Busch Stadium | nets 132-165 | 127-133 and 157-167 both marked 3B |
 
+**Three more, found without using the netting data at all.** A second check
+asks only whether a park's printed labels could describe a continuous seating
+bowl — one foul line numbered below the plate's sections, the other above,
+which is how a lower bowl is numbered. Three further parks fail it:
+
+| park | zone table | failure |
+|---|---|---|
+| Angel Stadium | 3B zones are 103-109 *and* 133-141, plate at 110-113 | one foul line straddles the plate's numbers, so the numbering wraps at an unpublished point |
+| PNC Park | 3B zones are 101-107 *and* 130-139, plate at 108-111 | same |
+| Globe Life Field | plate 1-5, one side 6-19, the other 25-37, nothing at 20-24 | numbered outward from the plate rather than round the bowl; which block is 1B is not established anywhere |
+
+This check never looks at a netting extent, and it independently condemns
+almost every park the extent-based checks had already rejected — five of the
+seven straddling tables and six of the plate-at-end ones were gaps already.
+Two parks share the plate-at-end shape and keep their mapping for recorded
+reasons: Rate Field, where pole-to-pole netting covers every field-level
+section so the sides cannot matter, and Dodger Stadium, where the club states
+the split itself ("section 40 (1B) and section 41 (3B)") and the zone table
+splits the same series the same way.
+
+**So nineteen of the 31 zone tables are suspect on their numbering** — twelve
+now showing as netting gaps, seven already gaps for source reasons and
+carrying the same defect underneath.
+
 **This contradicts a provenance claim this audit has been relying on.** Both
 the 2026-08-09 correction and `stadium.py`'s own header say the geometry is
 estimated *but* the section names and deck levels track real seating charts.
-That claim has now had its first external test, and at nine parks it failed.
-The names are not decoration: `seat_map.py` parses them into the printed-label
-index the entire Step 8 foul log is keyed on. At those nine parks a fan's
-logged section number is being mapped to a zone on the strength of a label
-range that a club page contradicts.
+That claim has now had its first external test, and at nine parks it failed
+outright, with ten more failing a structural check that needs no source at
+all. The names are not decoration: `seat_map.py` parses them into the
+printed-label index the entire Step 8 foul log is keyed on. At those parks a
+fan's logged section number is being mapped to a zone on the strength of a
+label range that a club page contradicts, or that cannot describe a bowl.
 
 The revised claim: section names track real seating charts *at the level of
 grouping and deck level*, and their **numeric ranges are unverified at every
-park and demonstrably wrong at nine**. Correcting them is now the highest-value
+park, demonstrably wrong at nine, and structurally impossible at ten more**.
+Correcting them is now the highest-value
 geometry work available, and unlike the distance/angle gap it needs no new
 class of source — the club seating maps already read in `SOURCED_DATA.md` would
 do it.
@@ -325,6 +352,6 @@ do it.
 **What netting did not change.** No ball lands anywhere different. Golden-game
 totals, mean distance, mean angle, the 1B/3B split and the unmatched count are
 byte-identical at all five games; the park sweep, the game backtest and the log
-calibration all read `expected_fouls` and are untouched. 17 of 31 parks have no
+calibration all read `expected_fouls` and are untouched. 20 of 31 parks have no
 usable netting data and are marked as gaps: nothing excluded, nothing
 highlighted, and the reason printed above the ranking.

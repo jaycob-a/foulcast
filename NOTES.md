@@ -412,7 +412,7 @@ parks transcribed from `SOURCED_DATA.md` Part 2, joined onto each park's zone
 table by printed section number. Full writeup in `NOTES_STEP10.md`.
 
 - **Item 2** said the model has no netting, so it assigns balls to seats
-  nobody can catch from. It no longer does at the 14 parks where the published
+  nobody can catch from. It no longer does at the 11 parks where the published
   extent joins: a foul into a netted zone is not catchable, the zone is out of
   every souvenir ranking, and the same zone leads the safety panel with its
   fouls, its exit velocities and the published net height intact. One field,
@@ -422,18 +422,24 @@ table by printed section number. Full writeup in `NOTES_STEP10.md`.
   gained a section that tests logged `landing_type='netting'` rows against the
   published extents. It is unscored only because the log has no rows at a
   mapped park yet.
-- **17 of 31 parks are gaps, and look like gaps.** Eight because
-  `SOURCED_DATA.md` has nothing to apply, nine because the club's section
+- **20 of 31 parks are gaps, and look like gaps.** Eight because
+  `SOURCED_DATA.md` has nothing to apply, twelve because the club's section
   numbers and this repo's section *names* cannot both be right. Nothing is
   excluded and nothing is highlighted at those parks, and the reason is
   printed above the ranking.
-- **New, and worse than the netting gap:** those nine parks are evidence
+- **New, and worse than the netting gap:** those twelve parks are evidence
   against a claim items 8 and 10 both leaned on — that the section names track
   real seating charts even though the geometry does not. At nine parks the
   numeric ranges in those names are contradicted by the club's own current
-  seating map. `AUDIT.md`'s Step 10 update carries the table. This is the
-  cheapest large correction now available in the repo: the sources needed to
-  fix it have already been read.
+  seating map. At three more — Angel, PNC, Globe Life — the names fail a test
+  that never looks at netting at all: their printed labels cannot describe a
+  continuous seating bowl, because one foul line's numbers straddle the
+  plate's or because both lines run the same way from a plate at the end of
+  the series. Seven further parks have the same structural defect and were
+  already gaps for source reasons, so **nineteen of the 31 zone tables are now
+  suspect on their numbering**. `AUDIT.md`'s Step 10 update carries the table.
+  This is the cheapest large correction available in the repo: the sources
+  needed to fix it have already been read.
 - Nothing physical moved. Golden-game totals, mean distance, mean angle, the
   1B/3B split and the unmatched count are byte-identical at all five games;
   the park sweep, the game backtest and the log calibration's zone comparison

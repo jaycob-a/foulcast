@@ -20,8 +20,7 @@ from foulball.batter_profiles import RED_SOX_2024_PROFILES, PITCHER_PROFILES
 MAPPED_PARKS = {
     'fenway_park', 'dodger_stadium', 'coors_field', 'truist_park',
     'camden_yards', 'citizens_bank', 'great_american', 'progressive_field',
-    'minute_maid', 'angel_stadium', 'pnc_park', 'oracle_park', 'globe_life',
-    'guaranteed_rate',
+    'minute_maid', 'oracle_park', 'guaranteed_rate',
 }
 
 # Parks where SOURCED_DATA.md itself has no usable section-level extent.
@@ -42,6 +41,16 @@ JOIN_GAP_PARKS = {
     'yankee_stadium', 'chase_field', 'petco_park', 'tmobile_park',
     'busch_stadium', 'rogers_centre', 'target_field', 'american_family',
     'nationals_park',
+    # Rejected by the structural checks (G4) rather than by the extent:
+    'angel_stadium', 'pnc_park',    # one foul line's labels wrap
+    'globe_life',                   # sides not establishable
+}
+
+# What each G4 park fails on, locked so a change of guard is a named diff.
+STRUCTURAL_GAP_KINDS = {
+    'angel_stadium': 'labels_wrap_unpublished',
+    'pnc_park': 'labels_wrap_unpublished',
+    'globe_life': 'sides_unverifiable',
 }
 
 
@@ -212,6 +221,87 @@ class TestTheJoin:
         assert field
         for sec in field:
             assert st.zone_netting[sec.section_id].status == 'netted'
+
+
+class TestTheZoneTableMustDescribeABowl:
+    """G4: structural checks on the labels, before any netting is applied.
+
+    These are the only checks in the layer that fire on evidence from outside
+    the netting data. They exist because the alternative is a park whose
+    netting looks mapped and whose sides may be swapped — worse than a gap,
+    because it is a wrong answer wearing a citation.
+    """
+
+    @pytest.mark.parametrize('key,kind', sorted(STRUCTURAL_GAP_KINDS.items()))
+    def test_structural_gap_park_fails_for_the_recorded_reason(self, key, kind):
+        j = N.join_park(STADIUMS[key](), key)
+        assert j.gap_kind == kind, f"{key}: {j.gap_kind} — {j.gap_detail}"
+
+    @pytest.mark.parametrize('key', ['angel_stadium', 'pnc_park'])
+    def test_a_wrapped_foul_line_is_detected(self, key):
+        """One 3B zone sits on the far side of the plate's numbers from the
+        other. Angel's 3B runs 103-109 and then 133-141 with the plate at
+        110-113; PNC's runs 101-107 and then 130-139 with the plate at
+        108-111. Either the numbering wraps at a point no source gives, or a
+        zone is on the wrong side. Both make an interval unreadable as an arc.
+        """
+        s = N._field_label_structure(STADIUMS[key]())
+        assert s['straddle'], f"{key}: expected a straddling side"
+        assert s['straddle'][0][0] == '3B'
+
+    @pytest.mark.parametrize('key', sorted(MAPPED_PARKS))
+    def test_no_mapped_park_has_a_wrapped_foul_line(self, key):
+        assert not N._field_label_structure(STADIUMS[key]())['straddle']
+
+    def test_globe_life_sides_are_not_establishable(self):
+        """Both foul lines numbered above the plate zone, with a five-section
+        hole between them, and an extent that covers only part of the series.
+        Which block is 1B and which is 3B decides the answer, and nothing
+        establishes it."""
+        s = N._field_label_structure(STADIUMS['globe_life']())
+        assert s['plate_at_end']
+        assert not N._extent_covers_field_span(
+            N.PARK_NETTING['globe_life'], s['field_span'])
+
+    def test_rate_field_survives_the_same_shape(self):
+        """Same unverifiable shape, and it does not matter: the White Sox net
+        pole to pole, so every field-level label is inside the extent and no
+        zone's status depends on which side it is on."""
+        s = N._field_label_structure(STADIUMS['guaranteed_rate']())
+        assert s['plate_at_end']
+        assert N._extent_covers_field_span(
+            N.PARK_NETTING['guaranteed_rate'], s['field_span'])
+
+    def test_dodger_survives_the_same_shape_by_corroboration(self):
+        """Dodger's field boxes really are numbered outward from the plate,
+        and the club says so: 40 on 1B, 41 on 3B, matching the zone table's
+        parity. That evidence is recorded on the entry and is what keeps the
+        park mapped where Globe Life is not."""
+        s = N._field_label_structure(STADIUMS['dodger_stadium']())
+        assert s['plate_at_end']
+        assert not N._extent_covers_field_span(
+            N.PARK_NETTING['dodger_stadium'], s['field_span'])
+        assert N.PARK_NETTING['dodger_stadium'].series_corroborated
+        assert N.join_park(STADIUMS['dodger_stadium'](),
+                           'dodger_stadium').status == 'mapped'
+
+    def test_corroboration_is_claimed_at_exactly_one_park(self):
+        """It is an escape hatch from a structural check, so it stays rare and
+        stays visible."""
+        claimed = {k for k, p in N.PARK_NETTING.items()
+                   if p.series_corroborated}
+        assert claimed == {'dodger_stadium'}
+
+    @pytest.mark.parametrize('key', sorted(MAPPED_PARKS))
+    def test_asymmetry_at_a_mapped_park_is_the_source_s(self, key):
+        """A mapped park's asymmetry, where it has any, comes from the extent
+        and not from a wrapped or reversed table — the structural checks have
+        already excluded those. The flag says so and carries the numbers."""
+        j = N.join_park(STADIUMS[key](), key)
+        for f in j.flags:
+            if 'asymmetric' in f:
+                assert 'structural checks' in f
+                assert 'below the behind-plate zone' in f
 
 
 @pytest.fixture(scope='module')
