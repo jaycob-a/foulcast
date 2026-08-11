@@ -11,6 +11,12 @@ COPY foulball/ foulball/
 COPY templates/ templates/
 COPY webapp_v2.py .
 
+# The public site: pre-built static pages plus the copy layer webapp_v2 reads
+# its slug registry from. Rebuild with `python site_build.py` before deploying;
+# without these, /parks/ 404s and the rest of the app is unaffected.
+COPY site/ site/
+COPY site_data.py .
+
 # Copy spray profiles (needed at runtime for per-batter pull tendency)
 COPY .cache/spray_profiles.json .cache/spray_profiles.json
 

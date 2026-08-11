@@ -1025,6 +1025,94 @@ def api_log_export(fmt):
         'Content-Disposition': 'attachment; filename=foul_log.csv'})
 
 
+# ============================================================
+# Public site (Step 11) — the 31 park pages plus a home page
+# ============================================================
+#
+# Built ahead of time by `site_build.py` into ./site and served from memory.
+# Nothing is simulated per request: the model run behind these pages is
+# deterministic, and the netting and park figures on them were read from their
+# sources on one day and are dated on the page. If ./site is absent the routes
+# return 404 and the rest of the app is unaffected.
+
+# Imported defensively: the demo app and the foul log must keep working in a
+# deployment that ships without the public site.
+try:
+    from site_data import PARK_SOURCES as _PARK_SOURCES
+    SITE_SLUGS = {s['slug'] for s in _PARK_SOURCES.values()}
+except ImportError:            # pragma: no cover - deployment shape only
+    logger.warning('site_data not importable; /parks/ will return 404')
+    SITE_SLUGS = set()
+
+SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
+_site_cache: dict[str, str] = {}
+_site_lock = threading.Lock()
+
+
+def _site_html(rel_dir: str):
+    """Read one built page, cached. `rel_dir` is '' for the home page."""
+    with _site_lock:
+        if rel_dir in _site_cache:
+            return _site_cache[rel_dir]
+    path = os.path.join(SITE_DIR, rel_dir, 'index.html') if rel_dir \
+        else os.path.join(SITE_DIR, 'index.html')
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding='utf-8') as fh:
+        html = fh.read()
+    with _site_lock:
+        _site_cache[rel_dir] = html
+    return html
+
+
+def _site_response(html: str):
+    from flask import Response
+    return Response(html, mimetype='text/html; charset=utf-8', headers={
+        'Cache-Control': 'public, max-age=3600',
+    })
+
+
+@app.route('/parks/')
+def site_home():
+    html = _site_html('')
+    if html is None:
+        return 'Site not built. Run: python site_build.py', 404
+    return _site_response(html)
+
+
+@app.route('/parks/<slug>/')
+def site_park(slug):
+    # Slugs are checked against the registry rather than sanitised, so no
+    # request-supplied string ever reaches a filesystem path.
+    if slug not in SITE_SLUGS:
+        return 'No such ballpark', 404
+    html = _site_html(slug)
+    if html is None:
+        return 'Site not built. Run: python site_build.py', 404
+    return _site_response(html)
+
+
+@app.route('/robots.txt')
+def robots_txt():
+    from flask import Response
+    body = ('User-agent: *\nAllow: /\n\n'
+            f'Sitemap: {request.url_root.rstrip("/")}/sitemap.xml\n')
+    return Response(body, mimetype='text/plain')
+
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    """Generated off the live host, so the built pages stay host-agnostic."""
+    from flask import Response
+    root = request.url_root.rstrip('/')
+    slugs = sorted(SITE_SLUGS)
+    urls = ''.join(f'<url><loc>{root}/parks/{s}/</loc></url>' for s in slugs)
+    body = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            f'<url><loc>{root}/parks/</loc></url>{urls}</urlset>\n')
+    return Response(body, mimetype='application/xml')
+
+
 # === HTML TEMPLATE ===
 # Loaded below from separate string to keep code readable.
 # All visualization is client-side (SVG + Canvas). No matplotlib needed.

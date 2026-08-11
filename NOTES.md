@@ -445,3 +445,32 @@ table by printed section number. Full writeup in `NOTES_STEP10.md`.
   the park sweep, the game backtest and the log calibration's zone comparison
   are untouched, because all of them read `expected_fouls` and netting does
   not change where a ball lands.
+
+**13. All of the above is now public — added 2026-08-11.** `step-11` builds the
+31 park pages and a home page (`site_build.py`, `site_data.py`, served by
+`webapp_v2` under `/parks/`). Full writeup in `NOTES_STEP11.md`. What it changes
+for the items above:
+
+- **Item 11's numbering finding is now a product constraint.** Because nineteen
+  of 31 zone tables are suspect on their numbering and nothing distinguishes
+  them from outside, **no section number appears anywhere on the site.** Zones
+  are described positionally — "the seats at field level behind home plate",
+  "the dugout boxes and field seats down the third-base line" — from
+  `site_data.ZONE_WORDS`, plus the park's own seating product word with the
+  range stripped. `tests/test_site.py` enforces it at every park.
+- **Item 2's two readings are the shape of every park page.** Netting first,
+  because it is sourced; the model second, because it is not. Then the same
+  zone figures read twice: netted zones removed from the catching list, netted
+  zones marked in the risk list. At the 20 gap parks the catching list says in
+  a panel that *nothing has been excluded*, which is the difference between a
+  gap and a blank.
+- **Items 1, 3, 5, 7 and 8 are quoted at the reader rather than filed.** Every
+  park page ends with the straight-back rate being a guess, the bowl shape
+  being unsourced, the mirror symmetry making left and right indistinguishable,
+  and the share of fouls that land where the model has no seats — which is 38%
+  at the median park and 60% at Las Vegas Ballpark. The word "safe" appears
+  nowhere on the site, in any inflection, and no page carries an accuracy
+  figure.
+- Nothing physical moved here either. No model code was touched; the site
+  calls `predict_game_fouls` with the same lineups, seed and pitch mix the park
+  sweep uses, and the full suite passes with the site tests added.
