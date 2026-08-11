@@ -217,3 +217,64 @@ Full evidence: the `MODULE PROVENANCE` block at the top of
 
 **Do not** map more stadiums until Phase 1 is done. That work only pays off once the matching
 logic is correct.
+
+---
+
+## Update — 2026-08-10 (Step 9)
+
+Appended, again, rather than edited in place. Nothing in the 2026-08-09
+correction above was wrong when it was written. Three of its numbers have since
+been made obsolete on purpose, and leaving them uncontradicted would be the
+same mistake in the other direction.
+
+**What the 2026-08-09 correction says, and what is now true.** That section's
+evidence for "one template wearing 31 names" was:
+
+| Claim, as of 2026-08-09 | As of 2026-08-10 |
+|---|---|
+| 2,064 geometry values drawn from **62 distinct values**, 84% multiples of 5 | 2,064 values drawn from **452**: 418 distinct distances, 15 angles, 19 heights |
+| Busch, Kauffman, Nationals and Rate **byte-identical**; Great American and Petco likewise | **No two parks are byte-identical.** 31 parks, 31 distinct geometry signatures |
+| `HOME-F` spans 55–90 degrees in all 31 parks | **Unchanged, and deliberately so** |
+| Every park exactly mirror-symmetric to the last decimal | **Unchanged, and deliberately so** |
+
+**What closed the gap.** Step 9 sourced three per-park physical parameters —
+foul-territory area, backstop distance, deck overhang — from Andrew Clem's
+stadium statistics, cross-checked against Seamheads and club figures, with a
+citation per park in `PARK_PARAMS.md`. They are applied in `stadium.py` as a
+radial scale, an absolute backstop anchor, and a rear pull-in for covered
+decks. The distances that result are no longer invented; they are the shared
+template's proportions placed by measured numbers.
+
+**What did not close, and is the more important half.** The angles and heights
+did not move at all, because no source publishes them. 2,064 geometry values
+still draw on 15 angles and 19 heights. Every park is still exactly
+mirror-symmetric. `SOURCED_DATA.md` records why: no public source gives
+distance-from-home-plate or angle-off-the-foul-line for any stadium section,
+and closing that needs a survey, CAD/GIS drawings, or Statcast's park geometry
+files. So the verdict of the correction above is unchanged — the geometry is
+still not measured — but the claim now has to be made on the shape, not on the
+distinctness of the numbers.
+
+**The audit's headline verdict is still CONTINUE**, and "what ready to sell
+actually requires" still names two missing assets. One of them is now half
+closed: the seating geometry is sourced in depth and unsourced in shape.
+Ground truth for foul landings remains entirely missing, and Step 8's logging
+mechanism is shelved with an empty log.
+
+**A second unsourced constant, small but worth naming.** Clem's backstop
+figure measures to the rear fence, so the anchor that pins the behind-plate
+bowl targets `backstop_ft + 1.0 ft` — seats stand behind a fence, not on it.
+The 1 ft is bounded rather than measured: Seamheads publishes a
+distance-to-*stands* figure, and at the 30 parks where both publish, the two
+agree exactly at 21 of them, with a mean difference of +0.40 ft and
+disagreements running both ways. The gap is below what either source can
+resolve. The correction moves no park by more than 0.1 fouls a game.
+
+**One new unsourced call, recorded here because it is load-bearing.** Whether a
+park's published upper-deck overhang counts as an obstruction depends on what
+is casting it, and Clem never says. The model classifies each park as deck,
+grandstand canopy, or stadium roof, and discards the figure at the six
+dome/retractable-roof parks on the grounds that a foul pop flies under a roof
+150+ ft up. That classification is argued per park in `stadium.py` and
+tabulated in `PARK_PARAMS.md`; it is judgment, not data, and it decides whether
+a sourced number is used at all.

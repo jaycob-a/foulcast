@@ -12,7 +12,10 @@ Ensures all 30 stadiums have valid section layouts:
 import pytest
 import numpy as np
 
-from foulball.stadium import STADIUMS, SeatSection
+from foulball.stadium import (
+    STADIUMS, SeatSection, PARK_PARAMS, _UPPER_COVER_BLOCKS, exposed_bands,
+    _SEAT_SETBACK_FT,
+)
 from foulball.mlb_api import (
     TEAM_STADIUM_MAP, ALTERNATE_HOME_VENUES,
     resolve_stadium_key, alternate_home_stadium_key,
@@ -117,6 +120,60 @@ class TestSectionGeometryValid:
                 f"{stadium.name} section {s.section_id}: "
                 f"avg_ticket_price={s.avg_ticket_price} is not positive"
             )
+
+
+class TestSourcedParams:
+    """Guard the two invariants the Step 9 sourced-parameter layer establishes.
+
+    Both are cheap to break by adding a park or editing a PARK_PARAMS row, and
+    neither shows up as a wrong-looking number — the geometry just quietly goes
+    back to being unanchored or uncovered.
+    """
+
+    def test_bowl_front_sits_behind_the_backstop(self, stadium):
+        """No behind-plate seat may be closer to home than the backstop fence.
+
+        Checked through exposed_bands() at a dead-back angle rather than
+        against raw section fields, because that is the front the engine
+        actually matches against. The front row sits one seat-setback behind
+        the fence, never on it — Clem's figure is the distance to the fence.
+        """
+        pool = [s for s in stadium.sections if s.side in ('1B', 'HOME')]
+        bands = exposed_bands(pool, 135.0)
+        assert bands, f"{stadium.name}: nothing owns the behind-plate wedge"
+        front = bands[0][1]
+        expected = stadium.backstop_distance + _SEAT_SETBACK_FT
+        assert front > stadium.backstop_distance, (
+            f"{stadium.name}: behind-plate bowl front is {front:.2f} ft, "
+            f"at or inside a backstop fence at {stadium.backstop_distance} ft"
+        )
+        assert front == pytest.approx(expected, abs=1e-6), (
+            f"{stadium.name}: behind-plate bowl front is {front:.2f} ft "
+            f"against an expected {expected:.2f} ft "
+            f"({stadium.backstop_distance} ft fence + {_SEAT_SETBACK_FT} ft setback)"
+        )
+
+    def test_every_overhang_figure_has_a_cover_classification(self):
+        """A published upper-deck percentage is unusable without one.
+
+        The classification decides whether the figure is applied at all, so a
+        park carrying one without the other is a silent behaviour change.
+        """
+        for key, p in PARK_PARAMS.items():
+            assert (p.upper_overhang is None) == (p.upper_cover is None), (
+                f"{key}: upper_overhang={p.upper_overhang} but "
+                f"upper_cover={p.upper_cover!r}"
+            )
+            if p.upper_cover is not None:
+                assert p.upper_cover in _UPPER_COVER_BLOCKS, (
+                    f"{key}: unknown upper_cover {p.upper_cover!r}"
+                )
+
+    def test_park_params_covers_every_stadium(self):
+        assert set(PARK_PARAMS) == set(STADIUMS), (
+            f"PARK_PARAMS and STADIUMS disagree: "
+            f"{set(PARK_PARAMS) ^ set(STADIUMS)}"
+        )
 
 
 class TestStadiumFactory:

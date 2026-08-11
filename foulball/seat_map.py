@@ -9,7 +9,10 @@ its MODULE PROVENANCE block is explicit about which is which:
 
   - The six geometry numbers on every `SeatSection` (`distance_min/max`,
     `angle_min/max`, `height_min/max`) are **estimated**. Not surveyed, not
-    digitized. All 31 parks are analogues off one template.
+    digitized. Since Step 9 the two distances are positioned per park by
+    published foul-area, backstop and overhang figures, so they are no longer
+    invented — but the four angles and heights still come from one shared
+    template at all 31 parks, and the bowl's *shape* is entirely unsourced.
   - The section *names* and deck levels **track real seating charts**. Every
     one of the 344 sections in the file carries a printed-section range in its
     name — `(Sec 109-114)`, `(Sec FB17-FB29)`, `(Sec 12L-14R)`.

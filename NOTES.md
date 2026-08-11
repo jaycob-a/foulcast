@@ -248,3 +248,159 @@ calibrate section geometry that was never measured.
 - Item 2 (no netting) now has a data field ahead of the model: entries record
   whether a ball hit the netting, but the model still assigns those balls to
   the zone behind the net. Netting comparisons are not meaningful until Step 9.
+
+**10. The section geometry is now sourced in depth — added 2026-08-10. Item 8
+is out of date and this replaces its numbers.** Item 8's evidence was that
+2,064 geometry values across 31 parks came from 62 distinct values, that four
+parks were byte-identical, and that every park was exactly mirror-symmetric.
+Step 9 changed the first two on purpose. It deliberately did not change the
+third.
+
+What is true now:
+
+- 2,064 geometry values draw on **452 distinct numbers**: 418 distances, 15
+  angles, 19 heights. The distances are no longer invented — each park's bands
+  are positioned by its published foul-territory area, its backstop distance
+  and its deck-overhang percentages, every figure cited in `PARK_PARAMS.md`.
+- **No two parks are byte-identical.** 31 parks, 31 distinct geometry
+  signatures, where there were 27. Busch/Kauffman/Nationals/Rate and Great
+  American/Petco all separate.
+- **The angles and heights did not move, and every park is still exactly
+  mirror-symmetric to the last decimal.** No source publishes a foul-territory
+  split by side, a behind-plate-vs-down-the-line split, or a deck elevation in
+  feet, so nothing was invented to fill those. `HOME-F` still spans 55-90
+  degrees at all 31 parks.
+
+So item 8's headline holds and its arithmetic does not. The bowls are placed;
+the bowls are not shaped. That is the half that still needs a survey, and
+`SOURCED_DATA.md` still records why no public source closes it.
+
+Re-reading item 8's three sub-points in that light:
+
+- Its remark that Fenway's numbers "pass through a blanket 0.85 distance
+  multiplier that exists to make deck matching behave" is **fixed**. That
+  multiplier and Wrigley's 0.88 are gone, replaced by sourced scales (Fenway
+  0.889 from an 18,100 sq ft foul area, the smallest in MLB).
+- Its remark that the behind-home zones are "too coarse" stands, but the front
+  of them is no longer arbitrary: it is pinned to the park's own backstop.
+- Its warning about reading a fleet mean as evidence of generalization
+  stands unchanged, and the sweep below is the reason.
+
+**11. What the re-run sweep says — 2026-08-10.** 31 parks, standard lineup,
+seed 42, 400 sims/batter, both lineups summed.
+
+| | fouls into stands |
+|---|---:|
+| median (31 parks) | **31.4** |
+| 27 parks fall between | 30.1 and 33.1 |
+| Target Field | 25.2 |
+| Wrigley Field | 24.1 |
+| Sutter Health Park | 22.1 |
+| Las Vegas Ballpark | 20.4 |
+
+Against Step 7's template run, which had 28 parks inside 1.7 fouls: the main
+group is now 27 parks inside **3.0** fouls, and the outlier set has grown from
+three to four. That is a real widening and it is still nowhere near enough.
+Sixty feet of sourced bowl depth moves a park's total by about three fouls a
+game, because the behind-plate group dominates the count and is still shaped
+identically at every park. The volume model's dynamic range problem from
+Step 6 (`r = -0.045`) is untouched by any of this.
+
+Two of the four low outliers are new, and both are the model being right
+rather than the model breaking:
+
+- **Wrigley (32.7 → 24.1)** and **Target Field (30.8 → 25.2)** carry the
+  heaviest published deck cover in the fleet (Wrigley 55%/100%, Target
+  35%/75%). Their covered decks now genuinely own no exposed ground, so fouls
+  that would have landed there match nothing. The model has no roof surface to
+  hand those balls to — it loses them. Wrigley's unmatched share goes 36% →
+  52% on that account.
+- The **six roofed parks moved the other way** (Tropicana, loanDepot, Daikin,
+  Chase, American Family, Rogers, +0.3 to +0.8 each), because their 93-100%
+  is dome shade from 150+ ft up and is now discarded rather than capped at
+  60%. Their upper decks are reachable again.
+
+Decomposing the change at the two parks that moved most, holding everything
+else fixed:
+
+| | Wrigley | Target |
+|---|---:|---:|
+| Step 9 baseline | 32.7 | 30.8 |
+| + roof/canopy classification, cap removed | −0.5 | −0.6 |
+| + decks resolved front to back | **−7.7** | **−4.7** |
+| + backstop anchor | −0.4 | −0.3 |
+
+The ordering fix dominates, and it was not the requested change — it became
+necessary once the cap came off. Measuring every deck's depth against the
+un-overhung bowl credited an upper deck with the wrong footprint, and the
+error was largest exactly where the cover was heaviest: at 100% the deck kept
+whatever the lower deck's retreat handed it, so a fully roofed deck stayed
+reachable and "apply Wrigley's canopy" would have been a no-op. Resolving
+decks front to back is what makes the published percentage mean what Clem
+says it means.
+
+The backstop anchor costs 0.2 to 1.1 fouls a game at every park and raises the
+fleet-median unmatched share from 37% to 38%. That is the intended sign: it
+opens a real annulus of foul ground between the plate and the front row, and
+short backward fouls that die in it now match nothing instead of being caught
+by seats that could not exist there.
+
+Five parks carry flags, against two before. Three are the outlier/unmatched
+pairs above plus Sutter and Las Vegas. The fifth is new and is a finding about
+the section table rather than the parameters: **Yankee Stadium's `1B-UR` now
+receives nothing and `3B-UR` almost nothing.** Upper Reserve survives only as a
+9-foot sliver in the 35-40 degree wedge, hidden everywhere else beneath Upper
+Box and Lower Reserve. That was always true of the table; deepening the bowl
+made it visible.
+
+Unchanged, and worth stating because it is the clearest evidence the shape did
+not move: the 1B share of sided fouls spans **0.66 pp** across all 31 parks
+(51.56% to 52.22%) against a seed-to-seed sampling band of **1.11 pp**. Park
+geometry still contributes nothing measurable to the left/right split, exactly
+as mirror-symmetric geometry must.
+
+**12. The backstop anchor now clears the fence — added 2026-08-10.** Item 11
+described the anchor as pinning the behind-plate front row *onto* the backstop
+distance. That was a contradiction with this repo's own source analysis and it
+is fixed.
+
+`PARK_PARAMS.md` §2 records that Clem defines his backstop figure as *"the
+distance from home plate to the fence in the rear"*, and the model adopts Clem
+at 30 of 31 parks. Pinning the first row of seats onto that number therefore
+asserted that Clem measures to the seating bowl — the opposite of what the
+source says, and it put the seats inside the fence. The anchor now targets
+`backstop_ft + _SEAT_SETBACK_FT`.
+
+**The setback is 1.0 ft, and the reasoning is in the sources rather than in
+taste.** Seamheads defines its own backstop differently — *"Distance from Home
+Plate to Stands"* — so Seamheads minus Clem is a direct measurement of the
+fence-to-stands gap wherever both publish:
+
+| | |
+|---|---:|
+| Parks where both publish | 30 |
+| Agreeing to the foot (no gap at all) | **21** |
+| Mean difference | **+0.40 ft** |
+| Median difference | 0 ft |
+| Disagreements, positive / negative | 6 / 3 |
+
+Three of the nine disagreements are *negative* — Comerica and loanDepot both
+put the stands 3 ft nearer than the fence — which no reference-point offset
+can produce. Those are the source conflicts §2.1 already catalogues, not a
+definitional step. So the real gap is below the resolution either source
+publishes at, and 1 ft is the smallest increment they could have expressed,
+rounding the observed +0.40 ft mean up rather than down.
+
+**It is nearly inert, and that is the finding.** Re-running the sweep, no park
+moves by more than 0.1 fouls a game; the median stays 31.4, the 27-park main
+band goes 30.1-33.2 to 30.1-33.1, and the flag set is unchanged. The five
+golden games move by +1, +7, +5, +3 and +5 unmatched fouls out of ~2,490. The
+contradiction in gap 7 was real but it was definitional: the anchor had the
+right magnitude and the wrong reference point, and correcting the reference
+point costs almost nothing.
+
+What is still open is the *variation*. A park with a photographers' well behind
+the plate has metres of setback; a park with dugout-club seats against the wall
+has almost none. Nothing published distinguishes them, so the 1 ft is uniform
+across all 31 parks and should be read as fixing the sign of the error rather
+than its size.
