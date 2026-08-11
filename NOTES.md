@@ -404,3 +404,38 @@ the plate has metres of setback; a park with dugout-club seats against the wall
 has almost none. Nothing published distinguishes them, so the 1 ft is uniform
 across all 31 parks and should be read as fixing the sign of the error rather
 than its size.
+
+**11. Netting is in the model — added 2026-08-10. Item 2's "no netting" gap is
+half closed, and item 9's last bullet is now settled.** `step-10` adds
+`foulball/netting.py`, the published protective-netting extent for all 31
+parks transcribed from `SOURCED_DATA.md` Part 2, joined onto each park's zone
+table by printed section number. Full writeup in `NOTES_STEP10.md`.
+
+- **Item 2** said the model has no netting, so it assigns balls to seats
+  nobody can catch from. It no longer does at the 14 parks where the published
+  extent joins: a foul into a netted zone is not catchable, the zone is out of
+  every souvenir ranking, and the same zone leads the safety panel with its
+  fouls, its exit velocities and the published net height intact. One field,
+  two opposite conclusions.
+- **Item 9's netting bullet** — "netting comparisons are not meaningful until
+  the model knows where the net is" — is now actionable. `calibrate_log.py`
+  gained a section that tests logged `landing_type='netting'` rows against the
+  published extents. It is unscored only because the log has no rows at a
+  mapped park yet.
+- **17 of 31 parks are gaps, and look like gaps.** Eight because
+  `SOURCED_DATA.md` has nothing to apply, nine because the club's section
+  numbers and this repo's section *names* cannot both be right. Nothing is
+  excluded and nothing is highlighted at those parks, and the reason is
+  printed above the ranking.
+- **New, and worse than the netting gap:** those nine parks are evidence
+  against a claim items 8 and 10 both leaned on — that the section names track
+  real seating charts even though the geometry does not. At nine parks the
+  numeric ranges in those names are contradicted by the club's own current
+  seating map. `AUDIT.md`'s Step 10 update carries the table. This is the
+  cheapest large correction now available in the repo: the sources needed to
+  fix it have already been read.
+- Nothing physical moved. Golden-game totals, mean distance, mean angle, the
+  1B/3B split and the unmatched count are byte-identical at all five games;
+  the park sweep, the game backtest and the log calibration's zone comparison
+  are untouched, because all of them read `expected_fouls` and netting does
+  not change where a ball lands.

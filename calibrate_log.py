@@ -600,6 +600,117 @@ def format_report(data: dict) -> str:
         add("")
 
     add(_readiness_block(data['readiness']))
+    add("")
+    add(_netting_block(data['netting']))
+    return "\n".join(L)
+
+
+def netting_checks(fouls: list[dict]) -> dict:
+    """Logged observations tested against the published netting.
+
+    The log is the only evidence in this repo that can test the netting join
+    from outside it. A fan who writes down "this one hit the net" in a section
+    the club publishes as unnetted, or who catches a ball bare-handed in a
+    section the club publishes as netted, has contradicted either the club
+    page or this park's printed-section labels. Both are worth knowing, and
+    neither is discoverable by reading the model.
+
+    Also counted: netting observations in parks whose netting is a gap. Those
+    do not close the gap — one fan seeing a net does not establish which
+    sections it covers — but they are the raw material that could.
+    """
+    from foulball.netting import PARK_NETTING     # local: keeps import cheap
+
+    out = {
+        'checked': 0,
+        'agree_netted': 0,
+        'agree_open': 0,
+        'contradictions': [],
+        'evidence_in_gaps': [],
+        'parks_seen': set(),
+    }
+    stadium_cache: dict[str, object] = {}
+
+    for f in fouls:
+        park_key = f.get('park_key')
+        zone_id = f.get('model_zone_id')
+        if park_key not in STADIUMS or not zone_id:
+            continue
+        if park_key not in stadium_cache:
+            stadium_cache[park_key] = STADIUMS[park_key]()
+        stadium = stadium_cache[park_key]
+        z = stadium.zone_netting.get(zone_id)
+        if z is None:
+            continue
+
+        out['parks_seen'].add(park_key)
+        lt = f.get('landing_type')
+        caught = f.get('caught') in (1, True)
+        where = (f"game {f.get('game_pk')} {park_key}/{zone_id}"
+                 f" (printed {f.get('printed_section') or '?'})")
+
+        if z.status == 'unknown':
+            if lt == 'netting':
+                out['evidence_in_gaps'].append(
+                    f"{where}: observer recorded a netting strike, and "
+                    f"{PARK_NETTING[park_key].park_name} publishes no usable "
+                    f"section-level extent")
+            continue
+
+        out['checked'] += 1
+        if lt == 'netting' and z.status == 'netted':
+            out['agree_netted'] += 1
+        elif lt == 'netting' and z.status == 'not_netted':
+            out['contradictions'].append(
+                f"{where}: observer recorded a netting strike in a section "
+                f"the club's published extent does not cover")
+        elif caught and z.status == 'netted':
+            out['contradictions'].append(
+                f"{where}: observer recorded a catch in a section published "
+                f"as behind netting")
+        elif lt == 'seats' and z.status == 'not_netted':
+            out['agree_open'] += 1
+
+    out['parks_seen'] = sorted(out['parks_seen'])
+    return out
+
+
+def _netting_block(n: dict) -> str:
+    L = []
+    add = L.append
+    add("-" * 74)
+    add("5. NETTING — published extents against what observers saw")
+    add("-" * 74)
+    add("  Netting changes no prediction in sections 1-3 above: a netted section")
+    add("  receives exactly the fouls it always did. What it changes is whether")
+    add("  those fouls are catchable, so the only thing the log can test here is")
+    add("  the join between the club's section numbers and this model's.")
+    add("")
+    if not n['checked'] and not n['evidence_in_gaps']:
+        add("  No logged observation falls in a park whose netting is mapped, so")
+        add("  nothing here is tested yet. Every foul logged with a printed")
+        add("  section at one of the 14 mapped parks tests it.")
+        return "\n".join(L)
+
+    add(f"  Observations in netting-mapped zones : {n['checked']}")
+    add(f"    consistent (net strike in a netted section)   : {n['agree_netted']}")
+    add(f"    consistent (seats landing in an open section) : {n['agree_open']}")
+    add(f"    contradictions                                : "
+        f"{len(n['contradictions'])}")
+    add("")
+    for c in n['contradictions'][:15]:
+        add(f"    ! {c}")
+    if n['contradictions']:
+        add("      ^ each of these says the club page and this park's printed")
+        add("        labels disagree. The club page is the sourced side.")
+        add("")
+    if n['evidence_in_gaps']:
+        add(f"  Netting seen at parks with no published extent: "
+            f"{len(n['evidence_in_gaps'])}")
+        for e in n['evidence_in_gaps'][:10]:
+            add(f"    - {e}")
+        add("      ^ evidence that a net exists, not evidence of which sections")
+        add("        it covers. It does not close the gap on its own.")
     return "\n".join(L)
 
 
@@ -695,6 +806,7 @@ def run(args) -> dict:
         'zone_rows': aggregate(usable),
         'gaps': zone_coverage_gaps(usable),
         'readiness': boundary_readiness(log['fouls']),
+        'netting': netting_checks(log['fouls']),
     }
 
 

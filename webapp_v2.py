@@ -270,6 +270,7 @@ def _run_prediction(away_id, home_id, venue_name=None):
                     'sec': sp.section, 'catch': 0, 'exp': 0,
                     'ev_s': 0, 'n': 0, 'danger': 0, 'batters': {},
                 }
+            combined[sid].setdefault('netting', sp.netting)
             c = combined[sid]
             c['catch'] += sp.catchable_fouls
             c['exp'] += sp.expected_fouls
@@ -279,9 +280,38 @@ def _run_prediction(away_id, home_id, venue_name=None):
             for b in sp.top_batters:
                 c['batters'][b] = c['batters'].get(b, 0) + 1
 
-    ranked = sorted(combined.values(), key=lambda x: x['catch'], reverse=True)
+    # Netting splits the sections in two before anything is ranked. A netted
+    # section keeps every foul it drew — `expected`, `danger` and `avg_ev` are
+    # untouched — and loses its place in the catch ranking, because the ball
+    # arrives in a net. The two lists are the same model output read for
+    # opposite purposes; the client renders one as "where to sit" and the
+    # other as "what the screen is stopping".
+    def _netted(r):
+        return r.get('netting') is not None and r['netting'].blocks_catch
+
+    netted_rows = sorted((r for r in combined.values() if _netted(r)),
+                         key=lambda x: x['exp'], reverse=True)
+    ranked = sorted((r for r in combined.values() if not _netted(r)),
+                    key=lambda x: x['catch'], reverse=True)
     mx = ranked[0]['catch'] if ranked else 1
-    total_exp = sum(x['exp'] for x in ranked) or 1
+    # Percentages stay over every section, netted included: they describe
+    # where fouls land, which netting does not change.
+    total_exp = sum(x['exp'] for x in combined.values()) or 1
+
+    def _netting_payload(r):
+        z = r.get('netting')
+        if z is None:
+            return {'status': 'unknown', 'reason': 'no netting data for this park'}
+        return {
+            'status': z.status,
+            'reason': z.reason,
+            'source': z.park.source,
+            'source_kind': z.park.source_kind,
+            'year': z.park.year,
+            'retrieved': z.park.retrieved,
+            'published': z.park.published,
+            'height': z.park.height,
+        }
 
     sections_out = []
     for r in ranked:
@@ -299,10 +329,23 @@ def _run_prediction(away_id, home_id, venue_name=None):
             'danger': round(r['danger'], 1), 'avg_ev': round(avg_ev, 1),
             'intensity': round(r['catch'] / mx, 3),
             'top_batters': top_b,
+            'netting': _netting_payload(r),
             'geo': {
                 'dmin': s.distance_min, 'dmax': s.distance_max,
                 'amin': s.angle_min, 'amax': s.angle_max,
             },
+        })
+
+    netted_out = []
+    for r in netted_rows:
+        s = r['sec']
+        avg_ev = r['ev_s'] / r['n'] if r['n'] > 0 else 0
+        netted_out.append({
+            'id': s.section_id, 'name': s.name, 'side': s.side, 'level': s.level,
+            'expected': round(r['exp'], 3),
+            'pct': round(r['exp'] / total_exp * 100, 1),
+            'danger': round(r['danger'], 1), 'avg_ev': round(avg_ev, 1),
+            'netting': _netting_payload(r),
         })
 
     tc = sum(r['catch'] for r in ranked)
@@ -338,6 +381,7 @@ def _run_prediction(away_id, home_id, venue_name=None):
             'd': round(t.landing_distance, 1), 'mh': round(t.max_height, 1),
             'ev': round(e.exit_velocity, 1), 'side': e.landing_side,
             'ft': round(t.flight_time, 2), 'c': bool(e.is_catchable),
+            'net': bool(e.hit_netting),
         })
 
     # Batter stats
@@ -382,6 +426,21 @@ def _run_prediction(away_id, home_id, venue_name=None):
             'phome': round(shm / tot * 100), 'sims': len(all_ev),
         },
         'sections': sections_out,
+        'netting': {
+            'coverage': pred_a.netting_coverage,
+            'note': pred_a.netting_note,
+            'park': stadium.netting.park_name if stadium.netting else stadium.name,
+            'published': stadium.netting.published if stadium.netting else '',
+            'height': (stadium.netting.height if stadium.netting else None),
+            'source': stadium.netting.source if stadium.netting else '',
+            'source_kind': (stadium.netting.source_kind if stadium.netting else 'none'),
+            'year': stadium.netting.year if stadium.netting else None,
+            'retrieved': stadium.netting.retrieved if stadium.netting else '',
+            'notes': list(stadium.netting.notes) if stadium.netting else [],
+            'sections': netted_out,
+            'expected_into_netting': round(
+                sum(r['exp'] for r in netted_rows), 1),
+        },
         'batters': {'away': batter_list(away_profiles), 'home': batter_list(home_profiles)},
         'trajectories': trajs,
         'methodology': {

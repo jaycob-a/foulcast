@@ -91,6 +91,28 @@ regressions and are not:
   wholly under a roof, but it means the model has nowhere to put a ball that
   hits that roof and comes back down.
 
+What Step 10 added, and what it did not touch
+---------------------------------------------
+
+Each `Stadium` now carries the park's published protective netting
+(`park_key`, `netting`, `zone_netting`), joined onto the section table by
+printed section number. See `foulball/netting.py` for the data and
+`NOTES_STEP10.md` for the result. Two things to know here:
+
+- **It moves no geometry.** A netted zone occupies exactly the ground it
+  occupied before; the only thing that changes is what a ball landing there
+  means. `zone_map_fingerprint` deliberately does not cover it, so Step 8's
+  logged observations keep their stamp.
+- **It found nine parks whose printed labels are wrong.** The join is
+  rejected where the club's netting page and this file's section names cannot
+  both be true — Yankee Stadium numbers the infield field level 109-131 where
+  the Yankees net 011-029; Nationals Park puts the PNC Diamond Club at
+  104-107 where the club puts it at 119-126. Those parks show a netting gap,
+  and their section *names* should be treated as suspect until corrected. The
+  provenance claim above that "section names and deck levels track real
+  seating charts" is the weakest claim in this block, and §5 of
+  NOTES_STEP10.md is the first external test it has failed.
+
 The landing-section geometry helpers below (`exposed_bands`,
 `find_landing_section`) are sound; they are correct machinery operating on
 estimated inputs.
@@ -99,6 +121,8 @@ import math
 
 import numpy as np
 from dataclasses import dataclass, field
+
+from .netting import PARK_NETTING, ParkNetting, ZoneNetting, join_park
 
 
 @dataclass
@@ -143,6 +167,27 @@ class Stadium:
 
     # Section matching: matchup_engine.py calls find_landing_section() below,
     # which intersects the trajectory with the exposed deck surfaces.
+
+    # Protective netting. `park_key` is this park's registry key, `netting` is
+    # the published extent for it (see `netting.PARK_NETTING`), and
+    # `zone_netting` is that extent joined onto the section table above — one
+    # entry per section, always present, `unknown` where the sources do not
+    # reach. All three are set by `_apply_sourced_params`, so a hand-built
+    # Stadium has no netting rather than a wrong default.
+    park_key: str = ''
+    netting: ParkNetting | None = None
+    zone_netting: dict[str, ZoneNetting] = field(default_factory=dict)
+
+    def is_netted(self, section_id: str) -> bool:
+        """Whether a ball reaching this zone lands behind netting.
+
+        True only for a zone the sources place *entirely* behind the net. A
+        partially netted zone and a zone nobody has published are both False
+        here — see `ZoneNetting.blocks_catch` for why neither may be rounded
+        up.
+        """
+        z = self.zone_netting.get(section_id)
+        return z is not None and z.blocks_catch
 
 
 # ============================================================
@@ -875,6 +920,13 @@ def _apply_sourced_params(stadium: Stadium, park_key: str) -> None:
                            stadium.backstop_distance)
     for s in stadium.sections:
         s.distance_min, s.distance_max = bands[s.section_id]
+
+    # Netting, joined last because the join reads the finished section table.
+    # It moves no geometry: a netted zone occupies the same ground it always
+    # did, and the only thing that changes is what a ball landing there means.
+    stadium.park_key = park_key
+    stadium.netting = PARK_NETTING[park_key]
+    stadium.zone_netting = join_park(stadium, park_key).zones
 
 
 # ============================================================

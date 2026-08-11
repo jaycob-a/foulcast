@@ -210,6 +210,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 /* Rankings table */
 .rankings { margin-bottom: 28px; }
 .rankings h2 { font-size: 16px; color: #fff; margin-bottom: 14px; }
+.netting-note { font-size: 11px; color: var(--text2); margin-bottom: 10px; line-height: 1.5; }
+.net-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px;
+  padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.net-tag.netted { background: rgba(59,130,246,0.14); color: #7fb0ff; }
+.net-tag.partial { background: rgba(245,158,11,0.14); color: #f5c069; }
+.net-tag.open { background: rgba(16,185,129,0.10); color: #4fd3a5; }
+.net-tag.unknown { background: rgba(148,163,184,0.12); color: var(--text3); }
+.netting-panel { border: 1px solid rgba(59,130,246,0.22); background: rgba(59,130,246,0.05);
+  border-radius: 8px; padding: 14px 18px; }
+.netting-panel .src { font-size: 10px; color: var(--text3); margin-top: 10px; line-height: 1.6;
+  word-break: break-word; }
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; padding: 10px 12px; background: var(--bg3); color: var(--text2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
 th:first-child { border-radius: 8px 0 0 8px; }
@@ -404,11 +415,16 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="batters-row" id="batters-row"></div>
     </div>
 
+    <!-- Netting first, deliberately. Where the net is, is a published fact;
+         the ranking below it is a model estimate. -->
+    <div class="rankings" id="netting-block"></div>
+
     <div class="rankings">
       <h2>All Sections Ranked</h2>
+      <div id="rankings-netting-note" class="netting-note"></div>
       <table id="rankings-table"><thead><tr>
         <th>#</th><th>Section</th><th>Side</th><th>Level</th>
-        <th>Catchable</th><th>Density</th><th>% of Fouls</th><th>90% CI</th><th>Avg EV</th>
+        <th>Catchable</th><th>Density</th><th>% of Fouls</th><th>90% CI</th><th>Avg EV</th><th>Netting</th>
       </tr></thead><tbody id="rankings-body"></tbody></table>
     </div>
 
@@ -601,6 +617,7 @@ function renderAll(d) {
   renderStadium(d);
   renderBatters(d);
   renderRankings(d);
+  renderNetting(d);
   renderAccuracy(d);
   document.getElementById('results').classList.add('show');
   // Smooth scroll to results
@@ -861,6 +878,10 @@ function showDetail(idx) {
       <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Danger Rating: ${sec.danger.toFixed(1)}/10</div>
       <div class="danger-bar"><div class="danger-fill" style="width:${dangerPct}%;background:${dangerColor}"></div></div>
     </div>
+    <div style="margin-top:14px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Netting ${nettingTag(sec.netting)}</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.5">${sec.netting ? sec.netting.reason : 'no netting data for this park'}</div>
+    </div>
   `;
   el.classList.add('show');
   document.getElementById('detail-placeholder').style.display = 'none';
@@ -1081,6 +1102,73 @@ function renderBatters(d) {
                + teamHTML(d.matchup.home + ' (Home)', d.batters.home);
 }
 
+// ========== NETTING ==========
+// One status, two readings. Here it annotates a catch ranking that has
+// already had the netted sections removed; in renderNetting() below, the same
+// sections are the whole point.
+function nettingTag(n) {
+  if (!n) return '<span class="net-tag unknown">unpublished</span>';
+  if (n.status === 'netted') return '<span class="net-tag netted">netted</span>';
+  if (n.status === 'partially_netted') return '<span class="net-tag partial">partly netted</span>';
+  // "not netted", never "safe": the seats behind the net are the only fact
+  // here, and a section without one is not thereby safe.
+  if (n.status === 'not_netted') return '<span class="net-tag open">not netted</span>';
+  return '<span class="net-tag unknown">unpublished</span>';
+}
+
+function renderNetting(d) {
+  const n = d.netting || {};
+  document.getElementById('rankings-netting-note').textContent =
+    'Netting: ' + (n.note || 'no netting data for this park.');
+
+  const el = document.getElementById('netting-block');
+  const rows = n.sections || [];
+  const src = `
+    <div class="src">
+      Published: ${n.published || '—'}<br>
+      Height: ${n.height || 'not published'}<br>
+      Source: ${n.source || '—'} (${n.source_kind || 'none'}, ${n.year || 'undated'}, retrieved ${n.retrieved || '—'})
+    </div>`;
+
+  if (!rows.length) {
+    el.innerHTML = `
+      <h2>Behind Protective Netting</h2>
+      <div class="netting-panel">
+        <div style="font-size:13px;color:var(--text2)">${n.note || 'No netting data for this park.'}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px">
+          No section here is shown as netted or as unnetted. The seats exist and take fouls;
+          what is missing is a published statement about which of them sit behind a screen.
+        </div>
+        ${src}
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <h2>Behind Protective Netting</h2>
+    <div class="netting-panel">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+        These sections are published as sitting behind netting, so they are excluded from the
+        catch ranking below. They still take <strong>${n.expected_into_netting}</strong> fouls a game —
+        the same balls, counted as what the screen stops rather than as souvenirs.
+      </div>
+      <table><thead><tr>
+        <th>Section</th><th>Side</th><th>Level</th><th>Fouls / Game</th><th>% of Fouls</th><th>Avg EV</th><th>Danger</th>
+      </tr></thead><tbody>
+      ${rows.map(s => `<tr>
+        <td><strong>${s.name}</strong></td>
+        <td>${s.side}</td>
+        <td>${s.level}</td>
+        <td><strong>${s.expected.toFixed(2)}</strong></td>
+        <td>${s.pct.toFixed(1)}%</td>
+        <td>${s.avg_ev.toFixed(0)} mph</td>
+        <td>${s.danger.toFixed(1)}/10</td>
+      </tr>`).join('')}
+      </tbody></table>
+      ${src}
+    </div>`;
+}
+
 // ========== RANKINGS TABLE ==========
 function renderRankings(d) {
   const body = document.getElementById('rankings-body');
@@ -1097,6 +1185,7 @@ function renderRankings(d) {
       <td>${s.pct.toFixed(1)}%</td>
       <td style="font-size:11px;color:var(--text2)">${s.ci_low !== undefined ? s.ci_low.toFixed(1) + '–' + s.ci_high.toFixed(1) + '%' : '—'}</td>
       <td>${s.avg_ev.toFixed(0)} mph</td>
+      <td>${nettingTag(s.netting)}</td>
     </tr>`;
   }).join('');
 }

@@ -29,8 +29,15 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
     events = pred.all_events
     total = len(events)
 
-    # Top 10 sections by catchable fouls
+    # Top 10 sections by catchable fouls. Sections published as fully behind
+    # netting are not in `top_sections` at all (Step 10), so this list can be
+    # shorter than 10 at a park whose netting is mapped.
     top10 = [sp.section.section_id for sp in pred.top_sections[:10]]
+
+    # Sections held out of the ranking by netting, locked separately so a
+    # change in the netting join shows up as its own diff rather than as an
+    # unexplained reshuffle of top10.
+    netted = sorted(sp.section.section_id for sp in pred.netted_sections)
 
     # Mean distance and spray angle
     distances = [e.landing_distance for e in events]
@@ -48,6 +55,7 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
     return {
         'total': total,
         'top10': top10,
+        'netted': netted,
         'mean_dist': round(mean_dist, 1),
         'mean_angle': round(mean_angle, 1),
         'n_1b': n_1b,
@@ -57,6 +65,39 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
 
 
 # ===== Baselines =====
+# ===== Relocked 2026-08-10 (Step 10) after the netting layer =====
+# Sections published as fully behind protective netting are excluded from the
+# souvenir ranking: a ball into a net is not a souvenir. They are held in
+# `pred.netted_sections` instead, where the safety view reads the same fouls as
+# the hazard the net exists to stop. See `foulball/netting.py`.
+#
+# Nothing about the physics, the spray model or the geometry moved, and the
+# numbers show it: `total`, `mean_dist`, `mean_angle`, `n_1b`, `n_3b` and
+# `no_section` are byte-identical to the Step 9b lock at all five games. The
+# balls land exactly where they landed before. Only what a landing *means*
+# changed.
+#
+# Three of the five games moved, and the third did not, for a reason worth
+# recording:
+#
+#   - Both Fenway games drop from 10 ranked sections to 7. The Red Sox publish
+#     netting from Field Box 79 round to Field Box 9, which covers four of
+#     Fenway's five field-box zones outright — including HOME-F, which had led
+#     both rankings. The new leader is 3B-LB1, a Loge zone behind and above the
+#     net. 3B-DUG stays in at rank 4 as `partially_netted` (FB71-79 of FB71-82
+#     are netted), flagged as an upper bound rather than dropped.
+#   - The Dodger game drops from 10 to 9, losing HOME-F, 1B-FB1 and 3B-FB1.
+#     HOME-DC keeps the top rank: the Dugout Club is a DG-series product the
+#     club's netting page never names, so it is `unknown`, and an unknown zone
+#     stays in the ranking flagged rather than being excluded on a guess.
+#   - Neither Yankee game moves at all. The Yankees publish the most detailed
+#     netting page in the league (011 → 029, with five separate heights), and
+#     none of it can be joined: the club numbers the infield field level
+#     011-029 and this park's zone table numbers it 109-131. The join is
+#     rejected, every Yankee zone is `unknown`, and nothing is excluded. That
+#     is the intended behaviour — a park with data the model cannot place shows
+#     a gap, not an assumption — and the identical baselines are the proof.
+#
 # ===== Relocked 2026-08-10 (Step 9b) after the cover flag and backstop anchor =====
 # Two follow-ups to the sourced-parameter layer, both in `stadium.py`:
 #
@@ -135,6 +176,7 @@ _BASELINES = {
     'yanks_vs_cole_yankee': {
         'total': 2504,
         'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-DUG', '1B-LR', '3B-FB1', '1B-FB1', '1B-LB1', '3B-DUG', '3B-LB1'],
+        'netted': [],
         'mean_dist': 131.0,
         'mean_angle': 73.3,
         'n_1b': 1329,
@@ -143,7 +185,8 @@ _BASELINES = {
     },
     'sox_vs_bello_fenway': {
         'total': 2476,
-        'top10': ['HOME-F', '3B-LB1', '1B-LB1', 'HOME-B', '1B-DUG', '3B-DUG', '1B-FB1', '3B-FB1', 'HOME-U', '1B-UB'],
+        'top10': ['3B-LB1', '1B-LB1', 'HOME-B', '3B-DUG', 'HOME-U', '1B-UB', '3B-UB'],
+        'netted': ['1B-DUG', '1B-FB1', '3B-FB1', 'HOME-F'],
         'mean_dist': 129.4,
         'mean_angle': 71.0,
         'n_1b': 1204,
@@ -152,7 +195,8 @@ _BASELINES = {
     },
     'yanks_vs_houck_fenway': {
         'total': 2487,
-        'top10': ['HOME-F', '3B-LB1', '1B-LB1', 'HOME-B', '3B-DUG', '1B-DUG', '1B-FB1', '3B-FB1', 'HOME-U', '1B-UB'],
+        'top10': ['3B-LB1', '1B-LB1', 'HOME-B', '3B-DUG', 'HOME-U', '1B-UB', '3B-UB'],
+        'netted': ['1B-DUG', '1B-FB1', '3B-FB1', 'HOME-F'],
         'mean_dist': 134.2,
         'mean_angle': 73.3,
         'n_1b': 1279,
@@ -162,6 +206,7 @@ _BASELINES = {
     'sox_vs_cortes_yankee': {
         'total': 2502,
         'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-FB1', '3B-DUG', '1B-DUG', '3B-FB1', '1B-LB1', '1B-LR', '3B-LB1'],
+        'netted': [],
         'mean_dist': 128.9,
         'mean_angle': 72.2,
         'n_1b': 1207,
@@ -170,7 +215,8 @@ _BASELINES = {
     },
     'yanks_vs_bello_dodger': {
         'total': 2477,
-        'top10': ['HOME-DC', 'HOME-B', '3B-FB1', '1B-FB1', 'HOME-F', '1B-DUG', '3B-DUG', '1B-LB1', '1B-UB', '3B-UB'],
+        'top10': ['HOME-DC', 'HOME-B', '1B-DUG', '3B-DUG', '1B-LB1', '1B-UB', '3B-UB', '3B-LB1', 'HOME-U'],
+        'netted': ['1B-FB1', '3B-FB1', 'HOME-F'],
         'mean_dist': 137.4,
         'mean_angle': 75.1,
         'n_1b': 1253,
@@ -252,6 +298,9 @@ def test_golden_game(game_key, regen_golden):
         f"Total events changed: {result['total']} vs {baseline['total']}"
     assert result['top10'] == baseline['top10'], \
         f"Top 10 sections changed"
+    assert result['netted'] == baseline.get('netted', []), \
+        f"Netting-excluded sections changed: {result['netted']} vs " \
+        f"{baseline.get('netted', [])}"
     assert result['mean_dist'] == pytest.approx(baseline['mean_dist'], abs=0.5), \
         f"Mean distance changed: {result['mean_dist']} vs {baseline['mean_dist']}"
     assert result['n_1b'] == baseline['n_1b'], \

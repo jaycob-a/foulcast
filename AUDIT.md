@@ -278,3 +278,53 @@ dome/retractable-roof parks on the grounds that a foul pop flies under a roof
 150+ ft up. That classification is argued per park in `stadium.py` and
 tabulated in `PARK_PARAMS.md`; it is judgment, not data, and it decides whether
 a sourced number is used at all.
+
+## Update — 2026-08-10 (Step 10)
+
+Netting, and an unwelcome finding about the section names.
+
+**What was added.** `foulball/netting.py` transcribes `SOURCED_DATA.md` Part 2
+— the published protective-netting extent for all 31 parks — and joins it onto
+each park's zone table by printed section number. Every entry carries its
+source, whether that source is a primary club page or a secondary compilation,
+the retrieval date and the vintage year. A netted section is excluded from
+every souvenir ranking and highlighted in the safety view; the two readings come
+from one field.
+
+**The finding.** The join is only applied where the club page and the model's
+own section names can both be true at once. At **nine parks they cannot**:
+
+| park | club page | `stadium.py` section names |
+|---|---|---|
+| Yankee Stadium | nets sections 011-029 | numbers that deck 109-131 |
+| Chase Field | nets 111-133 | behind plate is 101-104 |
+| T-Mobile Park | 27 ft of net at 126-134 | behind plate is 108-111 |
+| Rogers Centre | to 113C / 130C | behind plate is 108-111 |
+| American Family Field | nets 108-128 | behind plate is 103-106 |
+| Nationals Park | PNC Diamond Club is 119-126 | PNC Diamond Club is 104-107 |
+| Target Field | nets 103-126 | behind plate is 101-103 |
+| Petco Park | nets 101-106, 109-116 | behind plate is 106-109 |
+| Busch Stadium | nets 132-165 | 127-133 and 157-167 both marked 3B |
+
+**This contradicts a provenance claim this audit has been relying on.** Both
+the 2026-08-09 correction and `stadium.py`'s own header say the geometry is
+estimated *but* the section names and deck levels track real seating charts.
+That claim has now had its first external test, and at nine parks it failed.
+The names are not decoration: `seat_map.py` parses them into the printed-label
+index the entire Step 8 foul log is keyed on. At those nine parks a fan's
+logged section number is being mapped to a zone on the strength of a label
+range that a club page contradicts.
+
+The revised claim: section names track real seating charts *at the level of
+grouping and deck level*, and their **numeric ranges are unverified at every
+park and demonstrably wrong at nine**. Correcting them is now the highest-value
+geometry work available, and unlike the distance/angle gap it needs no new
+class of source — the club seating maps already read in `SOURCED_DATA.md` would
+do it.
+
+**What netting did not change.** No ball lands anywhere different. Golden-game
+totals, mean distance, mean angle, the 1B/3B split and the unmatched count are
+byte-identical at all five games; the park sweep, the game backtest and the log
+calibration all read `expected_fouls` and are untouched. 17 of 31 parks have no
+usable netting data and are marked as gaps: nothing excluded, nothing
+highlighted, and the reason printed above the ranking.

@@ -198,6 +198,7 @@ def print_combined_report(pred_away: GamePrediction, pred_home: GamePrediction, 
                     'ev_count': 0,
                     'danger': 0,
                     'batters': set(),
+                    'netting': sp.netting,
                 }
             combined_sections[sid]['expected_fouls'] += sp.expected_fouls
             combined_sections[sid]['catchable_fouls'] += sp.catchable_fouls
@@ -206,28 +207,52 @@ def print_combined_report(pred_away: GamePrediction, pred_home: GamePrediction, 
             combined_sections[sid]['danger'] = max(combined_sections[sid]['danger'], sp.danger_rating)
             combined_sections[sid]['batters'].update(sp.top_batters)
 
-    # Sort by catchable fouls
-    ranked = sorted(combined_sections.values(), key=lambda x: x['catchable_fouls'], reverse=True)
+    # Sort by catchable fouls. Sections published as fully behind netting are
+    # split out first: they still take fouls, but not catchable ones, so they
+    # belong in the safety block below and nowhere in this ranking.
+    def _netted(r):
+        return r['netting'] is not None and r['netting'].blocks_catch
 
-    total_fouls = sum(r['expected_fouls'] for r in ranked)
+    netted_rows = [r for r in combined_sections.values() if _netted(r)]
+    ranked = sorted((r for r in combined_sections.values() if not _netted(r)),
+                    key=lambda x: x['catchable_fouls'], reverse=True)
+    netted_rows.sort(key=lambda r: r['expected_fouls'], reverse=True)
+
+    total_fouls = sum(r['expected_fouls'] for r in combined_sections.values())
     total_catchable = sum(r['catchable_fouls'] for r in ranked)
+    total_netted = sum(r['expected_fouls'] for r in netted_rows)
 
     print(f"\nExpected fouls reaching stands: ~{total_fouls:.0f}")
     print(f"Expected catchable fouls: ~{total_catchable:.0f}")
+    if netted_rows:
+        print(f"Of which into netting (not catchable): ~{total_netted:.0f}")
+
+    # Netting leads, and the ranking follows it. Where the net is, is
+    # published; where the fouls go is this model's estimate. Nothing below
+    # calls a section "safe" — the two statuses are behind netting and not
+    # behind netting, and neither is a promise about a seat.
+    _print_netting_block(pred_away, netted_rows)
 
     # Top sections
     print_header("TOP SEATS FOR CATCHING A FOUL BALL", '-')
     print(f"{'Rank':<5} {'Section':<30} {'Side':<5} {'Level':<8} "
-          f"{'Fouls':>7} {'Catchable':>10} {'AvgEV':>7} {'Price':>7}")
-    print("-" * 82)
+          f"{'Fouls':>7} {'Catchable':>10} {'AvgEV':>7} {'Price':>7}  Netting")
+    print("-" * 100)
 
     for i, r in enumerate(ranked[:12], 1):
         sec = r['section']
         avg_ev = r['total_ev'] / r['ev_count'] if r['ev_count'] > 0 else 0
         price_str = f"${sec.avg_ticket_price:.0f}"
+        net = r['netting']
+        if net is None or net.status == 'unknown':
+            net_str = 'unpublished — cannot verify'
+        elif net.status == 'partially_netted':
+            net_str = 'PARTLY NETTED — upper bound'
+        else:
+            net_str = 'not netted'
         print(f"{i:<5} {sec.name:<30} {sec.side:<5} {sec.level:<8} "
               f"{r['expected_fouls']:>6.1f} {r['catchable_fouls']:>9.1f} "
-              f"{avg_ev:>6.1f} {price_str:>7}")
+              f"{avg_ev:>6.1f} {price_str:>7}  {net_str}")
 
     # Best value
     print_header("BEST VALUE — Most Foul Ball Chance Per Dollar", '-')
@@ -268,13 +293,46 @@ def print_combined_report(pred_away: GamePrediction, pred_home: GamePrediction, 
         else:
             print(f"\n  >>> Both sides are roughly equal for this matchup")
 
-    # Danger zones
+    # Danger zones. Netted sections are read the opposite way here from the
+    # ranking above: excluded there because no one catches a ball through a
+    # screen, listed first here because the screen is the safety story.
     print_header("DANGER ZONES — Bring a Glove!", '-')
     dangerous = [r for r in ranked if r['danger'] > 7 and r['section'].level == 'field']
     for r in dangerous[:5]:
         sec = r['section']
         avg_ev = r['total_ev'] / r['ev_count'] if r['ev_count'] > 0 else 0
-        print(f"  {sec.name}: avg {avg_ev:.0f} mph — reaction time < 2 sec")
+        net = r['netting']
+        tail = '' if net is not None and net.status != 'unknown' \
+            else '  [netting at this section is unpublished]'
+        print(f"  {sec.name}: avg {avg_ev:.0f} mph — reaction time < 2 sec{tail}")
+
+
+def _print_netting_block(pred, netted_rows):
+    """The netting panel. Printed before the ranking, on purpose.
+
+    Netted sections are read here the opposite way from the ranking: excluded
+    there because no one catches a ball through a screen, listed here because
+    the screen is what is stopping those balls.
+    """
+    print_header("BEHIND PROTECTIVE NETTING", '-')
+    if not netted_rows:
+        print(f"  {pred.netting_note}")
+        return
+
+    park = netted_rows[0]['netting'].park
+    print(f"  Published: {park.published}")
+    print(f"  Height:    {park.height or 'not published'}")
+    print(f"  Source:    {park.source} ({park.source_kind}, "
+          f"{park.year if park.year is not None else 'undated'}, retrieved "
+          f"{park.retrieved})")
+    print()
+    for r in netted_rows:
+        sec = r['section']
+        avg_ev = r['total_ev'] / r['ev_count'] if r['ev_count'] > 0 else 0
+        print(f"  {sec.name:<32} {r['expected_fouls']:>5.1f} fouls/game, "
+              f"avg {avg_ev:>3.0f} mph — behind netting")
+    print()
+    print(f"  {pred.netting_note}")
 
 
 def plot_combined_heatmap(pred_away: GamePrediction, pred_home: GamePrediction, game: GameInfo, filename: str):
@@ -345,13 +403,18 @@ def plot_combined_rankings(pred_away: GamePrediction, pred_home: GamePrediction,
         for sp in pred.section_predictions:
             sid = sp.section.section_id
             if sid not in combined:
-                combined[sid] = {'section': sp.section, 'catchable': 0, 'expected': 0, 'ev_sum': 0, 'n': 0}
+                combined[sid] = {'section': sp.section, 'catchable': 0, 'expected': 0,
+                                 'ev_sum': 0, 'n': 0, 'netting': sp.netting}
             combined[sid]['catchable'] += sp.catchable_fouls
             combined[sid]['expected'] += sp.expected_fouls
             combined[sid]['ev_sum'] += sp.avg_exit_velocity * sp.expected_fouls
             combined[sid]['n'] += sp.expected_fouls
 
-    ranked = sorted(combined.values(), key=lambda x: x['catchable'], reverse=True)[:12]
+    # Netted sections are not plottable as catch chances; they are dropped
+    # here for the same reason they leave the printed ranking.
+    rankable = [r for r in combined.values()
+                if r['netting'] is None or not r['netting'].blocks_catch]
+    ranked = sorted(rankable, key=lambda x: x['catchable'], reverse=True)[:12]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
 
@@ -369,7 +432,7 @@ def plot_combined_rankings(pred_away: GamePrediction, pred_home: GamePrediction,
         ax1.text(bar.get_width() + 0.02, bar.get_y() + bar.get_height()/2, f'{val:.2f}', va='center', fontsize=9)
 
     # Value chart
-    valued = [r for r in combined.values() if r['section'].avg_ticket_price > 0 and r['catchable'] > 0.01]
+    valued = [r for r in rankable if r['section'].avg_ticket_price > 0 and r['catchable'] > 0.01]
     valued.sort(key=lambda r: r['catchable'] / r['section'].avg_ticket_price, reverse=True)
     valued = valued[:12]
 

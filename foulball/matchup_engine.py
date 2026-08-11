@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from .batter_profiles import BatterFoulProfile
 from .trajectory import simulate_foul_ball, TrajectoryResult
 from .stadium import Stadium, SeatSection, find_landing_section
+from .netting import ZoneNetting
 from .log import get_logger, _warn_once
 from .validators import validate_trajectory, validate_sample, validate_monte_carlo_completeness, validate_side_consistency
 
@@ -32,6 +33,12 @@ class FoulBallEvent:
     is_catchable: bool         # did it land in the seats (not too high/far)?
     weight: float = 1.0        # per-batter foul rate scaling
     batter_id: int | None = None  # MLB player ID, for joining against Statcast
+    # True when the section this ball landed in is published as fully behind
+    # netting. The ball still lands here and still counts toward
+    # `expected_fouls`; it just cannot be caught. Separate from
+    # `is_catchable` so the two reasons a ball is uncatchable — too hot or
+    # too high, versus screened — stay distinguishable downstream.
+    hit_netting: bool = False
 
 
 @dataclass
@@ -47,6 +54,14 @@ class SectionPrediction:
     # 90% confidence intervals (5th–95th percentile from per-batter bootstrap)
     pct_ci_low: float = 0.0   # 5th percentile of pct_of_total
     pct_ci_high: float = 0.0  # 95th percentile of pct_of_total
+    # Published netting status for this section, or None if the stadium was
+    # built without a netting join. `expected_fouls` and `danger_rating` are
+    # unaffected by it; `catchable_fouls` is zero wherever it says `netted`.
+    netting: ZoneNetting | None = None
+
+    @property
+    def netting_status(self) -> str:
+        return self.netting.status if self.netting else 'unknown'
 
 
 @dataclass
@@ -59,9 +74,21 @@ class GamePrediction:
     total_simulated_fouls: int
     section_predictions: list[SectionPrediction]
     all_events: list[FoulBallEvent]
-    top_sections: list[SectionPrediction]  # sorted by catchable fouls
+    # Sorted by catchable fouls, and **netted sections are not in it**: a ball
+    # into a net is not a souvenir, so a section behind one has no business in
+    # a ranking of where to sit and catch. They are in `netted_sections`
+    # instead, where a safety view reads the same fouls as a hazard that the
+    # net is there to stop.
+    top_sections: list[SectionPrediction]
+    netted_sections: list[SectionPrediction] = field(default_factory=list)
     # Per-batter section weights for combined bootstrap CI
     batter_section_counts: dict[str, dict[str, float]] = field(default_factory=dict)
+    # How far the park's netting data reaches: 'mapped', 'source_gap' or
+    # 'join_gap' (see `netting.ParkJoin`). Anything but 'mapped' means no
+    # section here could be excluded, and the ranking must say so rather than
+    # read as a clean list.
+    netting_coverage: str = 'unknown'
+    netting_note: str = ''
 
 
 def predict_game_fouls(
@@ -260,9 +287,19 @@ def predict_game_fouls(
             section = find_landing_section(candidates, angle, horiz_dists,
                                            traj.positions[:, 2])
 
-            # Is it catchable? (reasonable speed and in the stands)
+            # Did it come down behind netting? Published fact about the
+            # section, not a property of this trajectory: the model has no net
+            # surface to intersect, only a per-zone status. See
+            # `netting.py` for what "netted" is allowed to mean.
+            hit_netting = (
+                section is not None and stadium.is_netted(section.section_id)
+            )
+
+            # Is it catchable? (reasonable speed, in the stands, and not into
+            # a net — no one catches a souvenir through the screen)
             is_catchable = (
                 section is not None and
+                not hit_netting and
                 traj.landing_speed < 95 and  # not a missile
                 distance > 15 and
                 distance < 350
@@ -284,6 +321,7 @@ def predict_game_fouls(
                 is_catchable=is_catchable,
                 weight=batter_weight,
                 batter_id=batter.player_id,
+                hit_netting=hit_netting,
             )
             all_events.append(event)
 
@@ -400,11 +438,18 @@ def predict_game_fouls(
             avg_exit_velocity=avg_ev,
             pct_ci_low=ci_low,
             pct_ci_high=ci_high,
+            netting=stadium.zone_netting.get(section.section_id),
         )
         section_predictions.append(pred)
 
-    # Sort by catchable fouls
-    top_sections = sorted(section_predictions, key=lambda p: p.catchable_fouls, reverse=True)
+    # Split before sorting: netted sections leave the souvenir ranking
+    # entirely rather than sitting at the bottom of it with a zero. A zero
+    # reads as "no fouls land here", which is the opposite of true — the
+    # fouls land, the net takes them.
+    netted = [p for p in section_predictions if p.netting_status == 'netted']
+    rankable = [p for p in section_predictions if p.netting_status != 'netted']
+    top_sections = sorted(rankable, key=lambda p: p.catchable_fouls, reverse=True)
+    netted.sort(key=lambda p: p.expected_fouls, reverse=True)
 
     return GamePrediction(
         home_team=stadium.team,
@@ -415,8 +460,55 @@ def predict_game_fouls(
         section_predictions=section_predictions,
         all_events=all_events,
         top_sections=top_sections,
+        netted_sections=netted,
         batter_section_counts=batter_section_counts,
+        netting_coverage=_netting_coverage(stadium),
+        netting_note=netting_note(stadium),
     )
+
+
+def _netting_coverage(stadium: Stadium) -> str:
+    """'mapped' if this park's published netting reached its zone table."""
+    if not stadium.zone_netting:
+        return 'unknown'
+    if any(z.status != 'unknown' for z in stadium.zone_netting.values()):
+        return 'mapped'
+    return 'gap'
+
+
+def netting_note(stadium: Stadium) -> str:
+    """One line a ranking or a safety panel can print above its list.
+
+    Says what the netting data does and does not cover at this park, so
+    neither view is read as more complete than it is.
+    """
+    if not stadium.zone_netting:
+        return 'No netting data attached to this stadium.'
+
+    statuses = [z.status for z in stadium.zone_netting.values()]
+    park = stadium.netting
+    if all(s == 'unknown' for s in statuses):
+        from .netting import join_park       # cached; see netting._JOIN_CACHE
+        detail = join_park(stadium, stadium.park_key).gap_detail
+        return (
+            f'Netting at {park.park_name if park else stadium.name} is not '
+            f'mapped to sections — {detail}. No section could be excluded '
+            f'from this ranking on netting grounds, and none should be read '
+            f'as unnetted.'
+        )
+
+    n_net = statuses.count('netted')
+    n_part = statuses.count('partially_netted')
+    n_unk = statuses.count('unknown')
+    bits = [f'{n_net} section(s) published as behind netting and excluded '
+            f'from the catch ranking']
+    if n_part:
+        bits.append(f'{n_part} partially netted and left in it as an upper '
+                    f'bound')
+    if n_unk:
+        bits.append(f'{n_unk} not covered by the source')
+    src = f'{park.source} ({park.year})' if park else 'unknown source'
+    return '; '.join(bits) + f'. Source: {src}.'
 
 
 def bootstrap_combined_ci(
