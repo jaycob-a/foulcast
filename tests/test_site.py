@@ -199,8 +199,8 @@ def test_side_specific_netting_claims_are_hedged(built):
     """Where the published extent lands differently on the two foul lines, the
     page is asserting which line is which. That is only allowed at a park whose
     sides are established, and even there it has to carry its own warning: the
-    anchors settle the mirror and nothing else, and at both of these parks the
-    club's own map puts the plate somewhere the model does not.
+    anchors settle the mirror and nothing else, and at all four of these parks
+    the club's own map puts the plate somewhere the model does not.
     """
     hedged = 0
     for slug, p in built['parks'].items():
@@ -214,19 +214,21 @@ def test_side_specific_netting_claims_are_hedged(built):
         else:
             assert 'so the two lines are named separately above' not in text, \
                 f'{slug}: side hedge shown where no side claim is made'
-    assert hedged == 2, f'expected 2 side-asymmetric mapped parks, {hedged}'
+    assert hedged == 4, f'expected 4 side-asymmetric mapped parks, {hedged}'
 
 
-def test_twenty_one_parks_are_netting_gaps(built):
+def test_twenty_four_parks_are_netting_gaps(built):
     """The counts on the home page have to be the counts in the data.
 
     Went from 20 to 21 when the side-anchor check (netting G5) rejected
     Oriole Park: its seating map has the lower bowl numbered the opposite way
-    round from the zone table. See MAP_FINDINGS.md.
+    round from the zone table. Went from 21 to 24 when the second map read
+    (Step 12) did the same to Coors, Progressive and Oracle. See
+    MAP_FINDINGS.md.
     """
     gaps = [p for p in built['parks'].values() if p['net']['state'] != 'mapped']
-    assert len(gaps) == 21
-    assert 'At the other 21 it is a gap' in flat(built['pages'][''])
+    assert len(gaps) == 24
+    assert 'At the other 24 it is a gap' in flat(built['pages'][''])
 
 
 def test_the_home_page_splits_gaps_by_whose_they_are(built):
@@ -274,8 +276,8 @@ def test_no_foul_line_is_named_where_it_is_not_established(built, key):
 
     Oriole Park was `mapped` with its two sides swapped and every check in the
     repo passed it, because the geometry is mirror-symmetric. So a page may
-    name a foul line only where a side-naming source backs it — six parks —
-    and at the other twenty-five the matching pair is folded into one row.
+    name a foul line only where a side-naming source backs it — nine parks —
+    and at the other twenty-two the matching pair is folded into one row.
     """
     slug = PARK_SOURCES[key]['slug']
     p = built['parks'][slug]
@@ -291,18 +293,19 @@ def test_no_foul_line_is_named_where_it_is_not_established(built, key):
         f'{slug}: sides are unestablished but the pair was not folded'
 
 
-def test_only_six_parks_may_name_a_foul_line(built):
+def test_only_nine_parks_may_name_a_foul_line(built):
     named = sorted(p['key'] for p in built['parks'].values()
                    if p['sides']['named'])
-    assert named == ['chase_field', 'comerica_park', 'dodger_stadium',
-                     'fenway_park', 'rogers_centre', 'truist_park']
-    assert '6 of the 31 parks have one' in flat(built['pages'][''])
+    assert named == ['chase_field', 'citizens_bank', 'comerica_park',
+                     'dodger_stadium', 'fenway_park', 'great_american',
+                     'guaranteed_rate', 'rogers_centre', 'truist_park']
+    assert '9 of the 31 parks have one' in flat(built['pages'][''])
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
 def test_every_page_states_its_own_side_position(built, key):
     """Silence about the sides is what let Oriole Park through, so the four
-    verdicts are stated on every page, including the twenty-five saying
+    verdicts are stated on every page, including the twenty-two saying
     nothing was ever tested."""
     slug = PARK_SOURCES[key]['slug']
     text = flat(built['pages'][slug])
@@ -418,7 +421,8 @@ def test_souvenir_reading_excludes_netted_zones(built):
         busiest = max(netted, key=lambda z: z['fouls'])
         if busiest['fouls'] >= 0.05 and busiest is p['zones'][0]:
             assert busiest['heading'] in risk_list
-    assert checked >= 8, 'expected most mapped parks to have a netted zone'
+    # Seven parks are mapped after Step 12 (three lost to the second map read).
+    assert checked >= 7, 'expected every mapped park to have a netted zone'
 
 
 def test_gap_parks_exclude_nothing_and_say_so(built):

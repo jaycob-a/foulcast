@@ -35,12 +35,12 @@ Four constraints come out of `AUDIT.md` and `NOTES.md` and are enforced by
    "lower risk".
 4. **No accuracy claims.** The model has never been compared with observed foul
    landings, and every page has to be readable by someone who knows that.
-5. **No foul line is named at a park whose sides are not established.** Six of
+5. **No foul line is named at a park whose sides are not established.** Nine of
    the 31 parks have a source that names a side alongside a section number
-   (`seat_map.SIDE_ANCHORS`); at the other twenty-five, a reversal of the two
+   (`seat_map.SIDE_ANCHORS`); at the other twenty-two, a reversal of the two
    sides would be invisible to every check this project has, and one park —
    Oriole Park — was reversed, mapped and cited for the whole of Step 10. So at
-   those twenty-five the two foul lines are folded into one row per matching
+   those twenty-two the two foul lines are folded into one row per matching
    pair, described as both lines at once. `_merge_foul_lines` does the folding
    and `PAIR_ZONE_WORDS` supplies the words.
 """
@@ -249,7 +249,7 @@ def split_phrase(z: dict) -> str:
 def _merge_foul_lines(zones: list[dict]) -> list[dict]:
     """Fold each matching pair of foul-line zones into one row.
 
-    For the twenty-five parks where nothing establishes which line is which.
+    For the twenty-two parks where nothing establishes which line is which.
     The alternative considered and rejected was to keep two rows and rename
     them "one foul line" and "the other" — which reads as an ordering the
     figures cannot support, and which still invites a reader to believe the
@@ -620,7 +620,7 @@ def netting_section(p: dict) -> str:
                 'on the two foul lines here, so the two lines are named '
                 'separately above.</strong> That naming is sourced at this '
                 'ballpark &mdash; the next section says what establishes it, '
-                'which is more than exists at twenty-five of the 31 parks on '
+                'which is more than exists at twenty-two of the 31 parks on '
                 'this site. But what it establishes is only which line is '
                 f'which. It does not establish where the boundary between one '
                 f'area and the next falls{tail}.</p></div>')

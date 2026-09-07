@@ -39,8 +39,8 @@ Three rules this file holds to, and the reasons they exist:
    and had its two sides the wrong way round, invisibly, because every geometry
    number in `stadium.py` is mirror-symmetric. Only a source that names a side
    next to a section number can catch that, and `seat_map.SIDE_ANCHORS` shows
-   how few of those exist: six parks of 31 have their sides established, three
-   of them among the ten with sourced netting. At the other twenty-five, the
+   how few of those exist: nine parks of 31 have their sides established, six
+   of them among the seven with sourced netting. At the other twenty-two, the
    two foul lines are shown as one seating area rather than as a first-base
    area and a third-base one, because naming them would be a claim this project
    cannot make. `PAIR_ZONE_WORDS` holds the side-neutral phrasing and
@@ -617,7 +617,7 @@ ZONE_WORDS: dict[str, tuple[str, str]] = {
                  'upper deck, rear rows'),
 }
 
-# The same zones, for the twenty-five parks where nothing establishes which
+# The same zones, for the twenty-two parks where nothing establishes which
 # foul line is which. Keyed by the zone ID's suffix, so `1B-DUG` and `3B-DUG`
 # fold into one row described as both lines at once.
 #
@@ -779,7 +779,7 @@ GAP_WORDS: dict[str, tuple[str, str]] = {
 # are the public rewrites, and the distinction they have to carry is the one
 # `MAP_FINDINGS.md` was written around: **passing is not the same as not being
 # tested.** Oriole Park spent Step 10 in the mapped list, cited, with its two
-# sides swapped, because nothing in the repo could tell the difference. Twenty
+# sides swapped, because nothing in the repo could tell the difference. Sixteen
 # of the 31 parks are still in the position Oriole Park was in — untested, not
 # vindicated — and their pages have to say which.
 #
@@ -811,8 +811,8 @@ SIDE_STATE_WORDS: dict[str, tuple[str, str]] = {
     ),
     'flipped': (
         'Reversed — and this page will not print the labels backwards',
-        'This is the one ballpark on the site where a source settles which '
-        'foul line is which and this model gets it wrong. Not one of the seat '
+        'This is one of the ballparks where a source settles which foul line '
+        'is which and this model gets it wrong. Not one of the seat '
         'labels the ballpark\'s own map anchors lands where the map puts it; '
         'they all land on the other line. Because that is a clean reversal '
         'rather than a drift, the <em>figures</em> below are unaffected — '
@@ -986,7 +986,7 @@ MAP_READS: dict[str, dict] = {
              'angle and height in this model is identical on the two sides of '
              'every park, so a park with its sides swapped passes each of them '
              'by construction. Only a source naming a side could catch it, and '
-             'this map is that source. Twenty of the 31 parks have no such '
+             'this map is that source. Sixteen of the 31 parks have no such '
              'source at all.'),
             ('The behind-plate area is also about half a block off',
              'Separately from the reversal, the map\'s behind-plate block is '
@@ -1092,7 +1092,7 @@ MODEL_LIMITS = [
         'foul lines at a given park differ only by simulation noise: across '
         'all 31 parks the split between them varies by less than two runs of '
         'the same park vary from each other. Read a matching pair of areas on '
-        'the two lines as one number, not two. Worse, at twenty-five of the 31 '
+        'the two lines as one number, not two. Worse, at twenty-two of the 31 '
         'parks nothing available establishes which of the two lines is which '
         '&mdash; and because the mirror makes a reversed park produce figures '
         'identical to a correct one, this model cannot detect the difference '

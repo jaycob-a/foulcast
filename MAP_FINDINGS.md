@@ -641,3 +641,575 @@ Chase Field passes — and its `HOME-F` is still in the right-field corner.
 Truist passes — and its plate zone is still four sections up the third-base
 line. Every one of the five parks in this file disagrees with its zone table;
 only one of them disagrees by a mirror.
+
+
+---
+
+# Step 12 — the six "sides untested" parks
+
+The seven parks left `mapped` with a `sides untested` flag at the end of Step
+11 all publish a bare numeric netting arc with no side named, so a mirror flip
+would pass every existing check. Six of the seven have a seating map in
+`seating_maps/`; Daikin Park does not, and stays untested. The six were read
+the same way as the five above — cropped and upsampled (2x–4x) around the
+plate, both foul lines and the deck edges — and compared against
+`_make_*_sections()` in `foulball/stadium.py`. **No geometry was changed.**
+The only code change is six new entries in `seat_map.SIDE_ANCHORS` and the
+test expectations that follow from them.
+
+Every claim below is from a label I could resolve at magnification. Where the
+map is too small to call a detail, that is said rather than guessed.
+
+Source files, as delivered:
+
+| Park | File | Pixels | Type | Legibility |
+|---|---|---|---|---|
+| Coors Field | `coors_field.jpg` | 2208x2208 | flat plan | excellent |
+| Rate Field | `rate_field.gif` | 1536x1344 | flat plan | excellent |
+| Progressive Field | `progressive_field.png` | 1536x864 | flat plan | good |
+| Great American Ball Park | `great_american.png` | 1024x576 | flat plan | fair |
+| Citizens Bank Park | `citizensbank_park.jpg` | 640x800 | flat plan | poor–fair |
+| Oracle Park | `oracle_park.jpg` | 640x828 | flat plan | poor–fair |
+
+All six are flat plans; none is isometric. On a flat plan viewed from above
+with the plate at the bottom of the frame, first base is on the viewer's
+right, so the drawn diamond is itself a landmark. At five of the six the map
+also names a left-field or right-field feature that agrees with the diamond.
+Rate Field is the exception and is called out below.
+
+## Summary
+
+| Park | Verdict | Sides | Plate zone, field level (map vs model `HOME-F`) |
+|---|---|---|---|
+| Coors Field | **Sides flipped** | reversed on all three decks | about right: map 128–132, model 127–132 |
+| Progressive Field | **Sides flipped** | reversed on all three decks | about right: map 150–155, model 148–152 |
+| Oracle Park | **Sides flipped, and plate zone offset** | reversed on all three decks | ≈6 sections toward 1B: map 113–118, model 107–109 |
+| Citizens Bank Park | Plate zone offset | correct | ≈5 sections toward 3B: map 122–125, model 127–131 |
+| Great American Ball Park | Plate zone offset | correct | ≈6 sections toward 3B: map 122–126, model 116–119 |
+| Rate Field | Plate zone offset, badly | correct | ≈18 sections toward 1B: map 130–134, model 112–115 |
+
+Three of the six were mirrored. That is the answer to the question this step
+asked, and it is worse than the Step 11 write-up guessed: the three it
+suspected on netting-coverage asymmetry (Citizens Bank, Great American, Truist)
+all turned out to have their sides right, and the three that were actually
+flipped were not on that list. Coverage asymmetry is not diagnostic of a flip,
+which the Truist case had already hinted.
+
+Six of six disagree with their zone table in some way. With the five above,
+that is eleven maps read and eleven disagreements.
+
+## Netting drawn on the maps
+
+| Park | On the map | Published extent (`SOURCED_DATA.md`) |
+|---|---|---|
+| Rate Field | red line along the field edge, legend "Netting located in front of sections 108-156" | 108–156 — **matches exactly** |
+| Oracle Park | no hatch; printed note "Protective netting extends from SECTIONS 101-135" | 101–135 — **matches exactly** |
+| Citizens Bank Park | hatch, legend "NETTING LOCATED AT FRONT OF SECTION": Diamond Club A–G and **110 through 136** | Diamond Club A–G; 109–138 — the map's hatch reads one section short at the 1B end and two at the 3B end, at a resolution where a hatch on a 25px wedge is at the limit of what I can resolve; I would not call 109, 137 or 138 either way |
+| Coors Field | none drawn, no legend entry | 112–147 |
+| Great American Ball Park | none drawn, no legend entry | 1–5, 22–25, 111–135 |
+| Progressive Field | none drawn, no legend entry | 128–174 |
+
+---
+
+## 6. Coors Field — `coors_field.jpg`
+
+Flat plan, plate at lower-left, field extending to the upper right, compass
+rose on the outfield. The largest and cleanest map of the six.
+
+**Orientation.** Fixed by the map's own legend: the **"Right Field Box"**
+colour is on 105–110 and **"Right Field Mezzanine"** on 201–209, both at the
+low-numbered end of the bowl. Two corroborations, both printed on the map: the
+foul-pole distances — **347'** at the corner beside 150/151 and **350'** beside
+109/110, and Coors' left-field line is the shorter of the two — and the
+**"Rockies Dugout"** label along 120–126 with **"Visitors Dugout"** along
+136–139. So low numbers = right field = 1B; high numbers = left field = 3B.
+
+### Behind home plate
+
+The **Toyota Clubhouse** (a club, black on the map) sits directly behind the
+plate. The 100 ring behind it: **129 130 131** dead centre, with 128 and 127
+on the 1B shoulder and 132, 133 on the 3B shoulder. Behind-plate block ≈
+**128–132**. At the 200 level the PNC Press Club / Legacy Club / Press Box
+occupy the space behind the plate: the club level runs 214–227 on the 1B side
+and 234–247 on the 3B side, and **228–233 are not printed anywhere**.
+
+### Lower bowl outward from the plate
+
+- **1B line, descending:** `127 126 125 124 123 122 121 120` (Infield Box)
+  `119 118 117 116` (Outfield Box) `115 114 113 112 111` (Corner Outfield Box)
+  `110 109 108 107 106 105` (Right Field Box) → RF corner at 350'.
+- **3B line, ascending:** `133 134 135` (Infield Box) `136 137 138 139 140
+  141` (Midfield Box) `142 143 144 145 146 147 148 149 150` (Outfield / Corner
+  Outfield Box) → LF corner at 347'. Pavilion 151–160 runs across the outfield
+  beyond.
+- **200 level:** `214 … 227` along the 1B side; `234 … 247` up the 3B side.
+- **300 level:** `301 … 309` Lower Rooftop Reserved in right field, `310–313`
+  by Gate B, `314 … 321` along the 1B side, `323 325 326 327 328 … 347` up
+  the 3B side to Gate E. A suite band numbered 1–45 sits between the 200 and
+  300 levels, 1 at the RF end and 45 at the LF end.
+
+### Deck levels
+
+100s 105–160; 200s 201–209 (RF Mezzanine) and 214–247 (Club); 300s 301–347;
+400s 401–403 (the Rockpile). Suites 1–45.
+
+### vs. `stadium.py` (`_make_coors_field_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `HOME-F` | Sec 127-132 | about right; 127 is the first 1B shoulder section |
+| `1B-FB1` | Sec 133-140 | **3B** — Infield/Midfield Box up the left-field line |
+| `1B-DUG` | Sec 141-150 | **3B** — the left-field corner |
+| `3B-FB1` | Sec 118-126 | **1B** — the Rockies-dugout run |
+| `3B-DUG` | Sec 110-117 | **1B** — the right-field corner |
+| `HOME-B` | Sec 225-236 | 225–227 are 1B club, 234–236 are 3B club, 228–233 do not exist |
+| `1B-LB1` | Sec 237-247 | **3B** |
+| `3B-LB1` | Sec 214-224 | **1B** |
+| `HOME-U` | Sec 321-332 | straddles the plate: 321–327 bottom / 1B shoulder, 328–332 up the 3B side |
+| `1B-UB` | Sec 333-347 | **3B** |
+| `3B-UB` | Sec 301-320 | 301–309 are the right-field rooftop reserved, 314–320 the 1B upper deck — all **1B** side |
+
+**Mismatch: the 1B and 3B label ranges are swapped on all three decks.** The
+plate zone is in the right place. The zone-table comment in `stadium.py` even
+says "1B Baseline (Sec 141-150) — down RF foul line"; the map puts 141–150 in
+the left-field corner.
+
+**Anchors added:** 1B 110–127, 3B 133–150. Check: **flipped**, 35 disagree, 0
+agree, 127 unmatched (the model's `HOME-F` claims it). Join is now
+`join_gap / sides_flipped`.
+
+---
+
+## 7. Citizens Bank Park — `citizensbank_park.jpg`
+
+Flat plan, plate at bottom-centre. 640px wide; the section labels are 8–10px
+tall and needed 3x–4x to read. Everything on the lower bowl resolved; the
+netting hatch is at the limit.
+
+**Orientation.** The map labels its own gates: **"FIRST BASE GATE"** on the
+right of the frame, **"THIRD BASE GATE"** on the left, "LEFT FIELD GATE" top
+left. The **"Phillies"** dugout is drawn on the right and **"VISITORS"** on the
+left, which agrees. Right = 1B = low numbers.
+
+### Behind home plate
+
+The **Diamond Club is lettered, not numbered**: `A B C D E F G` running
+3B→1B, `D` dead centre. Behind it the 100 ring reads `125 124 | 123 122`,
+with the centre falling between 123 and 124. Shoulders: `121 120 119` beside
+`G` on the 1B side, `126 127 128` beside `A` on the 3B side. Behind-plate
+block ≈ **122–125**; the wider arc 119–128.
+
+Further out: 200s `224 223 222 221 220` (222 centre); 300s `322 321 320 319`
+(centre between 320 and 321); 400s `421 420 419`.
+
+### Lower bowl outward from the plate
+
+- **1B line, descending:** `121 120 119` (shoulder) `118 117 116 115` (Infield
+  Box, red) `114 113 112` (purple) `111 110 109 108` (orange) `107 106 105 104
+  103 102 101` (tan) → RF corner beside the out-of-town scoreboard.
+- **3B line, ascending:** `126 127 128` (shoulder) `129 130 131 132` (red)
+  `133 134 135` (purple) `136 137 138 139` (orange) `140 141 142 143 144 145`
+  (tan) `146 147 148` → LF corner beside the Phanavision board.
+- **200 level:** `201–205` (red, RF corner), `206–212` right, `215–219` 1B,
+  `220–224` behind, `225–229` 3B, `230–237`, `241–245` (red, LF corner).
+- **300 level:** `301–318` right, `319–322` behind, `323–333` left.
+- **400 level:** `401–418` right, `419–421` behind, `422–434` left.
+
+### Netting
+
+Legend swatch **"NETTING LOCATED AT FRONT OF SECTION"**, a cross-hatch over
+the section's own fill. Hatched: the Diamond Club `A–G`; `110 111` (orange),
+`112 113 114` (purple), `115 116 117 118 119 120 121` (red), `123 124`, `126
+127 128 129 130 131 132` (red), `133 134 135` (purple), `136` (orange). `109`
+and `137` read plain. `122` and `125` are a lighter fill and I cannot tell
+hatched from not. So the map shows **110–136** against a published 109–138.
+At this resolution I would not argue the endpoints either way.
+
+### Deck levels
+
+100s 101–148 plus Diamond Club A–G; 200s 201–245; 300s 301–333; 400s
+401–434. The map does not name its levels.
+
+### vs. `stadium.py` (`_make_citizens_bank_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `HOME-F` | Sec 127-131 | **3B shoulder and line** — the plate block is 122–125 |
+| `1B-FB1` | Sec 120-126 | **straddles the plate**: 120–121 are the 1B shoulder, 122–125 the plate block, 126 the 3B shoulder |
+| `1B-DUG` | Sec 115-119 | 1B, correct side; these are the infield, not the dugout end |
+| `3B-FB1` | Sec 132-138 | 3B, correct |
+| `3B-DUG` | Sec 139-145 | 3B, correct |
+| `HOME-B` | Sec 223-229 | 223–224 plate, 225–229 3B: ≈3 toward 3B |
+| `1B-LB1` | Sec 215-222 | 1B, correct; 222 is dead centre |
+| `3B-LB1` | Sec 230-237 | 3B, correct |
+| `HOME-U` | Sec 323-329 | **3B** — the 300 plate block is 319–322 |
+| `1B-UB` | Sec 315-322 | 1B, correct, running up to the plate |
+| `3B-UB` | Sec 330-336 | 3B, correct |
+
+**Mismatch: the plate zone is offset about +5 sections toward 3B at field
+level,** and by 3–5 on the two upper decks. **Section ordering is correct on
+both sides on all three decks.**
+
+**Anchors added:** 1B 101–118, 3B 129–148. The shoulders 119–121 and 126–128
+are deliberately left out, as at Truist: the check is for a mirror, and the
+model's `1B-FB1` straddle is a boundary error the anchors are not meant to
+adjudicate. Check: **ok**, 18 agree, 0 disagree. The map's numbers 101–114
+and 146–148 fall outside every zone the model names (unmatched), as do 129–131
+which only `HOME-F` claims.
+
+---
+
+## 8. Great American Ball Park — `great_american.png`
+
+Flat plan, plate at lower-left, field extending to the upper right. 1024px
+wide with a large legend taking a third of the frame; the bowl is about 600px
+across and needed 3x–4x.
+
+**Orientation.** The legend's **"Sun Deck/Moon Deck"** colour is on 140–144,
+at the far end of the high-numbered line, and the Sun/Moon Deck is Great
+American's right-field deck. The drawn diamond agrees: its first-base corner
+is the lower-right one. So high numbers = right field = 1B; low numbers = 3B.
+The bleachers `401–406` sit at the top of the frame beyond 101–105, in
+left-centre.
+
+### Behind home plate
+
+Three premium wedges sit dead behind the plate, innermost first: **Diamond
+Seats `1 2 3 4 5`** (pink; `3` on the plate's axis), **Scout Box `22 23 24
+25`** (blue), then the 100 ring's **Scout `122 123 124 125 126`** (yellow;
+`124` on the axis). Shoulders: `119 120 121` (red, 3B) and `127 128 129` (red,
+1B). Behind-plate block on the 100 ring ≈ **122–126**. These match the
+published netting's "1–5, 22–25" — those are the two premium wedges behind
+the plate, not sections down a line.
+
+The 200 level is a row of small club boxes; `221 222 223 224 225` are legible
+to the 3B side of 122–126 and the rest are not. The 400 level behind the plate
+is around `422–425` — the labels there are 6px and I would not pin it closer.
+
+### Lower bowl outward from the plate
+
+- **3B line, ascending:** `119 118 117 116 115 114 113` (Infield Box, red,
+  stacked along the third-base line) `112 111 110 109` (Field Box, purple)
+  `108 107` (Terrace Line) `106 105 104 103 102 101` (Terrace Outfield, green)
+  → LF corner.
+- **1B line, descending:** `127 128 129 130 131 132 133` (Infield Box, red)
+  `134 135 136 137` (Field Box, purple) `138 139` (Terrace Line) → then the
+  Sun/Moon Deck `140 141 142 143 144` and `145 146` in right field.
+- **400 level:** `407 … 419` down the 3B side, `420 … 437` along the bottom
+  and up the 1B side; `401–406` bleachers.
+- **500 level:** `509 … 519` 3B side, `520 … 537` 1B side.
+
+### Netting
+
+**None drawn.** The legend is a 20-entry product key with no netting entry.
+
+### Deck levels
+
+100s 101–146 plus premium 1–5 and 22–25; 200s a row of small club boxes,
+only 221–225 legible; 300s 301–307 on the 1B side; 400s 401–437; 500s
+509–537.
+
+### vs. `stadium.py` (`_make_great_american_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `HOME-F` | Sec 116-119 | **3B line** — the Infield Box wedges stacked along third base, 3–7 sections up from the plate block |
+| `1B-FB1` | Sec 120-127 | **straddles the plate**: 120–121 3B shoulder, 122–126 plate block, 127 1B shoulder |
+| `1B-DUG` | Sec 128-136 | 1B, correct |
+| `3B-FB1` | Sec 109-115 | 3B, correct |
+| `3B-DUG` | Sec 101-108 | 3B, correct |
+| `HOME-B` / `1B-LB1` / `3B-LB1` | Sec 205-228 | **unreadable** — the 200 level is a row of 6px boxes |
+| `HOME-U` | Sec 412-419 | **3B** — the 400 plate block is ≈422–425 |
+| `1B-UB` | Sec 420-430 | 1B, correct, running from the plate |
+| `3B-UB` | Sec 401-411 | 401–406 are the left-field bleachers; 407–411 are 3B upper |
+
+**Mismatch: the plate zone is offset about +6 sections toward 3B at field
+level.** Same shape as Truist. **Section ordering is correct on both sides.**
+
+**Anchors added:** 3B 101–118, 1B 127–139. Check: **ok**, 25 agree, 0
+disagree; 116–118 and 137–139 unmatched.
+
+---
+
+## 9. Progressive Field — `progressive_field.png`
+
+Flat plan, plate at lower-left of the diamond, field extending up and to the
+right. 1536px wide, of which the bowl is about 900px; readable at 2x–3x.
+
+**Orientation.** The map labels **"LEFT FIELD DISTRICT"** on the left of the
+frame and **"RIGHT FIELD DISTRICT"** and **"RIGHT FIELD GATE"** on the right,
+with a NORTH arrow. The **"HOME DUGOUT"** is drawn along 158–165 and the
+**"AWAY DUGOUT"** along 138–142, which agrees (Cleveland's dugout is on the
+third-base side). So left = 3B = high numbers; right = 1B = low numbers.
+
+### Behind home plate
+
+The **Lexus Carnegie Club `1 2 3 4`** sits dead behind the plate. The 100
+ring behind it: `150 151 152 | 153 154 155`, with the plate's axis falling
+around 152–153 — the ring is not centred on the plate and I would not pin it
+closer than ±1. Behind-plate block ≈ **150–155**. Diamond Box front row
+(black) fronts 148–158.
+
+### Lower bowl outward from the plate
+
+- **1B line, descending:** `149 148 146 144 142 140` (Field Box, dark
+  blue/orange) `138 136` (Lower Box Front, orange) `134 131 130 129 128`
+  (Lower Box, red) `125 117` (Lower Box Outfield, pink) → the corner drink
+  rails and Field View Bullpen → `113 111 109 108 107 103` (Lower Reserved /
+  Lower Box Outfield) in the RF corner.
+- **3B line, ascending:** `153 154 155 156 157 158` (Field Box) `159 160 162
+  163 164` (Field Box Back / Middle) `165 167 169 170 171 172 174` (Lower Box)
+  `175 178 179` (Lower Box Outfield) → LF corner; bleachers `180–185` beyond.
+- **Numbers that do not appear on the lower bowl:** `132 133 135 137 139 141
+  143 145 147` and `114–116 118–124 126 127` on the 1B side; `161 166 168 173
+  176 177` on the 3B side.
+
+**The same numbers are printed twice.** Two suite columns on the 3B side, up
+against the press box, carry `132 133 134 136 138 139 140 142 144 146 147 148`
+(dark blue) and `150 151 152 153 154 155 156 157 158 159 160 161 162` (light
+blue, "Third Baseline Infield Suites"), plus a parallel `230 … 257`. So a bare
+printed **134–150 is on both foul lines** — first-base field box or
+third-base suite — and cannot anchor a side. The anchors below stop at 131.
+
+- **400 level:** `427 428 429 430 431 432 434 436 437 438 440 442 444 446 447`
+  (First Baseline Infield Suites, lavender) up the 1B side; `448 450 451 452
+  453 454 455 456 457 458 459` (View Box, yellow) along the press box on the
+  3B side, `461–472` beyond. The plate at this level is at the press box,
+  between 447 and 448.
+- **500 level:** `519 520 523 525 528 529 533 537 541 546 548` up the 1B side,
+  `550 551 552 553 554 555 556 557 558 559` up the 3B side; plate ≈ 548–550.
+- **300 level:** `303 304 307 309 311 316` (Pennant District, RF), `324 … 348`
+  (Club Lounge / Club Infield) on the 1B side. None printed on the 3B side.
+
+### Netting
+
+**None drawn**, and no legend entry.
+
+### Deck levels
+
+100s 103–185; suites 132–162 and 230–257 (3B side); 300s 303–348; 400s
+427–472 plus the KeyBank North Coast Social `1–20` in left field; 500s
+519–559.
+
+### vs. `stadium.py` (`_make_progressive_field_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `HOME-F` | Sec 148-152 | about right — one or two sections toward 1B of the plate block |
+| `1B-FB1` | Sec 153-161 | **3B** — Field Box up the left-field line |
+| `1B-DUG` | Sec 162-172 | **3B** — the home-dugout run |
+| `3B-FB1` | Sec 139-147 | **1B** field boxes along the away dugout (and 3B suites: ambiguous numbers) |
+| `3B-DUG` | Sec 130-138 | **1B** — 130, 131, 134, 136, 138 are the first-base Lower Box |
+| `HOME-B` | Sec 446-452 | straddles the press box: 446–447 1B suites, 448–452 3B view box |
+| `1B-LB1` | Sec 453-461 | **3B** |
+| `3B-LB1` | Sec 437-445 | **1B** |
+| `HOME-U` | Sec 546-555 | about right |
+| `1B-UB` | Sec 556-568 | **3B** |
+| `3B-UB` | Sec 534-545 | **1B** |
+
+**Mismatch: the 1B and 3B label ranges are swapped on all three decks.** The
+plate zone is roughly right on each.
+
+**Anchors added:** 1B 103–113 and 117–131 (the sections that carry a label,
+short of the duplicated range), 3B 153–179. Check: **flipped**, 22 disagree, 0
+agree. 31 unmatched: the RF corner and 117–129 fall outside every zone the
+model names, and 173–179 are past the model's 172.
+
+---
+
+## 10. Oracle Park — `oracle_park.jpg`
+
+Flat plan, plate at bottom-centre. 640px wide; the lower-bowl labels are
+7–9px and needed 4x. The section numbers resolved; the odd/even structure
+near the plate is the least certain part of the read.
+
+**Orientation.** Fixed by the legend. **"Arcade"** and **"Coors Light Cove:
+Silver Seats"** colours are on `145–152`, beyond the low-numbered end of the
+bowl — the arcade is the right-field wall over McCovey Cove. **"Club Left
+Field"** is on `232–234` and **"View Reserve Left Field"** on `332–336`,
+beyond the high-numbered end; the bleachers `136–143` run across left-centre.
+So low numbers = right field = 1B; high numbers = 3B.
+
+### Behind home plate
+
+A small dark block (the legend's Dugout Club / Batter's Box) sits directly
+behind the plate. The Field Club ring behind it: **`115` dead centre**, `117`
+and `113` flanking. The numbering interleaves two rows: the Field Club (front)
+reads `… 119 | 117 115 113 | 112 110 109 …` and the Premium Lower Box row
+behind it reads `118 117 116 115 114 113`, the same numbers again — a section
+number spans both products. Behind-plate block ≈ **113–118**; shoulders 112
+and 119.
+
+The 200 level behind the plate is the Diamond Seats arc `208 … 224`, with
+`215 216` centre; the 300 level `314 315 317`, centre ≈315.
+
+### Lower bowl outward from the plate
+
+- **1B line, descending:** `112 110 109 108 107` (Field Club, red) `106 105
+  104` (Lower Box, purple) `103 102 101` (Lower Box Outfield, light blue) →
+  RF corner; arcade 145–152 beyond.
+- **3B line, ascending:** `119 121 122 123` (Field Club) `124 125 126 127 128`
+  (Lower Box) `129 130 131 132 133 134 135` (Lower Box Outfield, green) → LF
+  corner; bleachers 136–143 beyond.
+- **200 level:** `202 203 204 205 207` (orange, RF) `208 209 210 211` (1B)
+  `212–224` (behind and 3B) `225 226 227 … 234` (3B / LF). A suite ring
+  numbered `37 … 61` sits behind it.
+- **300 level:** `302 304 305 307 308` (RF) `310 311` `314 315 317` (behind)
+  `319 320 321` `324 … 336` (3B / LF).
+
+### Netting
+
+No hatch. A printed note on the map: **"Protective netting extends from
+SECTIONS 101-135"** — matches the published extent word for word.
+
+### Deck levels
+
+100s 101–152 (101–135 lower box, 136–143 bleachers, 145–152 arcade); 200s
+201–234 plus suites 37–61; 300s 302–336.
+
+### vs. `stadium.py` (`_make_oracle_park_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `HOME-F` | Sec 107-109 | **1B line**, 4–8 sections down toward McCovey Cove |
+| `1B-FB1` | Sec 110-116 | 110–112 are 1B (correct); 113–116 are the plate block |
+| `1B-DUG` | Sec 117-123 | 117–118 plate block; **119–123 are 3B** |
+| `3B-FB1` | Sec 103-106 | **1B** |
+| `3B-DUG` | Sec 101-102 | **1B** — the right-field corner |
+| `HOME-B` | Sec 209-215 | the 1B half of the Diamond Seats arc |
+| `1B-LB1` | Sec 216-226 | **3B** |
+| `3B-LB1` | Sec 202-208 | **1B** |
+| `HOME-U` | Sec 308-316 | the 1B side of the 300 plate block |
+| `1B-UB` | Sec 317-327 | **3B** |
+| `3B-UB` | Sec 302-307 | **1B** |
+
+**Mismatch: the sides are swapped on all three decks, and the field-level
+plate zone is also about 6 sections down the first-base line.** The zone-table
+comment says "1B Club (Sec 117-123) — down RF line toward McCovey Cove"; the
+map puts 119–123 on the third-base side and McCovey Cove beyond 101.
+
+**Anchors added:** 1B 101–112, 3B 119–135. Check: **inconsistent**, not
+flipped — 3 agree (110, 111, 112: the model's `1B-FB1` starts far enough down
+the right-field line to overlap the true 1B side) and 11 disagree. That is the
+honest verdict: a swap alone would leave 110–112 on the wrong side, so the
+table is wrong in a way a mirror would not fix. G5 passes it on as
+`join_gap / labels_contradict_model`.
+
+---
+
+## 11. Rate Field — `rate_field.gif`
+
+Flat plan, plate at bottom-centre, the White Sox logo across the outfield.
+1536px wide and the most legible map of the six; every lower-bowl label is
+20px tall.
+
+**Orientation.** This is the one map of the six that **names no left-field or
+right-field landmark**. The orientation rests on the drawn diamond alone: the
+plate is at the bottom of the frame, the mound above it, so first base is on
+the viewer's right. The gates around the frame (Gate 4 behind the plate, Gate
+5 beside the high numbers, Gate 3 beside the low) and the named concourse
+areas (Miller Lite Landing at the 105–108 corner, Wintrust Kids Zone at the
+155–158 corner) are printed but do not say which field they are in, and were
+not relied on. Read with that caveat: right = 1B = low numbers.
+
+### Behind home plate
+
+The **"CIBC Scout Club"** is drawn behind `130–134`, and **`132` is dead
+centre**, `131` and `133` flanking. Behind-plate block ≈ **130–134**. At the
+300 (club) level the Rate Club box sits between `330` and `334`, so 331–333
+do not exist; at the 500 level `531` and `533` flank a centre gap.
+
+### Lower bowl outward from the plate
+
+- **1B line, descending:** `131 130 129 128 127 126 125 124 123 122 121 120
+  119 118 117 116 115 114 113 112 111 110 109 108` → RF corner; then the
+  Miller Lite Landing and `105 104 103 102 101 100` across the outfield.
+- **3B line, ascending:** `133 134 135 136 … 154 155 156` → LF corner; then
+  `157 158 159 160 161 162 163 164` across the outfield. Fully continuous
+  100–164, every number present.
+- **300 level:** `311 312 314 316 318 320 322 324 326 328 329 330` 1B side;
+  `334 335 336 338 340 342 344 346 348 350 352 354 356 357` 3B side.
+- **500 level:** `506 … 531` 1B side; `533 … 558` 3B side.
+
+### Netting
+
+**Drawn**: a red line along the field edge from 108 round to 156, with the
+legend **"Netting located in front of sections 108-156"**. Matches the
+published extent exactly.
+
+### Deck levels
+
+100s 100–164; 300s 311–357; 500s 506–558. **There is no 200 or 400 level on
+this map.**
+
+### vs. `stadium.py` (`_make_rate_field_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `HOME-F` | Sec 112-115 | **1B line, 17–20 sections down toward the right-field corner** |
+| `1B-FB1` | Sec 116-121 | 1B, correct side; mid-line |
+| `1B-DUG` | Sec 122-132 | 1B, correct side, running up to and including the plate |
+| `3B-FB1` | Sec 137-142 | 3B, correct |
+| `3B-DUG` | Sec 143-153 | 3B, correct |
+| `HOME-B` / `1B-LB1` / `3B-LB1` | Sec 214-243 | **no 200 level exists on this map** |
+| `HOME-U` | Sec 514-521 | **1B side**, 12–17 sections from the 500 plate at 531–533 |
+| `1B-UB` | Sec 522-534 | 1B, correct (534 is the first 3B section) |
+| `3B-UB` | Sec 535-546 | 3B, correct |
+
+**Mismatch: the plate zone is offset about 18 sections toward 1B** — the
+model has the plate at the low end of the 108–156 arc with both foul lines
+running the same way from it, the Sutter Health shape. **The sides are
+correct**, which is the question this step asked, but the 1B numbers run
+*toward* the plate in the model where the map has them running away from it.
+The model's whole 200 level names sections the map does not have.
+
+**Anchors added:** 1B 108–129, 3B 135–156. Check: **ok**, 31 agree, 0
+disagree; 108–115 unmatched (only `HOME-F` claims them), 135–136 and 154–156
+unmatched.
+
+---
+
+## What the check now says, across all 31 parks
+
+| Verdict | Parks |
+|---|---|
+| **flipped** | `camden_yards`, **`coors_field`**, **`progressive_field`** |
+| **inconsistent** | `busch_stadium`, `oakland_coliseum`, **`oracle_park`** |
+| ok | `chase_field`, `comerica_park`, `dodger_stadium`, `fenway_park`, `rogers_centre`, `truist_park`, **`citizens_bank`**, **`great_american`**, **`guaranteed_rate`** |
+| untestable, anchors exist but unusable | `petco_park`, `yankee_stadium` |
+| untestable, no anchor | the other 14 |
+
+Fifteen parks are testable; sixteen are not. Mapped parks drop from ten to
+**seven**: `fenway_park`, `dodger_stadium`, `truist_park`, `citizens_bank`,
+`great_american`, `guaranteed_rate` with sides confirmed, and `minute_maid`
+(Daikin) still `sides untested` — it is the one park on the Step 11 list with
+no seating map in `seating_maps/`.
+
+The test expectations in `tests/test_netting.py` (`MAPPED_PARKS`,
+`JOIN_GAP_PARKS`, `STRUCTURAL_GAP_KINDS`) and `tests/test_site.py` move with
+this. `site_data.MAP_READS` — the public, positional statement of each map
+finding — still carries the five Step 11 parks only; the six above are not yet
+written up for the site.
+
+## What I am least confident about
+
+1. **Rate Field's orientation.** It rests on the drawn diamond alone; no
+   named left- or right-field feature on the map corroborates it. Every other
+   map here has one. If the artist mirrored the plan, the anchor is wrong and
+   the check would call a mirrored table "ok". I think that is unlikely for a
+   map fans use to find their seats, and the diamond is drawn with its bases,
+   but it is the weakest basis of the six.
+2. **Citizens Bank's netting endpoints.** 110–136 as read against a published
+   109–138; a hatch on a 25px wedge at 640px is not something I would testify
+   to at the boundary sections. The sides and the plate block do not depend on
+   it.
+3. **Oracle Park's near-plate numbering.** `119 121 122 123` on the 3B side
+   and `112 110 109 108 107` on the 1B side, read at 4x from 7–9px labels. An
+   odd/even interleave means a misread digit moves a section one place, not
+   across the plate, so the side calls survive it; the exact plate block
+   (113–118) might be off by one.
+4. **The plate centre at Great American and Progressive**, pinned to ±1
+   section from where the plate's axis crosses the ring. Neither affects the
+   side calls; both affect how large the offset is.
+5. **Great American's 200 level.** Unreadable at 6px, so the model's
+   `HOME-B` / `1B-LB1` / `3B-LB1` (205–228) are simply not checked.

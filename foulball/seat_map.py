@@ -63,8 +63,8 @@ do not. This module improves the bookkeeping, not the geometry.
 The same caveat binds the side anchors, and harder. An anchor that passes says
 the table is not mirrored. It does not say the zone boundaries are right, that
 the behind-plate block is in the right place, or that the sections exist. Every
-one of the five parks in `MAP_FINDINGS.md` disagrees with its zone table in
-some way; only one of them disagrees by a mirror.
+one of the eleven parks in `MAP_FINDINGS.md` disagrees with its zone table
+in some way; four of them disagree by a mirror.
 """
 import hashlib
 import re
@@ -305,7 +305,7 @@ def zone_catalog(stadium) -> list[dict]:
 #      of statement.
 #   3. Seating maps read directly, where a landmark fixes the orientation and
 #      the numbers can then be read off each foul line. See `MAP_FINDINGS.md`
-#      for the five read so far, including which landmark fixed each one.
+#      for the eleven read so far, including which landmark fixed each one.
 #
 # A published netting *extent* on its own is not such a fact, however
 # asymmetric it is. "Sections 6 → 70" tells you the run is longer on one side
@@ -590,6 +590,171 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                    basis='the visiting dugout at Fenway is on the third-base '
                          'side; same unverified source as above'),
     ),
+    # --- Family 3, second read (2026-09-07): the six parks that were flagged
+    # "sides untested" because their published extent is a bare numeric arc.
+    # Read the same way as the five above; see MAP_FINDINGS.md, Step 12.
+
+    'coors_field': (
+        SideAnchor('', 110, 127, '1B',
+                   'lower bowl descending from the plate block 128-132 toward '
+                   'the right-field corner: 127 126 ... 120 (Infield Box), '
+                   '119-116 (Outfield Box), 115-111 (Corner Outfield Box), '
+                   '110-105 (Right Field Box)',
+                   'seating_maps/coors_field.jpg (Rockies seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at lower left. Orientation fixed by '
+                         'the map\'s own legend: the "Right Field Box" colour '
+                         'is on 105-110 and "Right Field Mezzanine" on '
+                         '201-209, both at the low-numbered end. Corroborated '
+                         'by the foul-pole distances printed on the field '
+                         '(347\' beside 150/151, 350\' beside 109/110; Coors\' '
+                         'left-field line is the shorter of the two) and by '
+                         'the "Rockies Dugout" label along 120-126. The 200 '
+                         'and 300 levels run the same way: 214-227 and '
+                         '314-321 on this side, 234-247 and 326-347 on the '
+                         'other'),
+        SideAnchor('', 133, 150, '3B',
+                   'lower bowl ascending from the plate block 128-132 toward '
+                   'the left-field corner: 133 134 135 (Infield Box), '
+                   '136-141 (Midfield Box), 142-150 (Outfield / Corner '
+                   'Outfield Box)',
+                   'seating_maps/coors_field.jpg (Rockies seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 1B anchor above; the '
+                         '"Visitors Dugout" label runs along 136-139'),
+    ),
+
+    'citizens_bank': (
+        SideAnchor('', 101, 118, '1B',
+                   'lower bowl descending toward the right-field corner: '
+                   '118 117 116 115 (beyond the 119-121 shoulder of the '
+                   'behind-plate arc) ... 102 101',
+                   'seating_maps/citizensbank_park.jpg (Phillies seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at bottom. Orientation fixed by the '
+                         'map\'s own "FIRST BASE GATE" (right of frame) and '
+                         '"THIRD BASE GATE" (left) labels; the "Phillies" '
+                         'dugout on the right and "VISITORS" on the left '
+                         'agree. The lettered Diamond Club A-G sits directly '
+                         'behind the plate with 122-125 behind it; 119-121 '
+                         'and 126-128 are the two shoulders and are left out '
+                         'of the anchors. 640px source, read at 3x'),
+        SideAnchor('', 129, 148, '3B',
+                   'lower bowl ascending toward the left-field corner: 129 '
+                   '130 131 132 (Infield Box) 133-135 136-139 140-148',
+                   'seating_maps/citizensbank_park.jpg (Phillies seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 1B anchor above'),
+    ),
+
+    'great_american': (
+        SideAnchor('', 101, 118, '3B',
+                   'lower bowl ascending from the plate toward the left-field '
+                   'corner: 113-118 stacked along the third-base line '
+                   '(Infield Box), 106-112 (Field Box), 101-105 (Terrace '
+                   'Outfield)',
+                   'seating_maps/great_american.png (Reds seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at lower left. Orientation fixed by '
+                         'the legend\'s "Sun Deck/Moon Deck" colour on 140-144 '
+                         'at the far end of the high-numbered line (the '
+                         'Sun/Moon Deck is Great American\'s right-field '
+                         'deck) and by the drawn diamond, whose first-base '
+                         'corner is the lower-right one. The premium wedges '
+                         '1-5 and 22-25 sit dead behind the plate, with '
+                         '122-126 behind them; 119-121 and 127 flank. '
+                         '1024px source, read at 4x'),
+        SideAnchor('', 127, 139, '1B',
+                   'lower bowl descending toward the right-field corner: '
+                   '127 128 ... 133 (Infield Box), 134-137 (Field Box), '
+                   '138-139, then the Sun/Moon Deck 140-144',
+                   'seating_maps/great_american.png (Reds seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 3B anchor above'),
+    ),
+
+    'progressive_field': (
+        SideAnchor('', 103, 113, '1B',
+                   'right-field corner, Lower Reserved / Lower Box Outfield: '
+                   '103 107 108 109 111 113',
+                   'seating_maps/progressive_field.png (Guardians seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at lower left. Orientation fixed by '
+                         'the map\'s own "LEFT FIELD DISTRICT" (left of '
+                         'frame) and "RIGHT FIELD DISTRICT" / "RIGHT FIELD '
+                         'GATE" (right) labels; the "HOME DUGOUT" along '
+                         '158-165 and "AWAY DUGOUT" along 138-142 agree'),
+        SideAnchor('', 117, 131, '1B',
+                   'first-base line descending toward the corner: 131 130 '
+                   '129 128 125 117 (only these six carry a label; '
+                   '118-124 and 126-127 do not appear)',
+                   'seating_maps/progressive_field.png (Guardians seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks. Deliberately stops at 131: the '
+                         'numbers 134 through 150 are printed twice on this '
+                         'map, once on the first-base field boxes (134 136 '
+                         '138 ... 148 149 150) and once on the third-base '
+                         'suite columns (132-162), so a bare label in that '
+                         'range is on both lines and cannot anchor'),
+        SideAnchor('', 153, 179, '3B',
+                   'lower bowl ascending from the plate block 150-152 '
+                   '(Lexus Carnegie Club 1-4 behind it) toward the '
+                   'left-field corner: 153 154 ... 158 (Field Box), 159-164 '
+                   '165-174 (Lower Box), 175 178 179',
+                   'seating_maps/progressive_field.png (Guardians seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks. 153-162 are also suite numbers on '
+                         'this map, but the suites carrying them are on this '
+                         'same side, so the label is on the third-base line '
+                         'whichever product it names'),
+    ),
+
+    'oracle_park': (
+        SideAnchor('', 101, 112, '1B',
+                   'lower bowl descending from the plate block 113-118 toward '
+                   'the right-field corner: 112 110 109 108 107 (Field Club) '
+                   '106 105 104 (Lower Box) 103 102 101',
+                   'seating_maps/oracle_park.jpg (Giants seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at bottom. Orientation fixed by the '
+                         'map\'s own legend: "Arcade" and "Coors Light Cove" '
+                         'colours on 145-152 beyond the low-numbered end (the '
+                         'arcade is the right-field wall over McCovey Cove), '
+                         'and "Club Left Field" / "View Reserve Left Field" '
+                         'colours on 232-234 and 332-336 beyond the '
+                         'high-numbered end. 115 is dead centre behind the '
+                         'plate. 640px source, read at 4x'),
+        SideAnchor('', 119, 135, '3B',
+                   'lower bowl ascending from the plate block 113-118 toward '
+                   'the left-field corner: 119 121 122 123 (Field Club) '
+                   '124-128 (Lower Box) 129-135 (Lower Box Outfield)',
+                   'seating_maps/oracle_park.jpg (Giants seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 1B anchor above'),
+    ),
+
+    'guaranteed_rate': (
+        SideAnchor('', 108, 129, '1B',
+                   'lower bowl descending from the plate at 132 toward the '
+                   'right-field corner: 129 128 ... 109 108',
+                   'seating_maps/rate_field.gif (White Sox seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at bottom, 132 dead centre behind '
+                         'the "CIBC Scout Club". Orientation fixed by the '
+                         'drawn diamond alone: the plate is at the bottom of '
+                         'the frame and the mound above it, so first base is '
+                         'on the viewer\'s right. This map names no '
+                         'left-field or right-field landmark, so this is the '
+                         'least corroborated read of the six; the gate '
+                         'numbers around the frame were not relied on'),
+        SideAnchor('', 135, 156, '3B',
+                   'lower bowl ascending from the plate at 132 toward the '
+                   'left-field corner: 135 136 ... 155 156',
+                   'seating_maps/rate_field.gif (White Sox seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same basis as the 1B anchor above'),
+    ),
+
 }
 
 

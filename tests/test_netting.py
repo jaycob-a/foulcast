@@ -18,9 +18,9 @@ from foulball.batter_profiles import RED_SOX_2024_PROFILES, PITCHER_PROFILES
 # Parks whose published extent joins onto their zone table. Locked as a list
 # rather than a count so that a park moving in or out is a named diff.
 MAPPED_PARKS = {
-    'fenway_park', 'dodger_stadium', 'coors_field', 'truist_park',
-    'citizens_bank', 'great_american', 'progressive_field',
-    'minute_maid', 'oracle_park', 'guaranteed_rate',
+    'fenway_park', 'dodger_stadium', 'truist_park',
+    'citizens_bank', 'great_american',
+    'minute_maid', 'guaranteed_rate',
 }
 
 # Parks where SOURCED_DATA.md itself has no usable section-level extent.
@@ -48,6 +48,12 @@ JOIN_GAP_PARKS = {
     # bowl ascending toward third base and the zone table has it ascending
     # toward first. Passed every other guard, because they are all symmetric.
     'camden_yards',
+    # Step 12, the second map read. Coors and Progressive are clean
+    # mirrors. Oracle is mirrored *and* has its plate zone several
+    # sections down the first-base line, so three of its anchored
+    # sections happen to agree; the check reports that as inconsistent
+    # rather than flipped, and G5 passes it on as labels_contradict_model.
+    'coors_field', 'progressive_field', 'oracle_park',
 }
 
 # What each G4 park fails on, locked so a change of guard is a named diff.
@@ -56,6 +62,9 @@ STRUCTURAL_GAP_KINDS = {
     'pnc_park': 'labels_wrap_unpublished',
     'globe_life': 'sides_unverifiable',
     'camden_yards': 'sides_flipped',
+    'coors_field': 'sides_flipped',
+    'progressive_field': 'sides_flipped',
+    'oracle_park': 'labels_contradict_model',
 }
 
 

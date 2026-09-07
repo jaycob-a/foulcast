@@ -96,13 +96,15 @@ the data and argues why nothing weaker will do; the short version is that a
 published extent like "Sections 6 → 70" fixes where the run ends but not which
 foul line each end is on, so no amount of extent asymmetry can settle it.
 
-The check reaches eleven parks and cannot reach the other twenty, which is a
-real limit and not a rounding error. Of the ten parks still mapped, three have
-their sides confirmed (Fenway, Dodger, Truist) and **seven have never been
-tested at all** (Coors, Citizens Bank, Great American, Progressive, Daikin,
-Oracle, Rate Field). Those seven carry a `sides untested` flag rather than
-silence, because "passed every check" and "passed every check that exists"
-are different claims and only the second one is true of them.
+The check reaches fifteen parks and cannot reach the other sixteen, which is
+a real limit and not a rounding error. Of the seven parks still mapped, six
+have their sides confirmed (Fenway, Dodger, Truist, Citizens Bank, Great
+American, Rate Field) and **one has never been tested at all** (Daikin). It
+carries a `sides untested` flag rather than silence, because "passed every
+check" and "passed every check that exists" are different claims and only
+the second one is true of it. The flag was not decorative: the second map
+read (Step 12, MAP_FINDINGS.md) found three of the seven parks it used to
+sit on — Coors, Progressive, Oracle — mirrored.
 
 HOW THIS IS USED, IN TWO OPPOSITE DIRECTIONS
 ============================================
