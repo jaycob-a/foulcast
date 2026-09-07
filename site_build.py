@@ -35,6 +35,14 @@ Four constraints come out of `AUDIT.md` and `NOTES.md` and are enforced by
    "lower risk".
 4. **No accuracy claims.** The model has never been compared with observed foul
    landings, and every page has to be readable by someone who knows that.
+5. **No foul line is named at a park whose sides are not established.** Six of
+   the 31 parks have a source that names a side alongside a section number
+   (`seat_map.SIDE_ANCHORS`); at the other twenty-five, a reversal of the two
+   sides would be invisible to every check this project has, and one park —
+   Oriole Park — was reversed, mapped and cited for the whole of Step 10. So at
+   those twenty-five the two foul lines are folded into one row per matching
+   pair, described as both lines at once. `_merge_foul_lines` does the folding
+   and `PAIR_ZONE_WORDS` supplies the words.
 """
 import argparse
 import html
@@ -52,9 +60,11 @@ from foulball.batter_profiles import YANKEES_2024_PROFILES, RED_SOX_2024_PROFILE
 from foulball.matchup_engine import predict_game_fouls
 from foulball.stadium import STADIUMS, PARK_PARAMS
 from foulball.netting import join_park, PDL_RULE
+from foulball.seat_map import check_side_anchors
 from site_data import (
-    PARK_SOURCES, ZONE_WORDS, AREA_WORDS, GAP_WORDS, NET_HEIGHT_WORDS,
-    COVER_WORDS, COVER_APPLIED, MODEL_LIMITS, RESEARCH_DATE,
+    PARK_SOURCES, ZONE_WORDS, PAIR_ZONE_WORDS, AREA_WORDS, GAP_WORDS,
+    NET_HEIGHT_WORDS, COVER_WORDS, COVER_APPLIED, MODEL_LIMITS, RESEARCH_DATE,
+    SIDE_STATE_WORDS, MAP_READS, MAP_READ_DATE, NO_MAP_READ,
     FOUL_AREA_CAVEAT, BACKSTOP_CAVEAT, OVERHANG_CAVEAT,
     CLEM_TABLE, CLEM_BASE, CLEM_OVERHANG_SNAPSHOT, SEAMHEADS_BASE,
 )
@@ -189,6 +199,109 @@ NETTING_CLUB_CAVEAT = (
     'this site is described as protected outright.'
 )
 
+# The one word per netting state, and the tag class that carries it. `split`
+# is not a state `netting.py` produces — it is what a folded pair becomes when
+# its two halves disagree, which can only happen at a park where the page
+# cannot say which half is which.
+STATUS_WORDS = {
+    'netted': ('behind netting', 'tag-net'),
+    'partially_netted': ('partly netted', 'tag-part'),
+    'not_netted': ('not behind netting', 'tag-open'),
+    'unknown': ('netting not verified', 'tag-unk'),
+    'split': ('differs by foul line', 'tag-part'),
+}
+
+
+_COUNTS: dict[str, int] = {}
+
+
+def netting_counts() -> dict[str, int]:
+    """How many parks sit in each join state, over the whole registry.
+
+    Several sentences on a park page quote a fleet-wide count ("that is true at
+    ten of the 31 parks"). Those were hand-maintained and went stale the moment
+    a guard changed, so they are computed here instead. Cached: the joins are
+    cheap but there are 31 of them and every page asks.
+    """
+    if not _COUNTS:
+        tally: dict[str, int] = {}
+        for key in STADIUMS:
+            j = join_park(STADIUMS[key](), key)
+            tally[j.status] = tally.get(j.status, 0) + 1
+        tally['gaps'] = sum(n for k, n in tally.items() if k != 'mapped')
+        _COUNTS.update(tally)
+    return _COUNTS
+
+
+def split_phrase(z: dict) -> str:
+    """What a folded pair whose two halves disagree can honestly be said to be.
+
+    This is the case the old side hedge was written for, and it is better said
+    as a fact than as a warning: one line is covered, the other is not, and
+    nothing in this project establishes which of the two you would be sitting
+    on.
+    """
+    a, b = z['split']
+    return (f'{STATUS_WORDS[a][0]} on one foul line and {STATUS_WORDS[b][0]} '
+            f'on the other, with nothing to say which of the two is which')
+
+
+def _merge_foul_lines(zones: list[dict]) -> list[dict]:
+    """Fold each matching pair of foul-line zones into one row.
+
+    For the twenty-five parks where nothing establishes which line is which.
+    The alternative considered and rejected was to keep two rows and rename
+    them "one foul line" and "the other" — which reads as an ordering the
+    figures cannot support, and which still invites a reader to believe the
+    two rows are telling them something different. They are not: the model
+    builds every park as an exact mirror, so the pair differs only by noise.
+
+    The folded figure is the **mean** of the two, not the sum. A row on this
+    page is one seating area, and the row beside it — the seats behind the
+    plate — is one seating area too. Summing the pair would make the foul-line
+    rows twice the size of everything they sit next to and would reverse the
+    ordering at most parks, on nothing but the fact that there are two of them.
+    """
+    singles, pairs = [], {}
+    for z in zones:
+        if z['id'][:3] in ('1B-', '3B-') and z['id'][3:] in PAIR_ZONE_WORDS:
+            pairs.setdefault(z['id'][3:], []).append(z)
+        else:
+            singles.append(z)
+
+    for suffix, pair in pairs.items():
+        if len(pair) != 2:
+            # No counterpart to fold into. Nothing here can name a side, so
+            # leaving it alone would leak one; this never fires on the current
+            # registry and is a guard rather than a case.
+            raise SystemExit(f'unpaired foul-line zone {suffix!r}')
+        a, b = pair
+        heading, level = PAIR_ZONE_WORDS[suffix]
+        statuses = tuple(sorted({a['status'], b['status']}))
+        weight = a['fouls'] + b['fouls']
+        singles.append({
+            'id': 'LINES-' + suffix,
+            'heading': heading,
+            'level': level,
+            # Two products with different names on the two lines cannot be
+            # named without naming a line. Citizens Bank and Oracle Park each
+            # have one such pair.
+            'area': a['area'] if a['area'] == b['area'] else '',
+            'fouls': weight / 2,
+            'share': (a['share'] + b['share']) / 2,
+            'ev': ((a['ev'] * a['fouls'] + b['ev'] * b['fouls']) / weight
+                   if weight > 0 else 0.0),
+            'status': statuses[0] if len(statuses) == 1 else 'split',
+            'split': statuses if len(statuses) == 2 else (),
+            # A ball cannot be caught through a net, and half a pair being
+            # netted does not stop the other half being catchable — so a split
+            # pair stays on the catching list, carrying its own caveat.
+            'blocks_catch': a['blocks_catch'] and b['blocks_catch'],
+        })
+
+    singles.sort(key=lambda z: -z['fouls'])
+    return singles
+
 
 def build_park(park_key: str, stats: dict) -> dict:
     """Everything one page needs, resolved from the model and the sources."""
@@ -218,9 +331,29 @@ def build_park(park_key: str, stats: dict) -> dict:
             'share': (fouls / into * 100) if into else 0.0,
             'ev': st['zone_ev'].get(sid, 0.0),
             'status': zn.status if zn else 'unknown',
+            'split': (),
             'blocks_catch': bool(zn and zn.blocks_catch),
         })
     zones.sort(key=lambda z: -z['fouls'])
+
+    # Which foul line is which — and whether this page is allowed to say.
+    #
+    # `check_side_anchors` returns 'ok' from an unverified compilation as
+    # readily as from a club page, and an 'ok' resting on a source
+    # `SOURCED_DATA.md` itself could not confirm is not enough to put a foul
+    # line's name on a public page. `deciding` is what separates the two.
+    sc = check_side_anchors(stadium, park_key)
+    state = {'ok': 'confirmed', 'flipped': 'flipped',
+             'inconsistent': 'inconsistent'}.get(sc.status, 'untested')
+    if not sc.deciding:
+        # A verdict of any kind resting only on evidence this repo marks as
+        # unconfirmed is not a verdict. It reads as untested, which is what it
+        # is.
+        state = 'untested'
+    sides_named = state == 'confirmed'
+    sides = {'state': state, 'named': sides_named}
+    if not sides_named:
+        zones = _merge_foul_lines(zones)
 
     # Netting, in the three states a reader has to be able to tell apart.
     net = {'state': join.status, 'park': join.park}
@@ -229,11 +362,14 @@ def build_park(park_key: str, stats: dict) -> dict:
         net['partial'] = [z for z in zones if z['status'] == 'partially_netted']
         net['open'] = [z for z in zones if z['status'] == 'not_netted']
         net['unknown'] = [z for z in zones if z['status'] == 'unknown']
+        net['split'] = [z for z in zones if z['status'] == 'split']
         # Where the published extent lands differently on the two foul lines,
-        # the page is making a claim about *which* side is which. That claim
-        # rests on the zone table's printed labels, which `AUDIT.md`'s revised
-        # position holds to be unverified at every park — so it has to be
-        # hedged where it is load-bearing, and only there.
+        # the page is asserting which line is which. At a park whose sides are
+        # folded, that assertion is not made at all — the pair comes out as a
+        # single `split` row saying the two differ and nothing says which is
+        # which. It survives only at the parks that name their sides, where
+        # what is at stake is no longer the mirror but where the boundaries
+        # between areas fall, and it is hedged on that.
         by_side = {}
         for z in zones:
             if z['id'][:3] in ('1B-', '3B-'):
@@ -261,6 +397,8 @@ def build_park(park_key: str, stats: dict) -> dict:
         'params': params,
         'join': join,
         'net': net,
+        'sides': sides,
+        'map_read': MAP_READS.get(park_key),
         'net_height': height,
         'zones': zones,
         'into_seats': into,
@@ -409,6 +547,7 @@ def netting_section(p: dict) -> str:
     club published one and it does not fit; nobody published one at all.
     """
     net, join, name = p['net'], p['join'], p['name']
+    counts = netting_counts()
     out = ['<h2 id="netting">Protective netting</h2>']
 
     src_line = (f'<p class="sub">Source: <a href="{e(join.park.source)}" '
@@ -422,8 +561,8 @@ def netting_section(p: dict) -> str:
             f'<div class="ok"><p><strong>Published, and it matches the seating '
             f'areas on this page.</strong> The club states where the netting '
             f'runs, and the areas it names line up with the areas this model '
-            f'carries for {e(name)}. That is true at 11 of the 31 parks on '
-            f'this site.</p></div>')
+            f'carries for {e(name)}. That is true at {counts["mapped"]} of the '
+            f'31 parks on this site.</p></div>')
 
         def listing(zs, tag, tagcls, lead):
             if not zs:
@@ -431,7 +570,9 @@ def netting_section(p: dict) -> str:
             items = ''.join(
                 f'<li><div class="zrow"><div class="zname">{zone_label(z)}</div>'
                 f'<div class="znum"><span class="tag {tagcls}">{tag}</span></div>'
-                f'</div><div class="zmeta">{e(z["level"])}</div></li>'
+                f'</div><div class="zmeta">{e(z["level"])}'
+                + (f' &middot; {split_phrase(z)}' if z['split'] else '')
+                + '</div></li>'
                 for z in zs)
             return f'<h3>{lead}</h3><ul class="zones">{items}</ul>'
 
@@ -445,6 +586,20 @@ def netting_section(p: dict) -> str:
                 'of the area and not the rest. Nobody publishes where the edge '
                 'falls within it, so this model cannot split the area in two '
                 'and treats the whole of it as reachable.</p>')
+        out.append(listing(net['split'], 'differs by foul line', 'tag-part',
+                           'Covered on one foul line and not the other'))
+        if net['split']:
+            out.append(
+                '<div class="warn"><p><strong>The club\'s netting reaches one '
+                'of the two foul lines further than the other, and nothing '
+                'available says which line is which at this ballpark.</strong> '
+                'The club\'s statement is sourced and is not in doubt. What is '
+                'in doubt is this model\'s own labelling of the two sides, '
+                'which no source here can check &mdash; and at one park that '
+                'labelling turned out to be reversed. So these areas are shown '
+                'as a matched pair on the two lines, one covered and one not, '
+                'rather than as a first-base claim and a third-base claim this '
+                'page cannot stand behind.</p></div>')
         out.append(listing(net['open'], 'not behind netting', 'tag-open',
                            'Not behind netting'))
         out.append(listing(net['unknown'], 'not stated', 'tag-unk',
@@ -455,29 +610,47 @@ def netting_section(p: dict) -> str:
                 'areas at all. Not mentioned is not the same as not netted, so '
                 'nothing is claimed about them here.</p>')
         if net['sides_differ']:
+            tail = (' &mdash; and at this park the map shows the seats behind '
+                    'home plate sitting somewhere other than where this model '
+                    'puts them, so the edge of the netted run is softer than '
+                    'the lists above make it look'
+                    if p['map_read'] else '')
             out.append(
                 '<div class="warn"><p><strong>The netting comes out different '
-                'on the two foul lines here, and which line is which is the '
-                'weakest claim on this page.</strong> The club\'s statement is '
-                'sourced. Attaching it to the first-base side rather than the '
-                'third rests on the seat labels this model carries, and those '
-                'labels are unverified at every park on this site &mdash; '
-                'contradicted outright by the club\'s own map at nine of them. '
-                'If they are reversed here, so is everything below that '
-                'distinguishes one foul line from the other. Read the two foul '
-                'lines together; either one on its own is much weaker.</p>'
-                '</div>')
+                'on the two foul lines here, so the two lines are named '
+                'separately above.</strong> That naming is sourced at this '
+                'ballpark &mdash; the next section says what establishes it, '
+                'which is more than exists at twenty-five of the 31 parks on '
+                'this site. But what it establishes is only which line is '
+                f'which. It does not establish where the boundary between one '
+                f'area and the next falls{tail}.</p></div>')
     else:
         out.append(
             f'<div class="gap"><p><strong>Not verified at {e(name)}. '
             f'{e(net["gap_label"])}.</strong></p>'
             f'<p>{net["gap_text"]}</p></div>')
+        # Whose gap it is. `join.status` already separates the two and the
+        # page has to as well: a reader who is told only "not verified" will
+        # read it as the club's failing at every one of these parks, and at
+        # most of them it is this model's.
+        if join.status == 'join_gap':
+            whose = (f'<strong>This one is this model\'s fault, not the '
+                     f'club\'s.</strong> The club does publish where its '
+                     f'netting runs; the seat labels this model carries cannot '
+                     f'be reconciled with what it publishes. That is the case '
+                     f'at {counts["join_gap"]} of the {counts["gaps"]}.')
+        else:
+            whose = (f'Here the gap is in what exists to read. At '
+                     f'{counts["join_gap"]} of the {counts["gaps"]} it is the '
+                     f'other way round &mdash; the club publishes an extent '
+                     f'and this model\'s own seat labels cannot carry it.')
         out.append(
-            '<p>This is a gap, and it is stated as one rather than left blank. '
-            'It is also the normal case: 20 of the 31 parks on this site have '
-            'no netting that can be attached to specific seats. Everything '
-            'below this point should be read knowing that some of the areas '
-            'the model puts fouls into may be entirely behind a net.</p>')
+            f'<p>This is a gap, and it is stated as one rather than left '
+            f'blank. It is also the normal case: {counts["gaps"]} of the 31 '
+            f'parks on this site have no netting that can be attached to '
+            f'specific seats. {whose} Everything below this point should be '
+            f'read knowing that some of the areas the model puts fouls into '
+            f'may be entirely behind a net.</p>')
         if join.park.source_kind == 'none':
             out.append(
                 f'<p class="sub">Checked {e(join.park.retrieved)}: '
@@ -500,29 +673,83 @@ def netting_section(p: dict) -> str:
     return '\n'.join(x for x in out if x)
 
 
+def labels_section(p: dict) -> str:
+    """What is known about the seat labels the areas on this page come from.
+
+    This sits between the netting and the model because it qualifies both: the
+    netting listing above is a join onto these labels, and the distribution
+    below is attached to them. It is the section `MAP_FINDINGS.md` made
+    necessary — before the maps were read there was nothing to put in it
+    except the standing caveat, and afterwards there were five parks with
+    specific, checkable findings and twenty-six with none.
+    """
+    label, para = SIDE_STATE_WORDS[p['sides']['state']]
+    out = ['<h2 id="labels">The seat labels these areas are built from</h2>',
+           '<p>Every area on this page is a group of the ballpark\'s own '
+           'printed seat labels. Nothing in this model measured them; they '
+           'were written down from seating charts, and the areas above and '
+           'below are only as good as they are. This section says what is '
+           'known about them here, because at every ballpark whose own seating '
+           'map has been read against them so far, they turned out to '
+           'disagree with it.</p>',
+           '<h3>Which foul line is which</h3>']
+
+    box = 'ok' if p['sides']['named'] else 'gap'
+    out.append(f'<div class="{box}"><p><strong>{e(label)}.</strong> {para}</p>'
+               f'</div>')
+
+    mr = p['map_read']
+    if mr:
+        out.append('<h3>What this ballpark\'s own seating map shows</h3>')
+        out.append(
+            f'<p>{e(mr["map_of"][0].upper() + mr["map_of"][1:])} was read '
+            f'directly on '
+            f'{e(MAP_READ_DATE)}, at magnification, and compared with the '
+            f'labels this model carries. It is {e(mr["landmark"])}, and as a '
+            f'source it is {e(mr["quality"])}. It disagrees with this model in '
+            f'the following ways.</p>')
+        for head, body in mr['findings']:
+            out.append(f'<div class="gap"><p><strong>{e(head)}.</strong> '
+                       f'{e(body)}</p></div>')
+        out.append(
+            '<p class="note">None of this has been corrected in the model. '
+            'Correcting it means rebuilding this park\'s seating table against '
+            'the map, which is a change to the model and not to this page, and '
+            'it has not been done. The figures below are what the model '
+            'currently produces, attached to the areas it currently names.</p>')
+    else:
+        out.append('<h3>What this ballpark\'s own seating map shows</h3>')
+        out.append(f'<p>{NO_MAP_READ}</p>')
+
+    return '\n'.join(out)
+
+
 def zones_section(p: dict) -> str:
-    tagmap = {
-        'netted': ('behind netting', 'tag-net'),
-        'partially_netted': ('partly netted', 'tag-part'),
-        'not_netted': ('not behind netting', 'tag-open'),
-        'unknown': ('netting not verified', 'tag-unk'),
-    }
     items = []
     for z in p['zones']:
-        tag, cls = tagmap[z['status']]
+        tag, cls = STATUS_WORDS[z['status']]
         ev = (f' &middot; leaving the bat at about {z["ev"]:.0f} mph'
               if z['fouls'] >= 0.05 else '')
+        split = f' &middot; {split_phrase(z)}' if z['split'] else ''
         items.append(
             f'<li><div class="zrow"><div class="zname">{zone_label(z)}</div>'
             f'<div class="znum">{fouls_str(z["fouls"])}</div></div>'
             f'<div class="zmeta">{e(z["level"])} &middot; '
             f'{share_str(z["share"])} of the fouls that reach seats{ev} '
-            f'&middot; <span class="tag {cls}">{tag}</span></div></li>')
+            f'&middot; <span class="tag {cls}">{tag}</span>{split}</div></li>')
+
+    paired = '' if p['sides']['named'] else '''
+<p class="note">The two foul lines are shown here as one area each rather than
+as a first-base area and a third-base one, because nothing available says which
+line is which at this ballpark. A figure against one of those rows is what
+reaches <em>one</em> of the two lines, which keeps it comparable with the
+behind-plate rows beside it. The model builds both lines identically, so the
+pair would differ only by simulation noise in any case.</p>'''
 
     return f'''<h2 id="zones">Where the model puts the fouls</h2>
 <p>One full game, both lineups, the same 18 batters at every park on this site
 so that the park is the only thing that changes. Figures are foul balls per
-game reaching each area, with the largest first.</p>
+game reaching each area, with the largest first.</p>{paired}
 <ul class="zones">{''.join(items)}</ul>
 <p class="sub">Model estimate. {p['sims']} simulations per batter, fixed seed.
 Not a count of anything observed.</p>
@@ -547,13 +774,21 @@ def readings_section(p: dict) -> str:
     catchable = [z for z in zones if not z['blocks_catch'] and z['fouls'] >= 0.05]
     excluded = [z for z in zones if z['blocks_catch']]
 
+    def caveat(z):
+        """The reason a zone that stayed on the catching list is not clean."""
+        if z['status'] == 'split':
+            return (' <span class="tag tag-part">differs by foul line</span> '
+                    '&mdash; a net stands in front of one of the two lines and '
+                    'not the other, and nothing says which')
+        if z['status'] == 'partially_netted':
+            return ' <span class="tag tag-part">partly netted</span>'
+        if z['status'] == 'unknown':
+            return ' <span class="tag tag-unk">netting not verified</span>'
+        return ''
+
     souvenir = ''.join(
         f'<li>{zone_label(z)} &mdash; about {fouls_str(z["fouls"])} a game'
-        + (' <span class="tag tag-part">partly netted</span>'
-           if z['status'] == 'partially_netted' else '')
-        + (' <span class="tag tag-unk">netting not verified</span>'
-           if z['status'] == 'unknown' else '')
-        + '</li>'
+        + caveat(z) + '</li>'
         for z in catchable[:6])
 
     if mapped:
@@ -576,15 +811,14 @@ def readings_section(p: dict) -> str:
                 'the list as a list of where balls arrive, not where they can '
                 'be caught.</p></div>')
 
+    def mark(z):
+        tag, cls = STATUS_WORDS[z['status']]
+        chip = f'<span class="tag {cls}">{tag}</span>'
+        return f'{chip} &mdash; {split_phrase(z)}' if z['split'] else chip
+
     risk = ''.join(
         f'<li>{zone_label(z)} &mdash; about {fouls_str(z["fouls"])} a game, '
-        f'leaving the bat at about {z["ev"]:.0f} mph. '
-        + {'netted': '<span class="tag tag-net">behind netting</span>',
-           'partially_netted': '<span class="tag tag-part">partly netted</span>',
-           'not_netted': '<span class="tag tag-open">not behind netting</span>',
-           'unknown': '<span class="tag tag-unk">netting not verified</span>',
-           }[z['status']]
-        + '</li>'
+        f'leaving the bat at about {z["ev"]:.0f} mph. ' + mark(z) + '</li>'
         for z in zones[:6] if z['fouls'] >= 0.05)
 
     if mapped:
@@ -716,13 +950,17 @@ def limits_section(p: dict) -> str:
 things will read the figures above as more than they are.</p>
 {items}
 <h3>Why there are no section numbers on this page</h3>
-<p>This model carries a printed seat label for every area it tracks. Those
-labels have been checked against the clubs' own current seating maps, and at
-nine of the 31 parks the club's map contradicts them outright; at ten more, the
-labels cannot describe a continuous seating bowl at all. Nineteen of 31 are
-therefore not trustworthy, and there is no way to tell from the outside which
-side of that line a given park falls on. So the areas on this page are described
-by where they are, and no seat number is printed anywhere on this site.</p>'''
+<p>This model carries a printed seat label for every area it tracks. Checked
+against what the clubs publish, at nine of the 31 parks the club's netting page
+contradicts them outright; at ten more, the labels cannot describe a continuous
+seating bowl at all. Five clubs' full seating maps have since been read directly
+and compared label by label, and <strong>all five disagreed</strong> &mdash; one
+with its two foul lines reversed, three with the seats behind home plate
+attached to the wrong block, one with more than half its field-level labels
+naming sections that are not in the building. Nothing suggests the twenty-six
+unread parks are in better shape; they are simply unread. So the areas on this
+page are described by where they are, and no seat number is printed anywhere on
+this site.</p>'''
 
 
 def park_page(p: dict, base_url: str) -> str:
@@ -757,6 +995,8 @@ against an observed landing &mdash; not here, not anywhere.</p></div>
 
 {netting_section(p)}
 
+{labels_section(p)}
+
 {zones_section(p)}
 
 {readings_section(p)}
@@ -781,20 +1021,80 @@ database. Model figures rebuilt {e(BUILT)}.</p>
 # The home page
 # ============================================================
 
+# The three groups the home page splits the 31 parks into, and the whole point
+# of the split: `join.status` already distinguishes a park whose *source* is
+# missing from a park whose source is fine and whose **model** cannot use it.
+# The old page did not — it had one list of parks with netting and one list of
+# parks without, which reads as a ranking of ballparks when the larger group is
+# a list of this project's own defects.
+GROUPS = [
+    ('mapped',
+     'Netting sourced, and this model\'s seating areas can carry it',
+     'The club states where its netting runs and the areas it names line up '
+     'with the areas this model carries, so these pages mark which areas are '
+     'behind it. {confirmed_here} of them have had which foul line is which '
+     'established by something outside this model. The rest have not, and '
+     'their pages say so rather than naming a line.'),
+    ('join_gap',
+     'The club publishes its netting and this model cannot use it',
+     '<strong>These are this model\'s failures, not the clubs\'.</strong> '
+     'Every club in this group publishes where its netting runs. The seat '
+     'labels this model carries cannot be reconciled with what they publish: '
+     'the netting would have to miss the seats behind home plate, or skip a '
+     'near area and resume at a further one, or run down a line this model has '
+     'on the wrong side of the field. Netting does not do any of those things, '
+     'so the model is the side of the disagreement that is wrong. This is the '
+     'largest of the three groups, and it is a list of defects in this '
+     'project.'),
+    ('source_gap',
+     'Nothing usable is published about the netting',
+     'Here the gap is in what exists. Some clubs publish nothing about their '
+     'netting at all; one declines on principle, stating that its own map '
+     'cannot show where the netting is; one club\'s page contradicts itself; '
+     'and at one park the club gives the two ends of the run while nothing '
+     'published says where the seat numbering wraps behind home plate. '
+     'Nothing on these pages is marked as behind netting, and that is a '
+     'statement about the sources, not about the ballpark.'),
+]
+
+# Small counts read better spelled out in prose, and spelling them out also
+# keeps them clear of the section-number checks in tests/test_site.py.
+WORD_COUNT = ['None', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
+              'Eight', 'Nine', 'Ten']
+
+SIDE_TAGS = {
+    'confirmed': ('sides established', 'tag-net'),
+    'untested': ('sides untested', 'tag-unk'),
+    'flipped': ('sides reversed', 'tag-open'),
+    'inconsistent': ('sides contradicted', 'tag-open'),
+}
+
+
 def home_page(parks: list[dict], base_url: str) -> str:
     parks = sorted(parks, key=lambda p: p['name'])
-    mapped = [p for p in parks if p['net']['state'] == 'mapped']
-    gaps = [p for p in parks if p['net']['state'] != 'mapped']
+    by_group = {k: [p for p in parks if p['join'].status == k]
+                for k, _, _ in GROUPS}
+    mapped = by_group['mapped']
+    gaps = by_group['join_gap'] + by_group['source_gap']
+    confirmed = [p for p in parks if p['sides']['named']]
 
     def row(p):
-        if p['net']['state'] == 'mapped':
-            tag = '<span class="tag tag-net">netting sourced</span>'
-        else:
-            tag = '<span class="tag tag-unk">netting not verified</span>'
-        return (f'<li><a href="{e(p["slug"])}/">{e(p["name"])}</a> {tag}'
+        tag, cls = SIDE_TAGS[p['sides']['state']]
+        return (f'<li><a href="{e(p["slug"])}/">{e(p["name"])}</a> '
+                f'<span class="tag {cls}">{tag}</span>'
                 f'<div class="sub">{e(p["city"])} &middot; {e(p["team"])}'
                 f'<br>Model estimate: about {p["into_seats"]:.0f} foul balls a '
                 f'game reach seats here</div></li>')
+
+    def group(key, heading, lead):
+        rows = ''.join(row(p) for p in by_group[key])
+        lead = lead.format(
+            confirmed_here=WORD_COUNT[sum(1 for p in by_group[key]
+                                          if p['sides']['named'])])
+        return (f'<h3>{heading} <span class="sub">({len(by_group[key])})</span>'
+                f'</h3><p>{lead}</p><ul class="parklist">{rows}</ul>')
+
+    groups = '\n'.join(group(*g) for g in GROUPS)
 
     title = 'Foul balls by ballpark — where they land, and what the netting covers | FoulCast'
     desc = ('Foul ball estimates for all 31 major and minor league ballparks: '
@@ -825,11 +1125,14 @@ seating page was read in a browser on {e(RESEARCH_DATE)}. Where the club
 publishes an extent that can be matched to specific seating areas, those areas
 are marked. That is true at <strong>{len(mapped)} of the 31 parks</strong>.</p>
 <p><strong>At the other {len(gaps)} it is a gap</strong>, and the pages say so
-in the same place, at the same size, rather than leaving a blank. Some clubs
-publish nothing; one declines on principle; one contradicts itself; and at
-twelve parks the club does publish an extent but this model's own seat labels
-cannot be reconciled with it &mdash; which is a fault in the model, not in the
-club.</p>
+in the same place, at the same size, rather than leaving a blank. But the two
+kinds of gap are not the same thing, and the list below keeps them apart: at
+<strong>{len(by_group['source_gap'])} parks nothing usable is
+published</strong>, and at <strong>{len(by_group['join_gap'])} the club
+publishes perfectly good netting information that this model's own seat labels
+cannot be reconciled with</strong>. The second group is larger than the first
+and it is a list of this project's defects, not a list of clubs that fell
+short.</p>
 <p><strong>The park dimensions are sourced</strong> &mdash; foul territory area
 and backstop distance, from Andrew Clem's stadium statistics, cross-checked
 against the Seamheads ballpark database, with the disagreements between them
@@ -844,13 +1147,33 @@ somewhere, and it is why there is a screen there &mdash; and partly an artefact
 of every park sharing one bowl shape. It is not a finding about any individual
 ballpark.</p>
 
+<h2>Which foul line is which, and why most pages will not say</h2>
+<p>Every ballpark on this site is modelled as an exact left-right mirror, which
+means a park with its two sides written down the wrong way round produces
+figures identical to one with them the right way round. This model cannot see
+the difference from the inside, and neither can a published netting range: it
+gives the two ends of the run, not which foul line each end is on. Only a
+source that names a side alongside specific seats can settle it, and
+<strong>{len(confirmed)} of the 31 parks have one</strong>.</p>
+<p>This is not a hypothetical. At one ballpark the two sides <em>were</em>
+written down backwards, and it sat in the sourced-netting group below, cited and
+apparently matched, until its own seating map was read. So at the parks with
+nothing to check against, the two foul lines are shown as a single seating area
+each and no area is called first-base or third-base. Every park page states its
+own position on this, in the same place, whichever of the four it is in.</p>
+
 <h2>Why there are no section numbers here</h2>
 <p>This model carries printed seat labels for every area it tracks. Checked
-against the clubs' current seating maps, nine parks' labels are contradicted
-outright and ten more cannot describe a continuous seating bowl. Nineteen of
-31 are unreliable and there is no way to tell which. So seating is described by
-position &mdash; the lower bowl behind the plate, the dugout boxes on the
-third-base side &mdash; and no seat number appears anywhere on this site.</p>
+against what the clubs publish, nine parks' labels are contradicted outright and
+ten more cannot describe a continuous seating bowl. Five clubs' full seating
+maps have since been read directly, at magnification, and compared label by
+label &mdash; and all five disagreed with the model: one with its two foul lines
+reversed, three with the seats behind home plate attached to the wrong block,
+one with more than half its field-level labels naming sections that are not in
+the building. The other twenty-six parks are unread, which is not the same as
+sound. So seating is described by position &mdash; the lower bowl behind the
+plate, the dugout boxes down the foul lines &mdash; and no seat number appears
+anywhere on this site.</p>
 
 <h2>The same figures read two ways</h2>
 <p>A net in front of a seat means opposite things depending on why you are
@@ -864,12 +1187,13 @@ netting "are still exposed to objects leaving the field of play", and this model
 has never seen a real foul ball. Seats are described as behind netting or not
 behind netting; risk is described as higher or lower.</p>
 
-<h2>Ballparks with sourced netting <span class="sub">({len(mapped)})</span></h2>
-<ul class="parklist">{''.join(row(p) for p in mapped)}</ul>
+<h2>All 31 ballparks</h2>
+<p>Grouped by what is actually known, not by how good the ballpark is. The tag
+against each park is whether anything establishes which of its two foul lines is
+which &mdash; a separate question from netting, and one where the answer is no
+at most of them.</p>
 
-<h2>Ballparks where netting is a gap <span class="sub">({len(gaps)})</span></h2>
-<p>Each of these pages says which kind of gap it is.</p>
-<ul class="parklist">{''.join(row(p) for p in gaps)}</ul>
+{groups}
 
 <hr>
 <footer>

@@ -34,6 +34,24 @@ park's section table. When `stadium.py` changes, old rows keep their old
 stamp, so a later analysis can tell which mapping produced which row instead
 of silently re-reading history through the new one.
 
+SIDE ANCHORS
+============
+
+The second half of this module holds `SIDE_ANCHORS` — every source in the repo
+that names a **foul-line side** next to a **printed section number** — and
+`check_side_anchors`, which tests a park's zone table against them.
+
+It lives here rather than in `netting.py` because a side anchor is a statement
+about labels and zones, which is this module's subject, and not about netting.
+`netting._check_join` calls it as its fifth guard, but the check is deliberately
+usable on its own: Sutter Health Park has no netting source of any kind and is
+still testable this way.
+
+What it is for: catching a zone table whose 1B and 3B label ranges are swapped.
+Nothing else in the repo can. See the comment block above `SIDE_ANCHORS` for
+why the netting guards are all blind to a mirror, and why a published netting
+extent — however asymmetric — cannot substitute for a source that says "1B".
+
 WHAT THIS MODULE DOES NOT ESTABLISH
 ===================================
 
@@ -41,6 +59,12 @@ That a printed section belongs to a zone's *number range* says nothing about
 whether the zone's distance/angle bands are right. The ranges come from the
 same names the provenance block calls real, but the bands they are attached to
 do not. This module improves the bookkeeping, not the geometry.
+
+The same caveat binds the side anchors, and harder. An anchor that passes says
+the table is not mirrored. It does not say the zone boundaries are right, that
+the behind-plate block is in the right place, or that the sections exist. Every
+one of the five parks in `MAP_FINDINGS.md` disagrees with its zone table in
+some way; only one of them disagrees by a mirror.
 """
 import hashlib
 import re
@@ -236,3 +260,480 @@ def zone_catalog(stadium) -> list[dict]:
             "num_seats": sec.num_seats,
         })
     return out
+
+
+# ============================================================
+# Side anchors — the only evidence that can catch a mirrored table
+# ============================================================
+#
+# WHY THIS EXISTS
+# ---------------
+#
+# `netting._check_join` has four guards, and a left/right flip survives all
+# four. Every park's zone table in `stadium.py` is exactly mirror-symmetric —
+# the provenance block says so outright: the angular vocabulary is shared, and
+# `1B-FB1` and `3B-FB1` carry identical angles, heights and distances. So
+# swapping the two sides' printed labels changes nothing any of G1-G4 measures:
+#
+#   G1 counts matched labels               — unchanged by a swap
+#   G2 tests the HOME zone                 — the plate is on neither side
+#   G3 walks each side outward by angle    — the angles are mirror-equal, so
+#                                            the same profile appears on the
+#                                            other side and still descends
+#   G4 tests below/above the plate's span  — a swap maps 'below' to 'above' on
+#                                            the other side; neither straddle
+#                                            nor plate_at_end changes
+#
+# Oriole Park is the case that exposed this: its seating map shows the lower
+# bowl ascending toward third base, the zone table has it ascending toward
+# first, and the park is nonetheless `status='mapped'`. Symmetric geometry
+# cannot detect a mirror; only an asymmetric fact can.
+#
+# WHAT COUNTS AS AN ASYMMETRIC FACT
+# ---------------------------------
+#
+# Exactly one thing: a source that names a **side** next to a **section
+# number**. Three families of them exist in this repo, and nothing else does:
+#
+#   1. Netting pages that name the side of an endpoint. "section 40 (1B) and
+#      section 41 (3B)" (Dodgers), "Sections 113C and 130C respectively" after
+#      "the first and third baseline walls" (Blue Jays), "Section 116 (1B line)
+#      and Section 142 (3B line)" (Tigers).
+#   2. Netting pages that name a **side-bearing product**. Busch's "Lower RF
+#      Box 132-134" places 132-134 in right field, and right field is the 1B
+#      side. Busch's own "1B Field Box"/"3B Field Box" rows are the same kind
+#      of statement.
+#   3. Seating maps read directly, where a landmark fixes the orientation and
+#      the numbers can then be read off each foul line. See `MAP_FINDINGS.md`
+#      for the five read so far, including which landmark fixed each one.
+#
+# A published netting *extent* on its own is not such a fact, however
+# asymmetric it is. "Sections 6 → 70" tells you the run is longer on one side
+# of the plate than the other; it does not tell you which side that is. That
+# asymmetry is real and useless here, and it is why this check has thin
+# coverage rather than universal coverage.
+#
+# Dugout locations are the same story. Which side a club's dugout sits on does
+# differ by park and would anchor the sides — but it only helps once some
+# source ties that dugout to section numbers. One park in this repo has that
+# (Fenway, and only from an unverified compilation), so it is carried at
+# `secondary_unverified` strength and can flag but never reject.
+#
+# WHAT AN ANCHOR DOES NOT ESTABLISH
+# ---------------------------------
+#
+# That the zone *boundaries* are right. An anchor says "printed section N is on
+# the 1B side"; it cannot say which zone N should fall in, how far from the
+# plate it sits, or where the behind-plate block starts and ends. Truist Park
+# passes every anchor below and its plate zone is still four sections up the
+# third-base line. A park that passes has failed to be mirrored — nothing more.
+
+# How much weight an anchor carries.
+#   'primary'               the club's own page named the side
+#   'map_read'              read off a published seating map at magnification,
+#                           with the landmark that fixed the orientation named
+#   'secondary_unverified'  a compilation nobody could confirm on a primary page
+ANCHOR_KINDS = ('primary', 'map_read', 'secondary_unverified')
+
+# Anchors at these strengths are allowed to reject a join. An unverified
+# compilation is not: it can raise a flag and nothing more.
+DECIDING_ANCHOR_KINDS = frozenset({'primary', 'map_read'})
+
+
+@dataclass(frozen=True)
+class SideAnchor:
+    """A source statement putting printed sections on a named foul-line side.
+
+    `raw` is the source's own wording, kept verbatim so the entry can be
+    checked without decoding this dataclass — same discipline as
+    `netting.NettedRange`. `basis` records the reasoning where turning the
+    wording into a side took one (a product name implying a side, a landmark
+    fixing a map's orientation); it is empty when the source said "1B" or "3B"
+    in those words.
+    """
+    prefix: str
+    start: int
+    end: int
+    side: str                   # '1B' or '3B'
+    raw: str
+    source: str
+    source_kind: str
+    retrieved: str
+    basis: str = ''
+
+    def numbers(self) -> range:
+        return range(self.start, self.end + 1)
+
+
+@dataclass(frozen=True)
+class SideCheck:
+    """Result of testing one park's zone table against its side anchors.
+
+    `status` is one of:
+      'ok'          every anchored label lands on the side its source names
+      'flipped'     every anchored label lands on the opposite side
+      'inconsistent' some agree and some do not — not a clean mirror, so the
+                    table is wrong in a way a swap would not fix
+      'untestable'  no anchor, or no anchored label that any zone claims
+    """
+    park_key: str
+    status: str
+    agree: tuple[str, ...] = ()
+    disagree: tuple[str, ...] = ()
+    unmatched: tuple[str, ...] = ()
+    detail: str = ''
+    # True when a deciding-strength anchor drove the verdict. A 'flipped' on
+    # secondary evidence alone must not reject a join.
+    deciding: bool = False
+
+
+SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
+
+    # --- Family 1: the club's netting page names the side ------------------
+
+    'dodger_stadium': (
+        SideAnchor('FD', 40, 40, '1B',
+                   'end of baseline section 40 (1B)',
+                   'https://www.mlb.com/dodgers/ballpark/netting',
+                   'primary', '2026-08-09',
+                   basis='the club gives bare numbers and the model numbers '
+                         'the same field boxes FD; see the netting entry\'s '
+                         'series_corroborated for why the two are one series'),
+        SideAnchor('FD', 41, 41, '3B',
+                   'section 41 (3B)',
+                   'https://www.mlb.com/dodgers/ballpark/netting',
+                   'primary', '2026-08-09'),
+    ),
+
+    'comerica_park': (
+        SideAnchor('', 116, 116, '1B', 'Section 116 (1B line)',
+                   'https://www.mlb.com/tigers/ballpark/netting',
+                   'primary', '2026-08-09'),
+        SideAnchor('', 142, 142, '3B', 'Section 142 (3B line)',
+                   'https://www.mlb.com/tigers/ballpark/netting',
+                   'primary', '2026-08-09'),
+    ),
+
+    'rogers_centre': (
+        SideAnchor('', 113, 113, '1B',
+                   'down the first and third baseline walls to Sections 113C '
+                   'and 130C respectively',
+                   'https://www.mlb.com/bluejays/ballpark/netting',
+                   'primary', '2026-08-09',
+                   basis='"respectively" binds 113C to the first baseline; '
+                         'the C suffix splits one printed section across an '
+                         'aisle and is dropped, per _zone_numbers'),
+        SideAnchor('', 130, 130, '3B',
+                   'down the first and third baseline walls to Sections 113C '
+                   'and 130C respectively',
+                   'https://www.mlb.com/bluejays/ballpark/netting',
+                   'primary', '2026-08-09',
+                   basis='"respectively" binds 130C to the third baseline'),
+    ),
+
+    'yankee_stadium': (
+        SideAnchor('', 11, 11, '1B', 'Section 011 (1B/RF side)',
+                   'https://www.mlb.com/yankees/ballpark/netting',
+                   'primary', '2026-08-09'),
+        SideAnchor('', 29, 29, '3B', 'Section 029 (3B/LF side)',
+                   'https://www.mlb.com/yankees/ballpark/netting',
+                   'primary', '2026-08-09'),
+    ),
+
+    # --- Family 2: the club names a side-bearing product -------------------
+
+    'busch_stadium': (
+        SideAnchor('', 135, 140, '1B', '1B Field Box 135-140',
+                   'https://www.mlb.com/cardinals/ballpark/netting',
+                   'primary', '2026-08-09'),
+        SideAnchor('', 161, 165, '3B', '3B Field Box 161-165',
+                   'https://www.mlb.com/cardinals/ballpark/netting',
+                   'primary', '2026-08-09'),
+        SideAnchor('', 132, 134, '1B', 'Lower RF Box 132-134',
+                   'https://www.mlb.com/cardinals/ballpark/netting',
+                   'primary', '2026-08-09',
+                   basis='right field is the first-base side; the club names '
+                         'the product, not the side, so this is one inference '
+                         'step past the wording'),
+    ),
+
+    # Petco's netting page names both sides, but the two runs it names overlap
+    # (111-115 "1B side" and 112-116 "3B side" share 112-115). A label cannot
+    # be on both foul lines, so the wording is either describing net panels
+    # rather than sides or the numbering interleaves in a way nothing here
+    # explains. Recorded so the gap is visible, and deliberately not turned
+    # into anchors: `_overlapping_prefixes` makes this park untestable rather
+    # than letting a half-read of an ambiguous sentence reject a join.
+    'petco_park': (
+        SideAnchor('', 111, 115, '1B',
+                   'angled net coverage 111-115 (1B side)',
+                   'https://www.mlb.com/padres/ballpark/netting',
+                   'primary', '2026-08-09'),
+        SideAnchor('', 112, 116, '3B',
+                   'angled net coverage 112-116 (3B side)',
+                   'https://www.mlb.com/padres/ballpark/netting',
+                   'primary', '2026-08-09'),
+    ),
+
+    # --- Family 3: read off a published seating map ------------------------
+    #
+    # Each entry names the landmark that fixed the map's orientation, because
+    # that landmark is the whole basis for the side claim. See MAP_FINDINGS.md.
+
+    'camden_yards': (
+        SideAnchor('', 20, 34, '1B',
+                   'lower bowl descending from the plate at 36/38 toward the '
+                   'right-field corner',
+                   'seating_maps/oriole_park.jfif (Orioles seating map)',
+                   'map_read', '2026-08-11',
+                   basis='orientation fixed by the B&O Warehouse and the "RF '
+                         'PORCH" label, both on the same side of the frame; '
+                         'the render is isometric, viewed from beyond the '
+                         'outfield, so left/right are reversed from a plan '
+                         'view and the landmarks are what settle it'),
+        SideAnchor('', 40, 58, '3B',
+                   'lower bowl ascending from the plate at 36/38 toward the '
+                   'left-field corner',
+                   'seating_maps/oriole_park.jfif (Orioles seating map)',
+                   'map_read', '2026-08-11',
+                   basis='same landmarks as the 1B anchor above'),
+    ),
+
+    'truist_park': (
+        SideAnchor('', 116, 120, '1B',
+                   '100 level descending from the plate at 125/126 toward the '
+                   'right-field corner',
+                   'seating_maps/truist_park.png (Braves seating map)',
+                   'map_read', '2026-08-11',
+                   basis='flat plan, standard orientation; corroborated by the '
+                         'Chop House (right field) sitting beyond section 107'),
+        SideAnchor('', 135, 143, '3B',
+                   '100 level ascending from the plate at 125/126 toward the '
+                   'left-field corner',
+                   'seating_maps/truist_park.png (Braves seating map)',
+                   'map_read', '2026-08-11',
+                   basis='same map; Home Run Porch Low (left field) sits '
+                         'beyond section 143'),
+    ),
+
+    'chase_field': (
+        SideAnchor('', 106, 118, '1B',
+                   '100 level descending from the plate at 122/123 toward the '
+                   'right-field corner',
+                   'seating_maps/chase_field.jpg (Diamondbacks seating map)',
+                   'map_read', '2026-08-11',
+                   basis='orientation fixed by the D-backs pool and "Home Run '
+                         'Porch R", both on the same side; the map\'s dugout '
+                         'labels are not used, as they read the other way'),
+        SideAnchor('', 127, 138, '3B',
+                   '100 level ascending from the plate at 122/123 toward the '
+                   'left-field corner',
+                   'seating_maps/chase_field.jpg (Diamondbacks seating map)',
+                   'map_read', '2026-08-11',
+                   basis='same landmarks as the 1B anchor above'),
+    ),
+
+    'oakland_coliseum': (
+        SideAnchor('', 105, 110, '1B',
+                   'lower bowl descending from the plate at 112 toward the '
+                   'right-field corner',
+                   'seating_maps/sutter_health.jpg (Athletics seating map)',
+                   'map_read', '2026-08-11',
+                   basis='flat plan; orientation fixed by the base markers '
+                         '(third base left, first base right), not by the '
+                         'dugout labels, which read the other way. This also '
+                         'resolves the MLB.com vs A View From My Seat conflict '
+                         'recorded in SOURCED_DATA.md in MLB.com\'s favour: '
+                         'the plate is at 112, inside MLB.com\'s 108-116'),
+        SideAnchor('', 114, 123, '3B',
+                   'lower bowl ascending from the plate at 112 toward the '
+                   'left-field corner',
+                   'seating_maps/sutter_health.jpg (Athletics seating map)',
+                   'map_read', '2026-08-11',
+                   basis='same map; the bowl ends at 123'),
+    ),
+
+    'fenway_park': (
+        SideAnchor('FB', 19, 39, '1B',
+                   'Field Box descending from the plate at FB46 toward the '
+                   'right-field corner',
+                   'seating_maps/fenway_park.jpg (Red Sox seating map)',
+                   'map_read', '2026-08-11',
+                   basis='orientation fixed by the "Red Sox"/"Visitor" dugout '
+                         'labels and the "First Base SRO"/"Third Base SRO" '
+                         'banners, which agree. The map is 800px wide and only '
+                         'about half the Field Box wedges carry a legible '
+                         'label, so the range is anchored on the ones that do'),
+        SideAnchor('FB', 49, 82, '3B',
+                   'Field Box ascending from the plate at FB46 toward the '
+                   'left-field corner',
+                   'seating_maps/fenway_park.jpg (Red Sox seating map)',
+                   'map_read', '2026-08-11',
+                   basis='same map and banners'),
+        # The independent dugout statement, at the strength the source has.
+        # It agrees with the map read above, which is worth recording: two
+        # unrelated sources putting the low Field Box numbers on 1B.
+        SideAnchor('FB', 21, 28, '1B',
+                   "the Red Sox dugout fronts sections 21-28",
+                   'fromthisseat.com / TickPick, via web-search summary '
+                   '(SOURCED_DATA.md Part 1, Fenway)',
+                   'secondary_unverified', '2026-08-09',
+                   basis='the Red Sox dugout is on the first-base side. '
+                         'SOURCED_DATA.md could not confirm this on a primary '
+                         'page and flags a nearby search summary as '
+                         'demonstrably wrong, so it can flag but never reject'),
+        SideAnchor('FB', 62, 69, '3B',
+                   "the visitors' dugout fronts sections 62-69",
+                   'fromthisseat.com / TickPick, via web-search summary '
+                   '(SOURCED_DATA.md Part 1, Fenway)',
+                   'secondary_unverified', '2026-08-09',
+                   basis='the visiting dugout at Fenway is on the third-base '
+                         'side; same unverified source as above'),
+    ),
+}
+
+
+def _overlapping_prefixes(anchors) -> set[str]:
+    """Prefixes where anchors of opposite sides claim the same number.
+
+    A printed section is on one foul line or the other. When a park's anchors
+    say both, the source has been misread or is describing something other
+    than sides, and the honest answer is that the park cannot be tested — not
+    that whichever anchor sorts first wins.
+    """
+    bad = set()
+    for i, a in enumerate(anchors):
+        for b in anchors[i + 1:]:
+            if a.prefix != b.prefix or a.side == b.side:
+                continue
+            if a.start <= b.end and b.start <= a.end:
+                bad.add(a.prefix)
+    return bad
+
+
+def _zone_side_for(stadium, prefix: str, number: int) -> str | None:
+    """Which foul-line side the zone table puts a printed label on.
+
+    Returns None when no zone claims the label, when only a HOME zone does (the
+    plate is on neither side, so it carries no mirror information), or when
+    zones on both sides claim it and the tie does not break (ambiguous, and an
+    ambiguous label must not decide a flip).
+
+    The tie-break is parity. A few parks number one foul line even and the
+    other odd from a shared block — Dodger Stadium's field boxes are FD12-FD24
+    on 1B against FD11-FD25 on 3B — so the two ranges overlap as integer
+    intervals while sharing no actual section. Where exactly one of the
+    claiming ranges has both endpoints of the label's own parity, that range is
+    the one that really contains it. This only ever breaks a tie; it never
+    creates one, and a range spanning both parities is left alone.
+    """
+    claims: list[tuple[str, bool]] = []
+    for sec in stadium.sections:
+        if sec.side not in ('1B', '3B'):
+            continue
+        for rng in parse_printed_ranges(sec.name):
+            if rng.prefix == prefix and rng.start <= number <= rng.end:
+                parity_match = (rng.start % 2 == rng.end % 2 == number % 2)
+                claims.append((sec.side, parity_match))
+
+    sides = {side for side, _ in claims}
+    if len(sides) == 1:
+        return sides.pop()
+    if not sides:
+        return None
+
+    parity_sides = {side for side, matched in claims if matched}
+    if len(parity_sides) == 1:
+        return parity_sides.pop()
+    return None
+
+
+def check_side_anchors(stadium, park_key: str) -> SideCheck:
+    """Test a park's zone table against every side anchor recorded for it.
+
+    This is deliberately independent of the netting join. Anchors are
+    statements about labels and sides, not about netting, so a park whose
+    netting is a source gap can still be tested — Sutter Health Park has no
+    netting source of any kind and is checkable here.
+    """
+    anchors = SIDE_ANCHORS.get(park_key, ())
+    if not anchors:
+        return SideCheck(park_key, 'untestable', detail=(
+            'no source in this repo names a side alongside a section number '
+            'for this park. A published netting extent alone cannot do it: it '
+            'gives the run\'s endpoints, not which foul line each end is on'))
+
+    skip = _overlapping_prefixes(anchors)
+    if skip:
+        return SideCheck(park_key, 'untestable', detail=(
+            f'anchors of opposite sides claim the same printed numbers in '
+            f'series {sorted(skip)!r}, so the source is not describing sides '
+            f'in a way that can be tested'))
+
+    agree, disagree, unmatched = [], [], []
+    deciding = False
+    for a in anchors:
+        for n in a.numbers():
+            label = _label_of(a.prefix, n)
+            model_side = _zone_side_for(stadium, a.prefix, n)
+            if model_side is None:
+                unmatched.append(label)
+                continue
+            # `deciding` means a deciding-strength anchor took part in the
+            # verdict, whichever way it went — so an 'ok' from a club page can
+            # be told apart from an 'ok' resting only on an unverified
+            # compilation, not just a 'flipped'.
+            if a.source_kind in DECIDING_ANCHOR_KINDS:
+                deciding = True
+            entry = f'{label}: source {a.side}, table {model_side}'
+            (agree if model_side == a.side else disagree).append(entry)
+
+    if not agree and not disagree:
+        return SideCheck(park_key, 'untestable', unmatched=tuple(unmatched),
+                         detail=('no anchored printed section is claimed by a '
+                                 '1B or 3B zone in this park\'s table, so the '
+                                 'anchors have nothing to test against'))
+
+    if disagree and not agree:
+        return SideCheck(
+            park_key, 'flipped', tuple(agree), tuple(disagree),
+            tuple(unmatched), deciding=deciding,
+            detail=(f'all {len(disagree)} anchored printed sections land on '
+                    f'the opposite side from the one their source names, and '
+                    f'none land on the named side. That is a mirrored table: '
+                    f'the 1B and 3B label ranges are swapped'))
+
+    if disagree:
+        return SideCheck(
+            park_key, 'inconsistent', tuple(agree), tuple(disagree),
+            tuple(unmatched), deciding=deciding,
+            detail=(f'{len(agree)} anchored printed sections land on the side '
+                    f'their source names and {len(disagree)} land on the '
+                    f'other. A swap would not fix this, so the table is wrong '
+                    f'in some way other than a mirror'))
+
+    return SideCheck(park_key, 'ok', tuple(agree), (), tuple(unmatched),
+                     deciding=deciding,
+                     detail=(f'all {len(agree)} anchored printed sections land '
+                             f'on the side their source names. This rules out '
+                             f'a mirrored table and nothing else — it says '
+                             f'nothing about where the zone boundaries fall'))
+
+
+def _label_of(prefix: str, number: int) -> str:
+    return f'{prefix}{number}'
+
+
+def side_anchor_audit(stadiums: dict) -> list[SideCheck]:
+    """Run `check_side_anchors` across a registry of parks.
+
+    `stadiums` maps park key to a zero-argument factory or a built Stadium.
+    Returned in a fixed order: flipped first, then inconsistent, then
+    untestable, then ok — worst news at the top.
+    """
+    rank = {'flipped': 0, 'inconsistent': 1, 'untestable': 2, 'ok': 3}
+    out = []
+    for key, entry in stadiums.items():
+        st = entry() if callable(entry) else entry
+        out.append(check_side_anchors(st, key))
+    return sorted(out, key=lambda c: (rank[c.status], c.park_key))

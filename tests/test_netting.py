@@ -19,7 +19,7 @@ from foulball.batter_profiles import RED_SOX_2024_PROFILES, PITCHER_PROFILES
 # rather than a count so that a park moving in or out is a named diff.
 MAPPED_PARKS = {
     'fenway_park', 'dodger_stadium', 'coors_field', 'truist_park',
-    'camden_yards', 'citizens_bank', 'great_american', 'progressive_field',
+    'citizens_bank', 'great_american', 'progressive_field',
     'minute_maid', 'oracle_park', 'guaranteed_rate',
 }
 
@@ -44,6 +44,10 @@ JOIN_GAP_PARKS = {
     # Rejected by the structural checks (G4) rather than by the extent:
     'angel_stadium', 'pnc_park',    # one foul line's labels wrap
     'globe_life',                   # sides not establishable
+    # Rejected by the side-anchor check (G5): the seating map puts the lower
+    # bowl ascending toward third base and the zone table has it ascending
+    # toward first. Passed every other guard, because they are all symmetric.
+    'camden_yards',
 }
 
 # What each G4 park fails on, locked so a change of guard is a named diff.
@@ -51,6 +55,7 @@ STRUCTURAL_GAP_KINDS = {
     'angel_stadium': 'labels_wrap_unpublished',
     'pnc_park': 'labels_wrap_unpublished',
     'globe_life': 'sides_unverifiable',
+    'camden_yards': 'sides_flipped',
 }
 
 
@@ -284,6 +289,88 @@ class TestTheZoneTableMustDescribeABowl:
         assert N.PARK_NETTING['dodger_stadium'].series_corroborated
         assert N.join_park(STADIUMS['dodger_stadium'](),
                            'dodger_stadium').status == 'mapped'
+
+    def test_a_mirrored_table_is_invisible_to_every_symmetric_guard(self):
+        """The reason G5 had to exist.
+
+        Swap Camden's 1B and 3B field-level labels and G1-G4 report exactly
+        what they reported before: the geometry is mirror-symmetric, so none
+        of them can see the difference. Only the side anchors can.
+        """
+        import copy
+        from foulball import seat_map as SM
+
+        park = N.PARK_NETTING['camden_yards']
+        as_is = STADIUMS['camden_yards']()
+        mirrored = copy.deepcopy(as_is)
+        for sec in mirrored.sections:
+            if sec.side in ('1B', '3B'):
+                sec.side = '3B' if sec.side == '1B' else '1B'
+
+        def verdict(st):
+            return N._check_join(
+                st,
+                {s.section_id: N._classify_zone(s, park) for s in st.sections},
+                park)
+
+        # With the anchors removed, G1-G4 are all that is left — and they pass
+        # the park both ways round. That is the state this layer was in before
+        # G5 existed, and it is why Camden was `mapped` with its sides swapped.
+        kept = SM.SIDE_ANCHORS.pop('camden_yards')
+        try:
+            assert verdict(as_is) == ('', '')
+            assert verdict(mirrored) == ('', '')
+        finally:
+            SM.SIDE_ANCHORS['camden_yards'] = kept
+
+        # With the anchors back, the two tables stop looking alike: the one
+        # the file ships is rejected, and its mirror image passes.
+        assert verdict(as_is)[0] == 'sides_flipped'
+        assert verdict(mirrored) == ('', '')
+
+    def test_unverified_anchors_can_flag_but_never_reject(self):
+        """Fenway's dugout anchor is a compilation SOURCED_DATA.md could not
+        confirm. It agrees with the map read, but if it ever disagreed it must
+        not turn a park into a gap on its own."""
+        from foulball import seat_map as SM
+        secondary = [a for a in SM.SIDE_ANCHORS['fenway_park']
+                     if a.source_kind == 'secondary_unverified']
+        assert secondary, 'expected the unverified dugout anchors'
+        assert all(a.source_kind not in SM.DECIDING_ANCHOR_KINDS
+                   for a in secondary)
+
+    def test_an_anchor_check_says_nothing_about_boundaries(self):
+        """Truist passes every anchor and its plate zone is still four
+        sections up the third-base line (MAP_FINDINGS.md). Passing means
+        'not mirrored', not 'correct'."""
+        from foulball import seat_map as SM
+        c = SM.check_side_anchors(STADIUMS['truist_park'](), 'truist_park')
+        assert c.status == 'ok'
+        home = [s for s in STADIUMS['truist_park']().sections
+                if s.side == 'HOME' and s.level == 'field'][0]
+        assert '129-133' in home.name   # the offset the check cannot see
+
+    def test_overlapping_side_claims_make_a_park_untestable(self):
+        """Petco's page names 111-115 as 1B and 112-116 as 3B. A section is on
+        one foul line or the other, so the wording is not describing sides in
+        a testable way, and the check must decline rather than pick."""
+        from foulball import seat_map as SM
+        c = SM.check_side_anchors(STADIUMS['petco_park'](), 'petco_park')
+        assert c.status == 'untestable'
+        assert 'same printed numbers' in c.detail
+
+    def test_mapped_parks_record_whether_their_sides_were_tested(self):
+        """A mapped park either passed the anchor check or had no anchor to
+        run, and the two must not look alike to a reader."""
+        from foulball import seat_map as SM
+        for key in sorted(MAPPED_PARKS):
+            j = N.join_park(STADIUMS[key](), key)
+            c = SM.check_side_anchors(STADIUMS[key](), key)
+            assert c.status in ('ok', 'untestable'), f'{key}: {c.status}'
+            marker = 'sides confirmed' if c.status == 'ok' else 'sides untested'
+            assert any(f.startswith(marker) for f in j.flags), (
+                f'{key}: no flag recording that sides were '
+                f'{"confirmed" if c.status == "ok" else "untested"}')
 
     def test_corroboration_is_claimed_at_exactly_one_park(self):
         """It is an escape hatch from a structural check, so it stays rare and

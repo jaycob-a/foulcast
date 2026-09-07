@@ -40,7 +40,9 @@ from foulball.stadium import STADIUMS
 from foulball.netting import join_park
 from foulball.seat_map import build_printed_index, printed_range_display
 import site_build
-from site_data import PARK_SOURCES
+from site_data import (
+    PARK_SOURCES, ZONE_WORDS, MAP_READS, NO_MAP_READ, SIDE_STATE_WORDS,
+)
 
 # Low enough to keep the suite quick; the constraints under test are properties
 # of the copy and the layout, not of the simulation count.
@@ -195,28 +197,141 @@ def test_netting_state_is_stated_either_way(built, key):
 
 def test_side_specific_netting_claims_are_hedged(built):
     """Where the published extent lands differently on the two foul lines, the
-    page is asserting which line is which — off labels `AUDIT.md` holds to be
-    unverified at every park. That assertion has to carry its own warning."""
+    page is asserting which line is which. That is only allowed at a park whose
+    sides are established, and even there it has to carry its own warning: the
+    anchors settle the mirror and nothing else, and at both of these parks the
+    club's own map puts the plate somewhere the model does not.
+    """
     hedged = 0
     for slug, p in built['parks'].items():
-        if p['net']['state'] != 'mapped':
-            continue
-        text = built['pages'][slug]
-        if p['net']['sides_differ']:
+        text = flat(built['pages'][slug])
+        asserting = (p['net']['state'] == 'mapped'
+                     and p['sides']['named'] and p['net']['sides_differ'])
+        if asserting:
             hedged += 1
-            assert 'which line is which is the weakest claim' in flat(text), \
+            assert 'so the two lines are named separately above' in text, \
                 f'{slug}: side-specific netting claim is not hedged'
         else:
-            assert 'which line is which is the weakest claim' not in flat(text), \
-                f'{slug}: hedge shown where the two sides agree'
-    assert hedged == 4, f'expected 4 side-asymmetric parks, found {hedged}'
+            assert 'so the two lines are named separately above' not in text, \
+                f'{slug}: side hedge shown where no side claim is made'
+    assert hedged == 2, f'expected 2 side-asymmetric mapped parks, {hedged}'
 
 
-def test_twenty_parks_are_netting_gaps(built):
-    """The count on the home page has to be the count in the data."""
+def test_twenty_one_parks_are_netting_gaps(built):
+    """The counts on the home page have to be the counts in the data.
+
+    Went from 20 to 21 when the side-anchor check (netting G5) rejected
+    Oriole Park: its seating map has the lower bowl numbered the opposite way
+    round from the zone table. See MAP_FINDINGS.md.
+    """
     gaps = [p for p in built['parks'].values() if p['net']['state'] != 'mapped']
-    assert len(gaps) == 20
-    assert '20 it is a gap' in built['pages']['']
+    assert len(gaps) == 21
+    assert 'At the other 21 it is a gap' in flat(built['pages'][''])
+
+
+def test_the_home_page_splits_gaps_by_whose_they_are(built):
+    """The larger group of gaps is this project's own defects, and the page has
+    to be built so that a reader sees that without reading the copy.
+
+    `join.status` already draws the line — `join_gap` is a park whose club
+    published something usable and whose *model* could not use it — and this
+    test holds the page to it, including the claim that it is the larger of
+    the two, which is the whole reason the split is worth making.
+    """
+    home = flat(built['pages'][''])
+    groups = {}
+    for p in built['parks'].values():
+        groups.setdefault(p['join'].status, []).append(p)
+    assert set(groups) == {'mapped', 'join_gap', 'source_gap'}
+    assert len(groups['join_gap']) > len(groups['source_gap']), \
+        'the copy calls the model-fault group the largest'
+    assert len(groups['join_gap']) > len(groups['mapped'])
+
+    for key, heading, _ in site_build.GROUPS:
+        marked = f'{heading} <span class="sub">({len(groups[key])})</span>'
+        assert marked in home, f'home page is missing the {key} group'
+        # Each group's own parks link from it, and only those — a park quietly
+        # dropped from all three, or listed twice, would otherwise pass.
+        listed = set(re.findall(r'href="([^"]+)/"',
+                                home.split(marked)[1].split('</ul>')[0]))
+        assert listed == {p['slug'] for p in groups[key]}, \
+            f'{key} group does not list exactly its own parks'
+
+
+# ============================================================
+# Constraint 5 — no foul line is named where nothing establishes it
+# ============================================================
+
+# Every heading that names a foul line. These are the phrases a page is only
+# allowed to print where a source establishes which line is which.
+SIDE_HEADINGS = [words[0] for zid, words in ZONE_WORDS.items()
+                 if zid[:3] in ('1B-', '3B-')]
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_no_foul_line_is_named_where_it_is_not_established(built, key):
+    """The constraint MAP_FINDINGS.md forced.
+
+    Oriole Park was `mapped` with its two sides swapped and every check in the
+    repo passed it, because the geometry is mirror-symmetric. So a page may
+    name a foul line only where a side-naming source backs it — six parks —
+    and at the other twenty-five the matching pair is folded into one row.
+    """
+    slug = PARK_SOURCES[key]['slug']
+    p = built['parks'][slug]
+    text = built['pages'][slug]
+    if p['sides']['named']:
+        assert any(h in text for h in SIDE_HEADINGS), \
+            f'{slug}: sides are established but no area names one'
+        return
+    for heading in SIDE_HEADINGS:
+        assert heading not in text, \
+            f'{slug}: names a foul line ("{heading}") with nothing to back it'
+    assert 'down the two foul lines' in text, \
+        f'{slug}: sides are unestablished but the pair was not folded'
+
+
+def test_only_six_parks_may_name_a_foul_line(built):
+    named = sorted(p['key'] for p in built['parks'].values()
+                   if p['sides']['named'])
+    assert named == ['chase_field', 'comerica_park', 'dodger_stadium',
+                     'fenway_park', 'rogers_centre', 'truist_park']
+    assert '6 of the 31 parks have one' in flat(built['pages'][''])
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_every_page_states_its_own_side_position(built, key):
+    """Silence about the sides is what let Oriole Park through, so the four
+    verdicts are stated on every page, including the twenty-five saying
+    nothing was ever tested."""
+    slug = PARK_SOURCES[key]['slug']
+    text = flat(built['pages'][slug])
+    label = SIDE_STATE_WORDS[built['parks'][slug]['sides']['state']][0]
+    assert 'id="labels"' in text
+    assert label in text, \
+        f'{slug}: does not state which foul line is which, or that it cannot'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_map_read_is_on_the_page_where_there_is_one(built, key):
+    """Five maps read, five disagreements. A park with a read has it stated;
+    a park without has the absence stated, because an unread park has not
+    passed anything."""
+    slug = PARK_SOURCES[key]['slug']
+    text = flat(built['pages'][slug])
+    if key in MAP_READS:
+        for head, _ in MAP_READS[key]['findings']:
+            assert flat(re.sub(r"'", '&#x27;', head)) in text, \
+                f'{slug}: map finding missing from the page'
+        assert NO_MAP_READ[:40] not in text
+    else:
+        assert flat(NO_MAP_READ)[:60] in text, \
+            f'{slug}: does not say its seating map has never been read'
+
+
+def test_five_seating_maps_have_been_read(built):
+    assert len(MAP_READS) == 5
+    assert 'all five disagreed' in flat(built['pages'][''])
 
 
 # ============================================================

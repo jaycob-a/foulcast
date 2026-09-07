@@ -54,26 +54,26 @@ by `seat_map.parse_printed_ranges`. Joining the two is therefore label
 arithmetic, and it inherits every weakness of the labels. See `seat_map` for
 why printed labels are the right join key.
 
-The join is only accepted for a park when it survives four coherence checks
-(`_check_join` below). They do not validate the labels — a park that passes
-has merely failed to contradict itself. What they catch is the opposite case:
-a published extent that is flatly incompatible with the printed sections the
-model has written down for that park, or a label table that cannot describe a
-seating bowl at all. When either happens the netting data is not what is
-wrong; the model's labels are. The park is reported as a gap with the
+The join is only accepted for a park when it survives five coherence checks
+(`_check_join` below). G1-G4 do not validate the labels — a park that passes
+them has merely failed to contradict itself. What they catch is the opposite
+case: a published extent that is flatly incompatible with the printed sections
+the model has written down for that park, or a label table that cannot
+describe a seating bowl at all. When either happens the netting data is not
+what is wrong; the model's labels are. The park is reported as a gap with the
 contradiction attached, because a join the model cannot verify is a gap and
 not a fact.
 
-Eleven of the 31 parks currently pass. Of the 20 that do not, six are the
-source gaps listed above, one is the Tropicana conflict, one is an unresolved
-arc (Comerica), and **twelve are the model's own printed labels failing
-against a perfectly good club page**. That last group is the most useful thing
-in this file: it is a list of parks whose zone tables need fixing, discovered
-by external data rather than by inspection.
+Ten of the 31 parks currently pass. Of the 21 that do not, six are the source
+gaps listed above, one is the Tropicana conflict, one is an unresolved arc
+(Comerica), and **thirteen are the model's own printed labels failing against
+a perfectly good club page**. That last group is the most useful thing in this
+file: it is a list of parks whose zone tables need fixing, discovered by
+external data rather than by inspection.
 
-Nine of the twelve are caught by the extent itself (G1-G3). The other three —
-Angel Stadium, PNC Park, Globe Life Field — are caught by G4, which reads only
-the zone table and asks whether its printed labels could describe a continuous
+Nine of the thirteen are caught by the extent itself (G1-G3). Three — Angel
+Stadium, PNC Park, Globe Life Field — are caught by G4, which reads only the
+zone table and asks whether its printed labels could describe a continuous
 bowl. They came to attention as an asymmetry: six mapped parks were coming out
 with the 1B side fully netted and the 3B side partly, always that way round,
 which is not what a heuristic should be trusted with. Three of the six turned
@@ -81,6 +81,28 @@ out to have structurally impossible tables and are now gaps. The other three —
 Truist, Citizens Bank, Great American — pass every structural check, so their
 asymmetry belongs to the published extent and they stay mapped with the
 numbers attached to the flag.
+
+The thirteenth is Oriole Park, and it is caught by G5, which is new and which
+none of the others could have caught. Its seating map shows the lower bowl
+ascending toward third base; the zone table has it ascending toward first. The
+two are mirror images, and **every check above is blind to a mirror**, because
+every geometry number in `stadium.py` is mirror-symmetric — `1B-FB1` and
+`3B-FB1` carry identical distances, angles and heights at all 31 parks. Camden
+therefore sat in the mapped list, with a citation, with its sides swapped.
+
+G5 tests the labels against sources that name a **side** next to a section
+number — the only asymmetric evidence there is. `seat_map.SIDE_ANCHORS` holds
+the data and argues why nothing weaker will do; the short version is that a
+published extent like "Sections 6 → 70" fixes where the run ends but not which
+foul line each end is on, so no amount of extent asymmetry can settle it.
+
+The check reaches eleven parks and cannot reach the other twenty, which is a
+real limit and not a rounding error. Of the ten parks still mapped, three have
+their sides confirmed (Fenway, Dodger, Truist) and **seven have never been
+tested at all** (Coors, Citizens Bank, Great American, Progressive, Daikin,
+Oracle, Rate Field). Those seven carry a `sides untested` flag rather than
+silence, because "passed every check" and "passed every check that exists"
+are different claims and only the second one is true of them.
 
 HOW THIS IS USED, IN TWO OPPOSITE DIRECTIONS
 ============================================
@@ -103,7 +125,10 @@ counting it clean would be an unpublished claim that it is not.
 """
 from dataclasses import dataclass, field
 
-from .seat_map import parse_printed_ranges
+from .seat_map import (
+    DECIDING_ANCHOR_KINDS, SIDE_ANCHORS, check_side_anchors,
+    parse_printed_ranges,
+)
 
 # Bumped by hand when the *interpretation* of a published extent changes —
 # a new alias, a changed guard, a re-read of a source. Data corrections that
@@ -163,6 +188,11 @@ PDL_RULE_YEAR = 2022
 #                                 rather than round the bowl, nothing
 #                                 establishes which block is 1B and which is
 #                                 3B, and the answer depends on it
+#   'sides_flipped'               a source names the side of specific printed
+#                                 sections and the table puts every one of
+#                                 them on the other foul line. Not "cannot be
+#                                 checked" like the two above — checked, and
+#                                 wrong. See `seat_map.SIDE_ANCHORS`
 GapKind = str
 
 SourceKind = str        # 'primary' | 'secondary_unverified' | 'none'
@@ -1141,10 +1171,11 @@ def _check_join(stadium, zones: dict[str, ZoneNetting],
                 park: ParkNetting) -> tuple[str, str]:
     """Coherence checks on a completed join. Returns ('', '') if it holds.
 
-    Four ways a join is rejected. None of them tests whether the model's
-    labels are *right* — they test whether the published extent and the
-    labels can both be true at once, and whether the answer depends on parts
-    of the table that cannot be checked at all.
+    Five ways a join is rejected. G1-G4 do not test whether the model's labels
+    are *right* — they test whether the published extent and the labels can
+    both be true at once, and whether the answer depends on parts of the table
+    that cannot be checked at all. G5 is the one that does test correctness,
+    and it can only run where a source names a side.
 
       G1  Nothing matched. Every published label falls outside every zone, so
           the two are numbering different things. Yankee Stadium: the club
@@ -1181,6 +1212,24 @@ def _check_join(stadium, zones: dict[str, ZoneNetting],
           G4 is the one guard that fires on evidence outside the netting data.
           It exists because the alternative is a park whose netting looks
           mapped and whose sides may be swapped.
+
+      G5  A source names the side of specific printed sections and the table
+          puts them on the other foul line. See `seat_map.SIDE_ANCHORS` for
+          the evidence and for why nothing weaker will do.
+
+          G4 was written to catch a swapped table and only half does: it fires
+          on tables whose *shape* makes the sides unverifiable, not on tables
+          that are verifiably wrong. A park numbered continuously round the
+          bowl passes G4 by construction and can still be mirrored, because
+          every geometry number in `stadium.py` is mirror-symmetric and so is
+          every one of G1-G4. Oriole Park was `mapped` with its sides swapped
+          until this guard existed.
+
+          G5 rejects only on anchors the repo can stand behind — a club page
+          or a seating-map read. An unverified compilation raises a flag
+          instead (see `_join_flags`), because rejecting a join on evidence
+          `SOURCED_DATA.md` itself marks as unconfirmed would be trading one
+          unfounded claim for another.
 
     Returns ('', '') when the join holds, otherwise (gap_kind, detail).
     """
@@ -1228,6 +1277,23 @@ def _check_join(stadium, zones: dict[str, ZoneNetting],
                         f'netting cannot skip the near zone and resume at the '
                         f'far one, so one of these label ranges is on the '
                         f'wrong side')
+
+    # G5 runs after G3 and before G4. After G3 because G3 reads the published
+    # extent — this module's own data — and names the offending label ranges
+    # directly; where both would fire, its message is the more specific one.
+    # Before G4 because G4 rejects tables it *cannot* check, and positive
+    # evidence that a table is wrong should outrank an absence of evidence.
+    side_check = check_side_anchors(stadium, park.park_key)
+    if side_check.deciding:
+        if side_check.status == 'flipped':
+            return ('sides_flipped',
+                    f'{side_check.detail}. Anchors: '
+                    f'{"; ".join(side_check.disagree)}')
+        if side_check.status == 'inconsistent':
+            return ('labels_contradict_model',
+                    f'{side_check.detail}. Agreeing: '
+                    f'{"; ".join(side_check.agree)}. Disagreeing: '
+                    f'{"; ".join(side_check.disagree)}')
 
     structure = _field_label_structure(stadium)
 
@@ -1407,8 +1473,11 @@ def _join_flags(stadium, zones: dict[str, ZoneNetting],
                         f'it reaches {lo} published sections below the '
                         f'behind-plate zone and {hi} above it. The other '
                         f'ring-numbered parks sit near even — Coors 15/15, '
-                        f'Minute Maid 5/6, Progressive 20/22, Camden 32/27, '
-                        f'Fenway 22/30 — so this is either a genuinely '
+                        f'Minute Maid 5/6, Progressive 20/22, Fenway 22/30 '
+                        f'(Camden was in this list at 32/27 until G5 found '
+                        f'its sides swapped, and a centring measured against '
+                        f'a known-wrong plate zone is not evidence of '
+                        f'anything) — so this is either a genuinely '
                         f'lopsided net or a zone table whose plate is a few '
                         f'sections off the real one. Nothing in the sources '
                         f'separates the two, which is why it is a flag and '
@@ -1427,6 +1496,33 @@ def _join_flags(stadium, zones: dict[str, ZoneNetting],
             + ', '.join(f'section {s}' for s in park.partial_labels)
             + ' as only partially covered; the join treats it as netted like '
               'any other listed section'
+        )
+
+    # G5's result, whichever way it went. A park that reaches here either
+    # passed the anchor check or had none to run, and both are worth saying:
+    # "sides confirmed" and "sides never tested" are very different grounds
+    # for trusting a mapped park, and without this flag they look identical.
+    side_check = check_side_anchors(stadium, park.park_key)
+    if side_check.status == 'ok':
+        kinds = sorted({a.source_kind for a in SIDE_ANCHORS[park.park_key]})
+        flags.append(
+            f'sides confirmed against {len(side_check.agree)} anchored '
+            f'printed sections ({", ".join(kinds)}): {side_check.detail}'
+        )
+    elif side_check.status == 'untestable':
+        flags.append(
+            f'sides untested — {side_check.detail}. This park passes the '
+            f'structural checks, but every geometry number in its table is '
+            f'mirror-symmetric, so passing them does not rule out the 1B and '
+            f'3B label ranges being swapped'
+        )
+    elif not side_check.deciding:
+        flags.append(
+            f'sides disputed on unverified evidence only — {side_check.detail}'
+            f'. Anchors: {"; ".join(side_check.disagree)}. Left mapped '
+            f'because no anchor at '
+            f'{" or ".join(sorted(DECIDING_ANCHOR_KINDS))} strength '
+            f'contradicts the table'
         )
     return flags
 

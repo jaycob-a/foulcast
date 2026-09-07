@@ -34,6 +34,18 @@ Three rules this file holds to, and the reasons they exist:
    published foul territory (Sutter Health Park, Las Vegas Ballpark) and one has
    no published backstop (Las Vegas Ballpark). Their pages say so.
 
+4. **No page names a foul line at a park whose sides are not established.**
+   `MAP_FINDINGS.md` records a park — Oriole Park — that was `mapped`, cited,
+   and had its two sides the wrong way round, invisibly, because every geometry
+   number in `stadium.py` is mirror-symmetric. Only a source that names a side
+   next to a section number can catch that, and `seat_map.SIDE_ANCHORS` shows
+   how few of those exist: six parks of 31 have their sides established, three
+   of them among the ten with sourced netting. At the other twenty-five, the
+   two foul lines are shown as one seating area rather than as a first-base
+   area and a third-base one, because naming them would be a claim this project
+   cannot make. `PAIR_ZONE_WORDS` holds the side-neutral phrasing and
+   `SIDE_STATE_WORDS` states each park's position outright.
+
 Source landscape, which every park page has to carry in some form:
 
 - **Foul territory area is effectively single-sourced.** Andrew Clem estimates
@@ -605,6 +617,32 @@ ZONE_WORDS: dict[str, tuple[str, str]] = {
                  'upper deck, rear rows'),
 }
 
+# The same zones, for the twenty-five parks where nothing establishes which
+# foul line is which. Keyed by the zone ID's suffix, so `1B-DUG` and `3B-DUG`
+# fold into one row described as both lines at once.
+#
+# This is not a softening of `ZONE_WORDS`; it is a different claim. "The
+# dugout boxes on the first-base side" asserts a side. "The dugout boxes down
+# the two foul lines" asserts only that there are two of them, which is what
+# the model's table actually supports at these parks. The figure shown against
+# a folded row is what reaches *one* line, so it stays comparable with the
+# behind-plate rows beside it rather than being twice their size.
+
+PAIR_ZONE_WORDS: dict[str, tuple[str, str]] = {
+    'FB1': ('The infield boxes down the two foul lines',
+            'field level, between the plate and the dugouts'),
+    'DUG': ('The dugout boxes and field seats down the two foul lines',
+            'field level, from the dugouts outward'),
+    'LB1': ('The second level down the two foul lines',
+            'one deck above field level, off the infield'),
+    'LR':  ('The lower reserved seats down the two foul lines',
+            'one deck above field level, well down the lines'),
+    'UB':  ('The upper deck down the two foul lines',
+            'upper deck, off the infield'),
+    'UR':  ('The back of the upper deck down the two foul lines',
+            'upper deck, rear rows'),
+}
+
 # Area words worth appending to a zone heading. Anything not listed here is
 # either a bare deck word the heading already says ("Upper", "Field") or a
 # number-derived label ("200 Level", "500 Level") that would reintroduce
@@ -718,7 +756,286 @@ GAP_WORDS: dict[str, tuple[str, str]] = {
         'the answer would change which seats came out behind netting. Nothing '
         'on this page is marked as behind netting.',
     ),
+    'sides_flipped': (
+        'This model has this park\'s two sides the wrong way round',
+        'The ballpark\'s own seating map shows the lower bowl numbered one way '
+        'around the plate, and the labels this model carries run the opposite '
+        'way — so every seating area this model calls first-base side is in '
+        'fact on the third-base side, and the reverse. The map is the sourced '
+        'side of that disagreement and this model is the unsourced one. Until '
+        'the labels are corrected, nothing on this page is marked as behind '
+        'netting, and no area below is described as being on one line or the '
+        'other &mdash; printing this model\'s own labels here would print them '
+        'backwards.',
+    ),
 }
+
+
+# ============================================================
+# Which foul line is which, park by park
+# ============================================================
+#
+# `seat_map.check_side_anchors` returns one of four verdicts per park. These
+# are the public rewrites, and the distinction they have to carry is the one
+# `MAP_FINDINGS.md` was written around: **passing is not the same as not being
+# tested.** Oriole Park spent Step 10 in the mapped list, cited, with its two
+# sides swapped, because nothing in the repo could tell the difference. Twenty
+# of the 31 parks are still in the position Oriole Park was in — untested, not
+# vindicated — and their pages have to say which.
+#
+# Keyed by verdict: (short label, paragraph).
+
+SIDE_STATE_WORDS: dict[str, tuple[str, str]] = {
+    'confirmed': (
+        'Established, against a source that names a side',
+        'Something outside this model says which foul line is which here — '
+        'either the club named a side alongside specific seats on its own '
+        'page, or the park\'s published seating map was read directly with a '
+        'landmark fixing which way round the drawing runs. Every seat label '
+        'this model puts on one line lands on that same line in the source. '
+        'That is why this page names the first-base and third-base sides at '
+        'all. It establishes nothing else: not where the boundaries between '
+        'areas fall, not whether the areas exist.',
+    ),
+    'untested': (
+        'Never tested — this model could have the two lines swapped',
+        'Nothing available for this park says which foul line is which. A '
+        'published netting range cannot settle it: it gives the two ends of '
+        'the run, not which line each end is on. Neither can this model\'s own '
+        'figures, because every park here is built as an exact left-right '
+        'mirror, so a park with its two sides swapped produces figures '
+        'identical to one with them the right way round. At another park this '
+        'exact silence hid a genuine reversal for the whole of the model\'s '
+        'life. So the two foul lines are shown here as one seating area, and '
+        'no area on this page is called first-base or third-base.',
+    ),
+    'flipped': (
+        'Reversed — and this page will not print the labels backwards',
+        'This is the one ballpark on the site where a source settles which '
+        'foul line is which and this model gets it wrong. Not one of the seat '
+        'labels the ballpark\'s own map anchors lands where the map puts it; '
+        'they all land on the other line. Because that is a clean reversal '
+        'rather than a drift, the <em>figures</em> below are unaffected — '
+        'every park here is built as an exact left-right mirror, so the two '
+        'lines carry the same distribution whichever way round they are '
+        'labelled. What is affected is the labelling, which is why no area on '
+        'this page is called first-base or third-base.',
+    ),
+    'inconsistent': (
+        'Contradicted, and not by a simple reversal',
+        'Some of this model\'s seat labels for this park land on the side '
+        'their source names and some land on the other, so swapping the two '
+        'sides would not fix it — the table is wrong in a way that has no '
+        'single correction. No area on this page is called first-base or '
+        'third-base.',
+    ),
+}
+
+
+# ============================================================
+# What the published seating maps say
+# ============================================================
+#
+# Five clubs' seating maps were read directly, at magnification, and compared
+# with the zone table this model carries for that park. `MAP_FINDINGS.md` is
+# the full record, including what could not be resolved and how confident each
+# read is. This is the public statement of what each one found.
+#
+# All five disagree with their zone table. That is the number worth carrying:
+# five read, five wrong, in five different ways. It is also why the other
+# twenty-six pages have to say that no map has been read for them rather than
+# leaving the silence to read as a pass.
+#
+# The rule against printing section numbers binds here too, and hardest — a
+# map finding is *about* section numbers. So every finding below is stated
+# positionally: how far off, in which direction, on which deck.
+
+MAP_READ_DATE = '2026-08-11'
+
+MAP_READS: dict[str, dict] = {
+
+    'truist_park': dict(
+        map_of="the Braves' published seating map",
+        landmark='a flat plan in standard orientation, with the right-field '
+                 'restaurant and the left-field porch confirming which way '
+                 'round it runs',
+        quality='the cleanest of the five maps read',
+        findings=[
+            ('The area this page calls the seats behind home plate is not '
+             'behind home plate',
+             'On the map, the block dead behind the plate at field level is '
+             'about four sections further toward first base than the block '
+             'this model labels as the behind-plate area. What this model '
+             'calls the behind-plate seats is really the first stretch up the '
+             'third-base line, and what it calls the first-base infield boxes '
+             'are really the seats behind the plate. The behind-plate figure '
+             'in the model section below is therefore attached to the wrong '
+             'seats, and it is the largest figure on this page.'),
+            ('Several of the seat labels this model carries here do not exist',
+             'At field level the map runs a block of consecutive sections with '
+             'no room for an unlabelled one between them, and four of the '
+             'numbers this model uses on the first-base side and five on the '
+             'third-base side are not among them. Three of the areas below '
+             'are partly built out of labels with nothing behind them, one of '
+             'them more than half.'),
+            ('The club\'s map and the club\'s own written guide disagree about '
+             'how far the netting runs',
+             'The map marks netting over a longer stretch of field level than '
+             'the written guide this site uses — several sections further at '
+             'each end. Both are the club\'s own current publications, so one '
+             'of them is stale, and nothing in the map says which. The netting '
+             'above uses the written guide, which is the shorter claim of the '
+             'two.'),
+        ],
+    ),
+
+    'chase_field': dict(
+        map_of="the Diamondbacks' published seating map",
+        landmark='a flat plan whose orientation is fixed by the swimming pool '
+                 'and the right-field porch sitting on the same side of the '
+                 'drawing — not by its dugout labels, which read the other way',
+        quality='good, though a smaller drawing than the best of the five',
+        findings=[
+            ('The area this page calls the seats behind home plate is in the '
+             'outfield corner',
+             'The map puts this model\'s behind-plate labels at the far end of '
+             'the right-field line, beside the pool — about as far from home '
+             'plate as a foul-territory section gets. The plate on the map '
+             'sits at the midpoint of a single arc of numbers, and this '
+             'model\'s table was built as though the numbering started behind '
+             'the plate and ran outward in both directions. The behind-plate '
+             'area below and both first-base areas are attached to seats '
+             'somewhere else in the building; only the third-base pair is '
+             'roughly where its name says.'),
+            ('The two field-level areas on the first-base side are in the '
+             'wrong order',
+             'This model puts the dugout-and-outward area further from the '
+             'plate than the infield boxes; the map has them the other way '
+             'round. The third-base side runs the right way.'),
+            ('This is the park the netting join already rejected, and the map '
+             'says why',
+             'The club does publish where its netting runs, and this model '
+             'reported the two as irreconcilable before any map was read. The '
+             'map supplies the reason: the netting range the club publishes '
+             'and the labels this model carries are describing different parts '
+             'of the building.'),
+        ],
+    ),
+
+    'oakland_coliseum': dict(
+        map_of="the Athletics' published seating map for Sutter Health Park",
+        landmark='a flat plan whose orientation is fixed by the base markers '
+                 '— not by its dugout labels, which read the other way',
+        quality='a very clean drawing',
+        findings=[
+            ('More than half the seat labels this model carries at field level '
+             'are not in the building',
+             'The map shows a single ring of twenty-three sections at field '
+             'level and nothing above it. This model\'s table for this park '
+             'names twenty-four field-level sections and fourteen of them are '
+             'numbered past where the ring ends; of the twenty-one labels it '
+             'carries above field level, thirteen do not exist either. The '
+             'consequence for this page is direct: every area below shown as a '
+             'pair of foul lines is really one block of seats that exists and '
+             'one that does not, because the model\'s second line is numbered '
+             'past the end of the bowl. In the upper-deck pair, one label of '
+             'the fifteen is in the building.'),
+            ('The only real upper seating at this ballpark is not behind the '
+             'plate',
+             'The map has six upper sections, all of them together on one side '
+             'of the park, and none at all behind home plate. This model has '
+             'an upper area behind the plate and a further pair down the two '
+             'lines. The behind-plate one is those six real sections, put in '
+             'the wrong place; the pair is very nearly all labels with nothing '
+             'behind them.'),
+            ('The area this page calls the seats behind home plate is out on a '
+             'foul line',
+             'The map\'s behind-plate section falls inside a different area of '
+             'this model\'s table altogether. The behind-plate figure below — '
+             'the largest on the page — belongs to seats some way down a line.'),
+            ('The labels run outward from a plate at the end of the series, '
+             'which a real bowl does not do',
+             'The map is a single arc with home plate at its midpoint. This '
+             'model numbers both foul lines upward from a plate placed near '
+             'the bottom of the range, which is the shape this project\'s own '
+             'structural check calls impossible. It was never caught here '
+             'because that check only runs on parks with a netting source, and '
+             'this park has none.'),
+        ],
+    ),
+
+    'camden_yards': dict(
+        map_of="the Orioles' published seating map",
+        landmark='a three-dimensional render seen from beyond the outfield, so '
+                 'left and right are reversed from a plan view; the orientation '
+                 'is fixed by the warehouse and the right-field porch, both on '
+                 'the same side of the frame',
+        quality='the hardest of the five to read — small, foreshortened labels',
+        findings=[
+            ('This model has the two sides of this park the wrong way round',
+             'The map has the lower bowl ascending toward third base and this '
+             'model has it ascending toward first, on all three decks. Thirty '
+             'anchored labels land on the opposite side from the map and none '
+             'land on the named side, which is a mirror rather than a drift. '
+             'This is why the netting above is reported as a gap: the club '
+             'publishes a perfectly good netting range, and this model cannot '
+             'be trusted to say which line either end of it is on.'),
+            ('It was reported as matched, with a citation, until the map was '
+             'read',
+             'Every check this project had was blind to it. Every distance, '
+             'angle and height in this model is identical on the two sides of '
+             'every park, so a park with its sides swapped passes each of them '
+             'by construction. Only a source naming a side could catch it, and '
+             'this map is that source. Twenty of the 31 parks have no such '
+             'source at all.'),
+            ('The behind-plate area is also about half a block off',
+             'Separately from the reversal, the map\'s behind-plate block is '
+             'wider than this model\'s and centred a little further toward the '
+             'third-base line. Correcting the reversal would not fix that.'),
+        ],
+    ),
+
+    'fenway_park': dict(
+        map_of="the Red Sox published seating map",
+        landmark='a flat plan rotated so home plate is at one edge; the '
+                 'orientation is fixed by the dugout labels and the two '
+                 'standing-room banners, which agree with each other',
+        quality='the least legible of the five — a small drawing with label '
+                'text a few pixels high, so the reads below are the firm ones',
+        findings=[
+            ('The best match of the five parks read, and still not a match',
+             'The seat labels run the right way round on both lines here, '
+             'which is why this page names them. What is off is where the '
+             'plate sits within them.'),
+            ('This model puts the behind-plate areas toward first base of '
+             'where the map has them, on all three levels',
+             'On each of the three rings the map has the block dead behind the '
+             'plate a handful of sections further toward third base than this '
+             'model does — enough that at the top level the area this model '
+             'calls a third-base area is the one actually behind the plate. '
+             'The behind-plate figures below are attached to seats that sit '
+             'somewhat toward the first-base side of the plate.'),
+            ('Two areas stop short of where the map keeps going',
+             'On the third-base side the map runs the second level and the top '
+             'level several sections further than this model\'s labels do, so '
+             'those two areas are short at the outer end.'),
+        ],
+    ),
+}
+
+# Every other park. The complement matters as much as the five above: a park
+# with no map read has not passed anything, and the page has to say so in the
+# same place the five say what their map found.
+NO_MAP_READ = (
+    'No published seating map has been read for this ballpark. Five have been '
+    'read so far, at magnification, against the seat labels this model '
+    'carries — and all five disagreed with them, in five different ways: one '
+    'with its two sides reversed, three with the seats behind home plate '
+    'attached to the wrong block, one with more than half its field-level '
+    'labels naming sections that are not in the building. This park has not '
+    'been checked. That is not the same as having passed, and the difference '
+    'is the whole reason this section exists.'
+)
 
 
 # ============================================================
@@ -770,11 +1087,16 @@ MODEL_LIMITS = [
         'behind home plate are exactly where it lands.'
     ),
     (
-        'Left and right are not distinguishable here',
-        'Because every park is modelled as a mirror, the first-base and '
-        'third-base figures at a given park differ only by simulation noise. '
-        'Across all 31 parks the left-right split varies less than the noise '
-        'between two runs of the same park. Read a first-base and third-base '
-        'pair as one number, not two.'
+        'One foul line is not distinguishable from the other',
+        'Every park here is built as an exact left-right mirror, so the two '
+        'foul lines at a given park differ only by simulation noise: across '
+        'all 31 parks the split between them varies by less than two runs of '
+        'the same park vary from each other. Read a matching pair of areas on '
+        'the two lines as one number, not two. Worse, at twenty-five of the 31 '
+        'parks nothing available establishes which of the two lines is which '
+        '&mdash; and because the mirror makes a reversed park produce figures '
+        'identical to a correct one, this model cannot detect the difference '
+        'from the inside. It went undetected at one park for the whole of this '
+        'model\'s life until the ballpark\'s own map was read.'
     ),
 ]
