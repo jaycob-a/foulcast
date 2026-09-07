@@ -24,6 +24,10 @@ data/*.db-shm
 
 # Research output
 *.png
+# ...except the published seating maps. They are the source evidence behind
+# the map reads in MAP_FINDINGS.md and seat_map.SIDE_ANCHORS, and code cites
+# them by path, so they are tracked whatever their format.
+!seating_maps/*.png
 
 # Environment
 .env

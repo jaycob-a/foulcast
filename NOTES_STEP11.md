@@ -127,30 +127,42 @@ Three states, and a reader has to be able to tell them apart at a glance:
 
 | State | Parks | What the page says |
 |---|---:|---|
-| Published and joinable | **11** | which areas are behind netting, partly behind it, not behind it, and not mentioned either way — with source URL, source kind, vintage year and retrieval date |
-| Published but not joinable | **12** | the club does publish an extent; this model's own seat labels cannot be reconciled with it, and the club is the sourced side of that disagreement |
+| Published and joinable | **10** | which areas are behind netting, partly behind it, not behind it, and not mentioned either way — with source URL, source kind, vintage year and retrieval date |
+| Published but not joinable | **13** | the club does publish an extent; this model's own seat labels cannot be reconciled with it, and the club is the sourced side of that disagreement. One of the thirteen — Oriole Park — is not a misfit but a mirror: its seating map settles which foul line is which, and the table has them the other way round |
 | Not published at all | **8** | which kind of nothing: no text, a club that declines on principle, a page that contradicts itself, or endpoints on a numbering that wraps at an unpublished point |
 
-### One hedge that the audit implies and Step 10 did not draw
+### Which foul line is which, and why most pages will not say
 
-At four of the eleven mapped parks — Fenway, Truist, Citizens Bank and Great
-American — the published extent lands **differently on the two foul lines**: one
-side's dugout boxes come out netted and the other side's come out partly netted
-or open. Printing that is a claim about *which* foul line is which, and that
-claim rests on the zone table's printed labels, which `AUDIT.md`'s revised
-position holds to be unverified at **every** park and wrong at nine.
+Printing anything as "the first-base side" is a claim about *which* foul line
+is which, and that claim rests on the zone table's printed labels, which
+`AUDIT.md`'s revised position holds to be unverified at **every** park and wrong
+at nine. The first draft of this step drew that as a hedge: four mapped pages
+where the netting came out differently on the two lines carried a warning
+telling the reader to take the two lines together.
 
-Those four pages therefore carry a warning saying so, and telling the reader to
-take the two foul lines together rather than either alone. The other seven
-mapped parks do not carry it, because their netting comes out the same on both
-sides and a reversal would change nothing. `tests/test_site.py` asserts both
-halves — present where the sides differ, absent where they do not.
+The seating-map read (below) showed the hedge was too weak. A mirrored table is
+not a matter of degree — Oriole Park's two sides are swapped outright, and it
+passed every join guard, because every geometry number in `stadium.py` is
+mirror-symmetric and so every structural check is blind to a mirror. So the
+site now does the stronger thing:
 
-This is not a new finding; it follows from the audit, and Step 10's join did not
-have to confront it because a zone table's netting status was never rendered
-side by side before.
+- `seat_map.SIDE_ANCHORS` holds every source in the repo that names a foul-line
+  side next to a printed section number — a club page or a direct map read.
+  Eleven parks have one; at six the table agrees with it, at one (Oriole Park)
+  it is reversed, at two the anchors contradict each other, and at
+  twenty-two there is nothing to test against.
+- `netting._check_join` gained a fifth guard, G5, that rejects a join when the
+  anchored sections all land on the other line. Oriole Park moved from mapped
+  to a `sides_flipped` gap. Every mapped park now carries a flag saying whether
+  its sides were confirmed (Fenway, Dodger, Truist) or never tested (the other
+  seven).
+- At the twenty-five parks whose sides are not established, the page folds
+  each matching pair of foul-line areas into one row — the mean, not the sum —
+  and describes it as both lines at once. No foul line is named there. Only
+  the six anchored-and-agreeing parks may name one, and every page states its
+  own side position in words. `tests/test_site.py` asserts all three.
 
-The nine gap reasons in `netting.GapKind` are rewritten into plain sentences in
+The ten gap reasons in `netting.GapKind` are rewritten into plain sentences in
 `site_data.GAP_WORDS`, because `ParkJoin.gap_detail` states several of them by
 quoting section numbers. The rewrites keep the distinction that matters most —
 *nobody published this* versus *somebody published it and this model does not
@@ -238,19 +250,23 @@ contradict are also the parks whose *grouping* is most likely wrong, and nothing
 on the site distinguishes them from the rest on that axis. It flags them as
 netting gaps, which is a different thing.
 
-**2. The Wrigley asymmetry note may mislead in the direction it is trying to
-correct.** Clem's sentence about more room on the first-base side is quoted on
-Wrigley's page as the one published statement of foul-territory asymmetry, and
-the page says the model cannot use it. But that page also prints separate
-first-base and third-base figures which differ only by simulation noise. The
-limits section says to read such a pair as one number. Whether a reader carries
-that instruction from the bottom of the page back up to the table, I doubt.
+**2. The folded foul-line rows hide a real asymmetry where one exists.** At
+the twenty-five parks with no side anchor, the two lines are shown as one area
+because the model cannot say which is which. That is honest about the labels
+and silent about the park: Clem's sentence about more room on the first-base
+side is quoted on Wrigley's page as the one published statement of
+foul-territory asymmetry, and the page says the model cannot use it. A folded
+row cannot show that asymmetry even in principle. Where the two halves of a
+pair disagree on netting, the row says so — one line covered, the other not,
+and nothing to say which — and that sentence is the most awkward one on the
+site.
 
 **3. The mapped/gap split will read as a quality ranking of ballparks, and it is
-not one.** Twelve of the twenty gaps are the model's fault, not the club's — the
-club published, this repo's labels do not fit. The pages say so in words. The
-home page's two lists, "sourced netting" and "netting is a gap", say the
-opposite structurally, and structure wins.
+not one.** Thirteen of the twenty-one gaps are the model's fault, not the
+club's — the club published, this repo's labels do not fit. The pages say so in
+words, and the home page now splits the gaps by whose fault they are rather
+than listing them as one block. It still reads as a ranking, because "sourced"
+against "gap" is a ranking whatever the sub-headings say, and structure wins.
 
 **4. The exit velocity numbers are the least defensible figures on the site.**
 They are speed off the bat, and the risk reading is the one place a reader would
@@ -272,24 +288,30 @@ a dated one. It does not refresh it.
 
 ---
 
-## An open thread this step did not act on
+## The seating-map read, and what was built on it
 
-An uncommitted `MAP_FINDINGS.md` and a `seating_maps/` directory appeared in the
-working tree during this step, recording a direct read of five published seating
-maps against the `_make_*_sections()` tables. Its headline claims are more
-serious than a numbering error: the plate zone placed in the wrong part of the
-park at Chase, Sutter Health and Truist; the two foul lines **swapped** at Oriole
-Park; a shift of several sections at Fenway. It also observes that the swap at
-Oriole Park passes `join_park()` cleanly, because a mirror-symmetric table cannot
-fail a structural left/right check.
+`MAP_FINDINGS.md` and the `seating_maps/` directory record a direct read of five
+published seating maps — Chase, Fenway, Oriole Park, Sutter Health, Truist —
+against the `_make_*_sections()` tables, at 2x-8x around the plate, both foul
+lines and the deck edges. Its headline claims are more serious than a numbering
+error: the plate zone placed in the wrong part of the park at Chase, Sutter
+Health and Truist; the two foul lines **swapped** at Oriole Park; a shift of
+several sections at Fenway. Every one of the five disagrees with its table.
 
-**Nothing in this step is built on it.** It is not committed, it was not part of
-the brief, and I have not verified it. But three of the five parks it names have
-pages on this site, and two of those — Fenway and Truist — are among the four
-that make side-specific netting claims. If that read holds, those two pages are
-wrong in a way the hedge above softens but does not fix, and Oriole Park is worse
-off than the site's "netting sourced" label suggests. It should be checked before
-the site is pointed at anybody.
+The read was not part of the brief, and for the first draft of this step it was
+left as an open thread. It is now committed, and the step is built on it in
+three places, all described above: the `map_read` family of
+`seat_map.SIDE_ANCHORS`, the G5 join guard that used it to knock Oriole Park
+out of the mapped list, and the folding of the foul-line rows at every park the
+read cannot reach. Each park page shows its own map read where there is one and
+says outright that no map has been read where there is not.
+
+The whole `seating_maps/` directory is tracked, including the maps that have
+not been read yet — 30 images for 31 parks. They are the evidence the anchors
+cite, and the unread ones are the cheapest next correction in the repo: the
+plate-zone and boundary findings at the five read parks are recorded in
+`MAP_FINDINGS.md` and **not yet applied to the tables**. An anchor that passes
+says the table is not mirrored. It says nothing about where the boundaries fall.
 
 ---
 
@@ -298,13 +320,14 @@ the site is pointed at anybody.
 - **No accuracy figure, because none can be computed.** Unchanged from every
   step before this one, and now stated on 32 public pages instead of in a
   markdown file.
-- **Nothing physical moved.** No model code was touched. `site_build.py` calls
-  `predict_game_fouls` exactly as `park_sweep.py` does, with the same lineups,
-  seed and pitch mix; the full suite passes unchanged, and the site tests are
-  additive.
+- **Nothing physical moved.** No physics or geometry code was touched.
+  `site_build.py` calls `predict_game_fouls` exactly as `park_sweep.py` does,
+  with the same lineups, seed and pitch mix. The one model-side change is the
+  netting join's fifth guard and the side-anchor table behind it, which change
+  what the model *claims* about a park and nothing about what it simulates.
 - **The numbering defect is not fixed.** It is routed around. `AUDIT.md`'s Step
   10 update still calls correcting the section labels the cheapest large
   correction available in the repo, and it still is — the sources needed have
   already been read. What Step 11 adds is a reason it now blocks something
   visible: 19 of 31 pages describe seating in words because their numbers cannot
-  be trusted, and 12 parks show a netting gap that is not a netting gap at all.
+  be trusted, and 13 parks show a netting gap that is not a netting gap at all.
