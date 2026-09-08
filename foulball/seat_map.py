@@ -452,6 +452,35 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
         SideAnchor('', 142, 142, '3B', 'Section 142 (3B line)',
                    'https://www.mlb.com/tigers/ballpark/netting',
                    'primary', '2026-08-09'),
+        # Step 14. The club page anchored one section per line and both of
+        # them land right. The map read below covers the rest of the ring and
+        # does not: 103-108 is in right field, not on the third-base line.
+        SideAnchor('', 101, 106, '1B',
+                   'outfield grandstand at the end of the right-field arm, '
+                   'the arm running 106 105 104 103 102 101 away from the '
+                   'plate block at 126-129',
+                   'seating_maps/comerica_park.jpg (Comerica Park seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom. Orientation fixed '
+                         'by the map\'s own labels: "RIGHT FIELD BALCONY" is '
+                         'printed along the RF1-RF4 strip drawn directly '
+                         'outboard of 101-106, with "Comerica Landing" and '
+                         'the "Right Field Pitcher\'s Pub" beyond it, and the '
+                         'legend colour filling 101-106 is "Right Field '
+                         'Grandstand". Nothing outside the image was needed'),
+        SideAnchor('', 133, 140, '3B',
+                   'lower bowl ascending from the plate block at 126-129 '
+                   'toward the left-field corner: 130 131 132 133 ... 140, '
+                   'then the "Left Field Baseline Box" colour at 141-143 and '
+                   'the Pavilion at 144-151',
+                   'seating_maps/comerica_park.jpg (Comerica Park seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='same frame as the 1B anchor above; this arm ends in '
+                         'the legend colour the map names "Left Field '
+                         'Baseline Box", which is the opposite corner from '
+                         'the Right Field Balcony'),
     ),
 
     'rogers_centre': (
@@ -579,6 +608,43 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                    'angled net coverage 112-116 (3B side)',
                    'https://www.mlb.com/padres/ballpark/netting',
                    'primary', '2026-08-09'),
+        # Step 14. The map explains the club page's apparent contradiction:
+        # Petco numbers one foul line odd and the other even from a shared
+        # block, so 111-115 and 112-116 share no actual section. The anchors
+        # below are single numbers because a range spanning both parities
+        # would be a claim about sections on the other line. They do not make
+        # this park testable — `_overlapping_prefixes` still trips on the two
+        # club-page ranges above, by design — they are recorded evidence.
+        SideAnchor('', 122, 122, '3B',
+                   'even arm ascending from the plate block at 101-104: 106 '
+                   '108 110 112 114 116 118 120 122 124 126 128 130 132',
+                   'seating_maps/petco_park.jpg (Petco Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom. Orientation fixed '
+                         'by the map\'s own label "WESTERN METAL SUPPLY CO. '
+                         'BUILDING", which stands at the left-field foul '
+                         'pole and is drawn at the head of this arm, next to '
+                         'the "FOUL POLE SUITE" label. The even/odd split is '
+                         'the map\'s, not an inference'),
+        SideAnchor('', 134, 134, '3B',
+                   'even arm, last full section before the Western Metal '
+                   'Supply Co. Building at the foul pole',
+                   'seating_maps/petco_park.jpg (Petco Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmark as the 122 anchor above'),
+        SideAnchor('', 125, 125, '1B',
+                   'odd arm ascending from the plate block at 101-104: 105 '
+                   '107 109 111 113 115 117 119 121 123 125 127 129 131',
+                   'seating_maps/petco_park.jpg (Petco Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='the arm opposite the Western Metal Supply Co. '
+                         'Building; the "T-MOBILE HOME RUN DECK" label runs '
+                         'along its outfield end, past 131-137'),
+        SideAnchor('', 137, 137, '1B',
+                   'odd arm, last section along the T-Mobile Home Run Deck',
+                   'seating_maps/petco_park.jpg (Petco Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmark as the 125 anchor above'),
     ),
 
     # --- Family 3: read off a published seating map ------------------------
@@ -963,6 +1029,143 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                    'seating_maps/nationals_park.jpg (Nationals seating map)',
                    'map_read', '2026-09-07',
                    basis='same landmarks as the 3B anchor above'),
+    ),
+
+    # --- Step 14 ------------------------------------------------------------
+    #
+    # Six maps, and the shape of the defect is the same at five of them: the
+    # zone table numbers the bowl outward from a plate block in the middle,
+    # and the park numbers it monotonically along the bowl from one foul pole
+    # to the other. Where the park's ring happens to run low-at-1B the table's
+    # two side blocks still land right and only the plate block is misplaced;
+    # where it runs the other way, or wraps, one of the side blocks lands on
+    # the wrong foul line and the anchors catch it.
+
+    'pnc_park': (
+        SideAnchor('', 101, 101, '1B',
+                   'first section of the right-field arm, at the foul pole',
+                   'seating_maps/pnc_park.jpg (PNC Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='rotated plan, plate at the middle left and the '
+                         'outfield opening to the lower right. Orientation '
+                         'fixed by the map\'s own labels: "RIGHT FIELD GATE" '
+                         'is printed alongside this end of the arm, the '
+                         '"MILLER LITE SKULL BAR" and "RIVERWALK" sit under '
+                         'it, and the right-field bleachers 147 146 145 144 '
+                         '143 142 run from immediately past 101 along the '
+                         'outfield wall'),
+        SideAnchor('', 107, 110, '1B',
+                   'right-field arm descending from the plate block at '
+                   '114-119: 113 112 110 109 108 107 105 103 101 (111 is not '
+                   'printed), with field boxes 1 2 4 5 6 7 8 9 10 inboard',
+                   'seating_maps/pnc_park.jpg (PNC Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 101 anchor above. The range '
+                         'stops at 110 because 111 is not printed on this '
+                         'map and an anchor may not claim a section it did '
+                         'not read'),
+        SideAnchor('', 130, 138, '3B',
+                   'left-field arm ascending from the plate block at 114-119: '
+                   '120 121 123 124 125 127 128 129 130 131 132 133 134 135 '
+                   '136 137 138, with field boxes 20-32 inboard',
+                   'seating_maps/pnc_park.jpg (PNC Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='orientation fixed by the map\'s own label "JIM BEAM '
+                         'LEFT FIELD LOUNGE", printed vertically alongside '
+                         '135-138 and the 235-238 deck above them. The '
+                         '"PIRATES DUGOUT" label lies on this same arm and '
+                         'agrees, but the lounge is the deciding landmark '
+                         'because it names the field'),
+    ),
+
+    'target_field': (
+        SideAnchor('', 101, 106, '1B',
+                   'right-field arm descending from the plate block at '
+                   '112-116: 111 110 109 108 107 106 105 104 103 102 101, '
+                   'with field boxes 7 6 5 4 3 2 1 and lettered boxes E D C '
+                   'B A inboard',
+                   'seating_maps/target_field.jpg (Target Field seating map)',
+                   'map_read', '2026-09-07',
+                   basis='rotated plan, plate at the middle left. Orientation '
+                         'fixed by the map\'s own label "Corona Right Field '
+                         'Field Patio 139, 140", drawn immediately outboard '
+                         'of section 101 at the foul pole, with "Gate 29 '
+                         'Right Field Entrance" beyond it. The map\'s own '
+                         'legend line "Home Plate Taproom presented by Pryes '
+                         'Brewing (Section 213-216)" fixes the plate block on '
+                         'the ring above and agrees'),
+        SideAnchor('', 121, 127, '3B',
+                   'left-field arm ascending from the plate block at 112-116: '
+                   '117 118 119 120 121 122 123 124 125 126 127, then the '
+                   'left-field bleachers 128 129 130 131',
+                   'seating_maps/target_field.jpg (Target Field seating map)',
+                   'map_read', '2026-09-07',
+                   basis='the arm ends under "Gate 6 Left Field Entrance". '
+                         'The range starts at 121 rather than 117 to stay '
+                         'clear of the bend behind the plate, though 117-120 '
+                         'are plainly on this side of it, past the VISITORS '
+                         'DUGOUT label - see MAP_FINDINGS.md'),
+    ),
+
+    'tmobile_park': (
+        SideAnchor('', 114, 127, '1B',
+                   'right-field arm descending from the plate block at the '
+                   'bend: 127 126 125 124 123 122 121 120 119 118 117 116 '
+                   '115 114 112 111 110, past the MARINERS dugout (113 is '
+                   'not printed)',
+                   'seating_maps/tmobile_park.jpg (T-Mobile Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='rotated plan, plate at the lower left. Orientation '
+                         'fixed by the map\'s own label "Hit it Here Cafe", '
+                         'printed along the outfield sections 105-110 at the '
+                         'end of this arm - that cafe is the right-field '
+                         'landmark - with "RF GATE" beyond. The map also '
+                         'prints "3B ENTRY" against 330-333 on the opposite '
+                         'arm, which is the same statement made the other '
+                         'way round'),
+        SideAnchor('', 133, 144, '3B',
+                   'left-field arm ascending from the plate block at the '
+                   'bend: 128 129 131 132 133 ... 144, then 146 147 148 149 '
+                   '150 (130 and 145 are not printed), past the VISITORS '
+                   'dugout toward the LF GATE',
+                   'seating_maps/tmobile_park.jpg (T-Mobile Park seating map)',
+                   'map_read', '2026-09-07',
+                   basis='the map prints "3B ENTRY" outside 330-333, which '
+                         'sit on the same radials as 129-133; "LF GATE" is '
+                         'printed over the far end of the same arm. The range '
+                         'starts at 133 and stops at 144 so that every '
+                         'number in it is one the map actually prints'),
+    ),
+
+    'angel_stadium': (
+        SideAnchor('', 103, 109, '3B',
+                   'left-field arm descending toward the plate block at '
+                   '114-122: 101 102 103 ... 113, then the Lexus Diamond '
+                   'Club arc 114-122 behind the plate',
+                   'seating_maps/angel_stadium.jpg (Angel Stadium seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom. Orientation fixed '
+                         'by the map\'s own legend: the swatch labelled '
+                         '"Left Field Pavilion" is the orange filling '
+                         '256-260 at the head of this arm, and the swatch '
+                         'labelled "Right Field Pavilion" is the yellow '
+                         'filling 241-249 at the head of the other. The '
+                         'ANGELS and VISITOR dugout labels agree. The map '
+                         'also prints "Protective netting extends from '
+                         'SECTIONS 109 - 127", which is centred on 118 and '
+                         'so corroborates the plate block'),
+        SideAnchor('', 123, 135, '1B',
+                   'right-field arm ascending from the Lexus Diamond Club '
+                   'arc: 123 124 125 ... 135, ending at the foul pole under '
+                   'the Right Field Pavilion',
+                   'seating_maps/angel_stadium.jpg (Angel Stadium seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='same legend swatches as the 3B anchor above. This '
+                         'is the anchor the zone table fails: it carries '
+                         '133-141 as "3B Field", and 133 134 135 are the '
+                         'last three sections of the right-field arm'),
     ),
 
 }

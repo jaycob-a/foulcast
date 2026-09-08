@@ -293,19 +293,29 @@ def test_no_foul_line_is_named_where_it_is_not_established(built, key):
         f'{slug}: sides are unestablished but the pair was not folded'
 
 
-def test_only_twelve_parks_may_name_a_foul_line(built):
+def test_only_thirteen_parks_may_name_a_foul_line(built):
     """Three parks joined the list in Step 13, off their seating maps:
     Daikin Park, Wrigley Field and Yankee Stadium. Yankee Stadium is the
     instructive one — it always had two club-page anchors, but they name
     sections on a ring this park's zone table does not number, so the park
-    was untestable until the map supplied labels the table does carry."""
+    was untestable until the map supplied labels the table does carry.
+
+    Step 14 moved three: Target Field and T-Mobile Park joined, because their
+    maps confirmed the sides their tables already had, and Comerica Park left.
+    Comerica is the instructive one this time — it is the only park so far to
+    go the wrong way down this list. Its two club-page anchors (116 on the 1B
+    line, 142 on the 3B line) both land right and made it 'ok'; the map read
+    adds 101-106 in right field, under the Right Field Balcony the map itself
+    labels, and the zone table calls 103-108 "3B Infield". Two anchored
+    sections agreeing was never evidence about the other forty."""
     named = sorted(p['key'] for p in built['parks'].values()
                    if p['sides']['named'])
-    assert named == ['chase_field', 'citizens_bank', 'comerica_park',
-                     'dodger_stadium', 'fenway_park', 'great_american',
-                     'guaranteed_rate', 'minute_maid', 'rogers_centre',
-                     'truist_park', 'wrigley_field', 'yankee_stadium']
-    assert '12 of the 31 parks have one' in flat(built['pages'][''])
+    assert named == ['chase_field', 'citizens_bank', 'dodger_stadium',
+                     'fenway_park', 'great_american', 'guaranteed_rate',
+                     'minute_maid', 'rogers_centre', 'target_field',
+                     'tmobile_park', 'truist_park', 'wrigley_field',
+                     'yankee_stadium']
+    assert '13 of the 31 parks have one' in flat(built['pages'][''])
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))

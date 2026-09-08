@@ -57,9 +57,16 @@ JOIN_GAP_PARKS = {
 }
 
 # What each G4 park fails on, locked so a change of guard is a named diff.
+# Angel Stadium and PNC Park moved from 'labels_wrap_unpublished' to
+# 'labels_contradict_model' in Step 14: both already failed on the wrap, and
+# the map read added a side anchor each one's zone table contradicts, which is
+# the earlier and stronger reason. Angel Stadium carries 133-141 as "3B Field"
+# and the map has 133 134 135 at the end of the right-field arm; PNC carries
+# 101-107 as "3B Infield" and the map has that arm running to the Right Field
+# Gate. See MAP_FINDINGS.md.
 STRUCTURAL_GAP_KINDS = {
-    'angel_stadium': 'labels_wrap_unpublished',
-    'pnc_park': 'labels_wrap_unpublished',
+    'angel_stadium': 'labels_contradict_model',
+    'pnc_park': 'labels_contradict_model',
     'globe_life': 'sides_unverifiable',
     'camden_yards': 'sides_flipped',
     'coors_field': 'sides_flipped',
