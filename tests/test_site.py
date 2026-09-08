@@ -16,9 +16,11 @@ cannot support:
 4. **No accuracy claims**, and the absence of validation stated on every page.
 
 The site is rebuilt into a temporary directory at a low simulation count, so
-these test the *generator* rather than whatever happens to be committed. One
-extra test checks that the committed build exists and covers every park, which
-is what the web app actually serves.
+these test the *generator* rather than whatever happens to be committed. A
+second group then tests what *is* committed, because the generator being right
+is worth nothing if the pages being served came out of an older one: the
+committed pages have to match a fresh render, and the cached model run they
+were rendered from has to carry the current model's fingerprint.
 
 Known limit of the section-number test, stated rather than hidden: the
 substring check only runs on printed labels of three characters or more.
@@ -28,8 +30,11 @@ by the pattern checks instead, which catch every mechanism by which a number
 could actually leak: a raw section name, a printed range, or the word "section"
 followed by a digit.
 """
+import ast
+import json
 import os
 import re
+import shutil
 import sys
 
 import pytest
@@ -50,6 +55,7 @@ TEST_SIMS = 8
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COMMITTED_SITE = os.path.join(REPO, 'site')
+COMMITTED_CACHE = os.path.join(REPO, '.cache', 'site', 'park_stats.json')
 
 
 @pytest.fixture(scope='module')
@@ -92,6 +98,189 @@ def test_committed_build_covers_every_park():
     for src in PARK_SOURCES.values():
         page = os.path.join(COMMITTED_SITE, src['slug'], 'index.html')
         assert os.path.exists(page), f'missing built page for {src["slug"]}'
+
+
+# ============================================================
+# The cache, the committed build, and the model behind both
+# ============================================================
+#
+# Two staleness holes, both found by inspection rather than by a failing test,
+# which is why they are tests now:
+#
+# 1. The model cache keyed on park + sims + seed only. Halving Fenway's foul
+#    territory in `PARK_PARAMS` and running the normal build reproduced the
+#    pages byte for byte without simulating anything, because the cache
+#    entries still looked current.
+# 2. Nothing compared the committed `site/` with what the generator would
+#    produce today, so the pages served to the public sat five commits behind
+#    the copy that generated them.
+
+
+def _package_imports(module: str) -> set[str]:
+    """The `foulball` modules `module` imports, read out of its source."""
+    path = os.path.join(REPO, 'foulball', f'{module}.py')
+    with open(path, encoding='utf-8') as fh:
+        tree = ast.parse(fh.read())
+    found = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+            found.add(node.module.split('.')[0])
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith('foulball.'):
+                    found.add(alias.name.split('.')[1])
+    return found
+
+
+def test_model_sources_cover_the_model_imports():
+    """`MODEL_SOURCES` is a hand-kept list, so this walks the imports and fails
+    when a module joins the model path without joining the list — which is how
+    the fingerprint would quietly stop covering the model."""
+    closure, queue = set(), ['matchup_engine', 'stadium']
+    while queue:
+        mod = queue.pop()
+        if mod in closure:
+            continue
+        closure.add(mod)
+        queue.extend(_package_imports(mod) - closure)
+
+    listed = set(site_build.MODEL_SOURCES)
+    excluded = set(site_build.DISPLAY_ONLY_SOURCES)
+    assert listed <= closure, \
+        f'MODEL_SOURCES names modules the model never imports: {listed - closure}'
+    assert closure <= listed | excluded, \
+        (f'these modules are on the model path but are neither fingerprinted '
+         f'nor listed as display-only: {sorted(closure - listed - excluded)}')
+    assert not listed & excluded
+
+
+def _repo_fingerprint() -> str:
+    """The fingerprint of this checkout, independent of a patched `ROOT`."""
+    root = site_build.ROOT
+    site_build.ROOT = REPO
+    try:
+        return site_build.model_fingerprint()
+    finally:
+        site_build.ROOT = root
+
+
+def test_a_park_params_change_moves_the_fingerprint(tmp_path, monkeypatch):
+    """The exact edit that used to be invisible: Fenway's foul territory,
+    halved. Computed against a copy of the tree, so the real one is untouched.
+    """
+    shutil.copytree(os.path.join(REPO, 'foulball'), tmp_path / 'foulball',
+                    ignore=shutil.ignore_patterns('__pycache__'))
+    monkeypatch.setattr(site_build, 'ROOT', str(tmp_path))
+    assert site_build.model_fingerprint() == _repo_fingerprint()
+
+    stadium_py = tmp_path / 'foulball' / 'stadium.py'
+    text = stadium_py.read_text(encoding='utf-8')
+    edited = text.replace("'fenway_park': ParkParams(18_100,",
+                          "'fenway_park': ParkParams(9_050,")
+    assert edited != text, 'the Fenway PARK_PARAMS line has moved; fix this test'
+    stadium_py.write_text(edited, encoding='utf-8')
+
+    assert site_build.model_fingerprint() != _repo_fingerprint()
+
+
+def _fake_cache(path, fingerprint, sims):
+    """A complete, plausible cache stamped with a given fingerprint."""
+    entries = {k: {'park': k, 'sims': sims, 'seed': site_build.SEED,
+                   'model': fingerprint, 'zone_fouls': {}, 'zone_ev': {},
+                   'into_seats': 1.0, 'total_fouls': 2.0, 'unmatched': 1.0}
+               for k in STADIUMS}
+    with open(path, 'w', encoding='utf-8') as fh:
+        json.dump(entries, fh)
+
+
+def test_a_stale_fingerprint_re_simulates_every_park(tmp_path, monkeypatch):
+    cache = tmp_path / 'park_stats.json'
+    _fake_cache(cache, 'not-the-current-model', TEST_SIMS)
+
+    ran = []
+
+    def fake_run(key, sims, fingerprint=None):
+        ran.append(key)
+        return {'park': key, 'sims': sims, 'model': fingerprint}
+
+    monkeypatch.setattr(site_build, 'run_park', fake_run)
+    site_build.load_stats(refresh=False, sims=TEST_SIMS, cache_path=str(cache))
+    assert sorted(ran) == sorted(STADIUMS), \
+        'a cache produced by a different model was reused'
+
+
+def test_a_current_fingerprint_is_reused(tmp_path, monkeypatch):
+    """The other half: the fingerprint must not defeat the cache it guards."""
+    cache = tmp_path / 'park_stats.json'
+    _fake_cache(cache, site_build.model_fingerprint(), TEST_SIMS)
+
+    def refuse(*args, **kwargs):
+        pytest.fail('re-simulated a park whose cache entry was current')
+
+    monkeypatch.setattr(site_build, 'run_park', refuse)
+    stats = site_build.load_stats(refresh=False, sims=TEST_SIMS,
+                                  cache_path=str(cache))
+    assert set(stats) == set(STADIUMS)
+
+
+def test_the_committed_cache_came_from_the_current_model():
+    """What the committed pages were rendered from. If this fails, the numbers
+    on the public pages come from a model that no longer exists; rebuild with
+    `python site_build.py`."""
+    if not os.path.exists(COMMITTED_CACHE):
+        pytest.skip('no committed model cache in this checkout')
+    with open(COMMITTED_CACHE, encoding='utf-8') as fh:
+        cache = json.load(fh)
+    fingerprint = site_build.model_fingerprint()
+    behind = sorted(k for k, e in cache.items() if e.get('model') != fingerprint)
+    assert not behind, f'the cached model run is behind the model at: {behind}'
+    assert all(e['sims'] == site_build.SIMS for e in cache.values())
+
+
+# The one thing on a page that moves without anyone editing anything.
+_BUILD_DATE = re.compile(r'rebuilt \d{4}-\d{2}-\d{2}')
+
+
+def test_the_committed_site_matches_a_fresh_render(tmp_path):
+    """The hole that let `site/` sit five commits behind its own generator.
+
+    Rendered from the committed cache rather than simulated, so this takes a
+    second rather than eight minutes: the cache is checked against the model by
+    `test_the_committed_cache_came_from_the_current_model`, and the pages are
+    checked against the cache here. The build date in the footer is normalised
+    out — it is the only part of a page that changes on its own — and
+    everything else has to match byte for byte.
+    """
+    if not os.path.isdir(COMMITTED_SITE):
+        pytest.skip('site/ not built in this checkout')
+    if not os.path.exists(COMMITTED_CACHE):
+        pytest.skip('no committed model cache in this checkout')
+
+    out = tmp_path / 'site'
+    site_build.build(str(out), base_url='', sims=site_build.SIMS,
+                     no_model=True, cache_path=COMMITTED_CACHE)
+
+    def files(root):
+        return {os.path.relpath(os.path.join(where, name), root).replace(os.sep, '/')
+                for where, _, names in os.walk(root) for name in names}
+
+    fresh, committed = files(str(out)), files(COMMITTED_SITE)
+    assert fresh == committed, \
+        (f'a fresh render and committed site/ hold different files '
+         f'(only in site/: {sorted(committed - fresh)}; only in the render: '
+         f'{sorted(fresh - committed)}); rebuild with `python site_build.py`')
+
+    stale = []
+    for rel in sorted(fresh):
+        with open(out / rel, encoding='utf-8') as fh:
+            new = _BUILD_DATE.sub('rebuilt <date>', fh.read())
+        with open(os.path.join(COMMITTED_SITE, rel), encoding='utf-8') as fh:
+            old = _BUILD_DATE.sub('rebuilt <date>', fh.read())
+        if new != old:
+            stale.append(rel)
+    assert not stale, (f'{len(stale)} committed page(s) differ from a fresh '
+                       f'render, starting with {stale[0]}; rebuild with '
+                       f'`python site_build.py` and commit site/')
 
 
 # ============================================================

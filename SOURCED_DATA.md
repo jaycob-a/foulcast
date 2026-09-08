@@ -7,7 +7,8 @@ is listed as a gap rather than estimated.
 
 Research date: **2026-08-09**. Pages retrieved on that date are marked
 "retrieved 2026-08-09"; where the page itself carries a date or copyright year,
-that is noted too.
+that is noted too. Part 3 was added later and was read on **2026-09-08**; it
+carries its own dates.
 
 Two rules I held to while collecting this:
 
@@ -263,7 +264,7 @@ All rows marked *primary* were read directly from the live page on 2026-08-09.
 | 13 | `minute_maid` | Daikin Park (formerly Minute Maid Park) | Sections 112–126 and the Diamond Club | not stated | *primary* — [mlb.com/astros/ballpark/seat-map](https://www.mlb.com/astros/ballpark/seat-map) |
 | 14 | `kauffman_stadium` | Kauffman Stadium | **no section numbers published** — the club states only that the map "show[s] the general location where additional netting has been installed" and that "it is not possible for a map like this to show the precise location of the netting" | not stated | *primary* — [mlb.com/royals/ballpark/seating-map](https://www.mlb.com/royals/ballpark/seating-map). Secondary fallback: RateYourSeats (updated 2020-03-20) lists 107–148 |
 | 15 | `angel_stadium` | Angel Stadium | Sections 103–133 | not stated | *primary* — [mlb.com/angels/ballpark/netting](https://www.mlb.com/angels/ballpark/netting). Note: this is materially wider than the 110–126 reported in 2019 sources |
-| 16 | `citi_field` | Citi Field | **no official statement found.** *Secondary — unverified:* netting in front of sections 107–128, with the net proper 111–124 and a protective fence continuing to 107 and 128 | not stated | Gap at the primary level; the Mets' `/ballpark/netting` and seat-map pages carry no netting text (checked 2026-08-09). Secondary via web search of RateYourSeats Citi Field pages |
+| 16 | `citi_field` | Citi Field | **no official statement found.** *Secondary — unverified:* netting in front of sections 107–128, with the net proper 111–124 and a protective fence continuing to 107 and 128 | not stated | Gap at the primary level: [mlb.com/mets/ballpark/netting](https://www.mlb.com/mets/ballpark/netting) and [mlb.com/mets/ballpark/seat-map](https://www.mlb.com/mets/ballpark/seat-map) both carry no netting text (both read 2026-08-09). The first of those two URLs is the one the park page prints. Secondary via web search of RateYourSeats Citi Field pages |
 | 17 | `oakland_coliseum` → Sutter Health Park | Sutter Health Park | **no club statement found.** The A's A-Z guide has no netting entry, and the Sutter Health Park ballpark-map page carries no netting text (both checked 2026-08-09). The only applicable authority is the PDL rule: foul pole to foul pole, by 2025 Opening Day | not stated | Gap — see the PDL row in the baseline table above |
 | 18 | `las_vegas_ballpark` | Las Vegas Ballpark | **no park-specific source found.** The A-to-Z guide tells guests to stay behind "railings and protective netting" without describing its extent. Same PDL rule applies (Aviators are Triple-A) | not stated | Gap. Note: a web-search summary attributed "nets extend to the far ends of the dugouts and are extremely high" to a Las Vegas Review-Journal article, but on fetching that article ([2018-02-01](https://www.reviewjournal.com/sports/aviatorsbaseball/major-league-baseball-expands-netting-at-all-parks/)) it contains no LVB-specific detail — the claim is not supported |
 | 19 | `pnc_park` | PNC Park | Section 101 → Section 130 | varies by section | *primary* — [mlb.com/pirates/ballpark/seat-map](https://www.mlb.com/pirates/ballpark/seat-map) (PNC Park 3D seating chart) |
@@ -276,7 +277,7 @@ All rows marked *primary* were read directly from the live page on 2026-08-09.
 | 26 | `rogers_centre` | Rogers Centre | Down the first and third baseline walls to Sections 113C and 130C respectively, "tapering off to the curve before the foul poles" | 30 ft (matching the height previously in place behind home plate) | *primary* — [mlb.com/bluejays/ballpark/netting](https://www.mlb.com/bluejays/ballpark/netting) |
 | 27 | `target_field` | Target Field | Sections 7–10; 1–6 and 11–17; 109–119; 105–108 and 120–123; 103–104 and 124–125; **Section 126 — "Partially covered"** | varies by section | *primary* — [mlb.com/twins/ballpark/seat-map](https://www.mlb.com/twins/ballpark/seat-map). The only explicit partial-coverage flag in the league |
 | 28 | `guaranteed_rate` | Rate Field | 49 sections: 108–156 (enumerated individually on the page) | varies by section | *primary* — [mlb.com/whitesox/ballpark/seat-map](https://www.mlb.com/whitesox/ballpark/seat-map) |
-| 29 | `loan_depot` | loanDepot park | **No text published** — the club's seat-map page has a "loanDepot park Netting" heading whose content is an image ("Netting at loanDepot park") with no section list (checked 2026-08-09). *Secondary — unverified:* sections 8–21 | not stated | Gap at the primary level; secondary via web search of RateYourSeats loanDepot park pages, consistent with the 2020 RateYourSeats table (8–21) |
+| 29 | `loan_depot` | loanDepot park | **No text published** — the club's seat-map page has a "loanDepot park Netting" heading whose content is an image ("Netting at loanDepot park") with no section list (checked 2026-08-09). *Secondary — unverified:* sections 8–21 | not stated | Gap at the primary level: [mlb.com/marlins/ballpark/seat-map](https://www.mlb.com/marlins/ballpark/seat-map) (read 2026-08-09) is the page with the image, and is the URL the park page prints. Secondary via web search of RateYourSeats loanDepot park pages, consistent with the 2020 RateYourSeats table (8–21) |
 | 30 | `american_family` | American Family Field | Sections 108–128 | ~33 ft, measured from the warning-track surface | *primary* — [mlb.com/brewers/ballpark/netting](https://www.mlb.com/brewers/ballpark/netting) |
 | 31 | `nationals_park` | Nationals Park | Terra Club A–E; PNC Diamond Club 119–126; Sections 109–118 and 127–135 | varies by section | *primary* — [mlb.com/nationals/ballpark/netting](https://www.mlb.com/nationals/ballpark/netting). Page text references the 2026 season explicitly |
 
@@ -329,6 +330,48 @@ with photo counts per section, so the raw material is there.
 
 ---
 
+## Part 3 — Where foul balls actually land
+
+Nothing in this part is model input either. It is here because the public site
+makes a claim about it: every park page says no public record of real foul-ball
+landings exists, and names the largest published collection. Until 2026-09-08
+that page said "about 900 balls for a single story" and named nobody, and the
+figure traced only to a passing line in `AUDIT.md`. This is the source it
+should have had, and the pages now carry the real number and a link.
+
+**The one published collection.** FiveThirtyEight hand-collected foul balls for
+the story *"We Watched 906 Foul Balls To Find Out Where The Most Dangerous Ones
+Land"* and published the underlying data. Read on **2026-09-08** from the data
+repository, which is the live primary:
+
+| Figure | Value | Source |
+|---|---|---|
+| Balls in the set | 906 | [github.com/fivethirtyeight/data/tree/master/foul-balls](https://github.com/fivethirtyeight/data/tree/master/foul-balls), `README.md` |
+| How they were drawn | "906 foul balls collected from the most foul-heavy day at each of the the 10 stadiums that produced the most foul balls, as of June 5, 2019" (*sic*, doubled "the") | same |
+| What a landing location is | a **zone**, not a section: `predicted_zone` is "The zone we predicted the foul ball would land in by gauging angles", `camera_zone` is "The zone that the foul ball landed in, confirmed by footage", and `used_zone` is the one the story analysed | same |
+| Exit velocity | `exit_velocity`, "Recorded exit velocity of each hit -- blank if not provided"; batted-ball data from Baseball Savant | same |
+
+**The story page itself is gone.** The URL the README links,
+`https://fivethirtyeight.com/features/we-watched-906-foul-balls-to-find-out-where-the-most-dangerous-ones-land/`,
+returned **301 → `https://abcnews.com/politics`** when fetched on 2026-09-08 —
+FiveThirtyEight was retired and its owner now redirects the whole site to ABC
+News. A Wayback snapshot dated
+**2026-03-01** exists and answers 200
+(`web.archive.org/web/20260301023347/https://fivethirtyeight.com/features/we-watched-906-foul-balls-to-find-out-where-the-most-dangerous-ones-land/`),
+but it could not be read from this environment, so nothing here rests on the
+article text — every figure above comes off the data repository. **The site
+links the data repository rather than the story for that reason:** a link to
+the story would now drop a reader on a politics page.
+
+**Why this is a gap and not a source.** 906 balls, ten games, one day per park,
+placed in broad zones by eye from camera footage, in 2019. It is not a
+section-level record, it does not cover any park in this registry beyond those
+ten, and it is not something this model can be validated against — which is the
+claim the park pages make, and the reason the phrase on the site is "no such
+record exists publicly" rather than "no data exists".
+
+---
+
 ## Consolidated gap list
 
 **Part 1 — geometry**
@@ -373,3 +416,11 @@ with photo counts per section, so the raw material is there.
     ~$60M of hurricane repairs including a new roof
     ([ESPN](https://www.espn.com/mlb/story/_/id/46947195/rays-return-tropicana-field-26-hurricane-repairs)) —
     the netting page may predate the reopening.
+
+**Part 3 — foul-ball landings**
+
+14. **A record of where real foul balls land.** There is one published
+    collection (906 balls, ten games, 2019, broad zones by eye) and no
+    section-level record for any park. This is the gap the site states on
+    every page, and the one that would have to close before any accuracy
+    figure could be computed.

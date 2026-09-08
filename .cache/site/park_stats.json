@@ -3,6 +3,7 @@
   "park": "yankee_stadium",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 0.8337999999999993,
    "HOME-F": 6.719000000000017,
@@ -47,6 +48,7 @@
   "park": "fenway_park",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-LB1": 3.9692000000000154,
    "HOME-F": 6.481100000000022,
@@ -81,6 +83,7 @@
   "park": "dodger_stadium",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 1.0764999999999991,
    "HOME-DC": 4.488500000000046,
@@ -117,6 +120,7 @@
   "park": "wrigley_field",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "HOME-F": 6.378000000000024,
    "1B-FB1": 2.2279999999999975,
@@ -157,6 +161,7 @@
   "park": "coors_field",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.074300000000001,
    "HOME-F": 6.652600000000018,
@@ -191,6 +196,7 @@
   "park": "chase_field",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.582900000000005,
    "HOME-F": 6.549500000000018,
@@ -225,6 +231,7 @@
   "park": "truist_park",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.5866000000000047,
    "HOME-F": 6.353000000000027,
@@ -259,6 +266,7 @@
   "park": "camden_yards",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.0836000000000006,
    "HOME-F": 6.725100000000015,
@@ -293,6 +301,7 @@
   "park": "citizens_bank",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.0458000000000003,
    "HOME-F": 6.389300000000025,
@@ -327,6 +336,7 @@
   "park": "great_american",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.3029000000000024,
    "HOME-F": 6.54280000000002,
@@ -361,6 +371,7 @@
   "park": "progressive_field",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 1.9370000000000012,
    "HOME-F": 6.738900000000013,
@@ -395,6 +406,7 @@
   "park": "comerica_park",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 1.9828000000000028,
    "HOME-F": 6.556700000000017,
@@ -429,6 +441,7 @@
   "park": "minute_maid",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.760900000000004,
    "HOME-F": 6.734800000000019,
@@ -463,6 +476,7 @@
   "park": "kauffman_stadium",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.184700000000001,
    "HOME-F": 6.2274000000000305,
@@ -497,6 +511,7 @@
   "park": "angel_stadium",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.187400000000001,
    "HOME-F": 6.705400000000014,
@@ -531,6 +546,7 @@
   "park": "citi_field",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.194100000000001,
    "HOME-F": 6.70480000000002,
@@ -565,6 +581,7 @@
   "park": "oakland_coliseum",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "HOME-F": 6.808300000000013,
    "1B-FB1": 2.219699999999997,
@@ -593,6 +610,7 @@
   "park": "las_vegas_ballpark",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "HOME-F": 6.587300000000017,
    "1B-FB1": 2.1116999999999986,
@@ -621,6 +639,7 @@
   "park": "pnc_park",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.3609000000000027,
    "HOME-F": 6.546800000000021,
@@ -655,6 +674,7 @@
   "park": "petco_park",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.331500000000003,
    "HOME-F": 6.460500000000024,
@@ -689,6 +709,7 @@
   "park": "oracle_park",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.2231000000000023,
    "HOME-F": 6.48450000000002,
@@ -723,6 +744,7 @@
   "park": "tmobile_park",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 1.979600000000002,
    "HOME-F": 6.750500000000014,
@@ -757,6 +779,7 @@
   "park": "busch_stadium",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 1.7613000000000012,
    "HOME-F": 6.502600000000021,
@@ -791,6 +814,7 @@
   "park": "tropicana_field",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.788000000000004,
    "HOME-F": 5.9693000000000405,
@@ -825,6 +849,7 @@
   "park": "globe_life",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.4231000000000043,
    "HOME-F": 5.959000000000042,
@@ -859,6 +884,7 @@
   "park": "rogers_centre",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-LB1": 2.441400000000003,
    "HOME-F": 6.559800000000019,
@@ -893,6 +919,7 @@
   "park": "target_field",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "HOME-F": 6.315300000000027,
    "1B-FB1": 2.1381999999999977,
@@ -927,6 +954,7 @@
   "park": "guaranteed_rate",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 1.5821000000000014,
    "HOME-F": 6.711500000000013,
@@ -961,6 +989,7 @@
   "park": "loan_depot",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.6031000000000044,
    "HOME-F": 6.389400000000025,
@@ -995,6 +1024,7 @@
   "park": "american_family",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 2.6360000000000046,
    "HOME-F": 6.588700000000015,
@@ -1029,6 +1059,7 @@
   "park": "nationals_park",
   "sims": 400,
   "seed": 42,
+  "model": "debec3c7c804de8f",
   "zone_fouls": {
    "3B-UB": 1.8665000000000014,
    "HOME-F": 6.1552000000000335,

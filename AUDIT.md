@@ -134,6 +134,10 @@ answer would be wrong.
 locations — FiveThirtyEight had to hand-log 906 of them for a single story. Statcast does not
 record which side a foul lands on. Nobody has this data.
 
+*(2026-09-08: that 906 was carried on the public site for months with no source behind it
+anywhere but this line. It is now cited — the FiveThirtyEight data repository, read and
+recorded in `SOURCED_DATA.md` Part 3, and linked from every park page.)*
+
 That is the moat. A few thousand hand-logged or crowdsourced fouls with real section labels
 would let you calibrate the model, validate it honestly, and own something no competitor can
 replicate from public sources. It converts the project from "a simulation that might be right"

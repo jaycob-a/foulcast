@@ -2213,10 +2213,13 @@ MODEL_LIMITS = [
         'This model has never been compared with a record of where real foul '
         'balls actually landed, at this park or any other. No such record '
         'exists publicly — Statcast logs that a foul happened, not where it '
-        'came down, and the largest hand-collected set anyone has published '
-        'ran to about 900 balls for a single story. Everything below is an '
-        'estimate from physics and published park dimensions. Nothing on this '
-        'page is a measurement of foul balls.'
+        'came down. The largest hand-collected set anyone has published is '
+        'FiveThirtyEight\'s <a href="https://github.com/fivethirtyeight/data/'
+        'tree/master/foul-balls" rel="nofollow">906 fouls</a>, taken from one '
+        'game at each of ten parks in 2019 and placed by eye, off camera '
+        'footage, into broad zones rather than seating areas. Everything '
+        'below is an estimate from physics and published park dimensions. '
+        'Nothing on this page is a measurement of foul balls.'
     ),
     (
         'The seating shape is not surveyed',

@@ -16,6 +16,13 @@ The model run is the slow part (about 15 seconds a park), so it is cached to
 `.cache/site/park_stats.json` and reused unless `--refresh` is passed. Copy
 changes rebuild in under a second.
 
+A cache entry is only reused when it was produced by the same model: every
+entry carries `model_fingerprint()`, a hash of the source files the simulation
+reads, and an entry whose fingerprint no longer matches is re-simulated. Before
+that, the key was park + sims + seed alone, so halving Fenway's foul territory
+in `PARK_PARAMS` and running the normal build produced byte-identical pages
+without running a single simulation.
+
 WHAT THIS FILE IS NOT ALLOWED TO DO
 -----------------------------------
 Four constraints come out of `AUDIT.md` and `NOTES.md` and are enforced by
@@ -46,6 +53,7 @@ Four constraints come out of `AUDIT.md` and `NOTES.md` and are enforced by
    has moved five times and `side_counts()` computes it.
 """
 import argparse
+import hashlib
 import html
 import json
 import os
@@ -83,6 +91,51 @@ SIMS = 400
 
 BUILT = date.today().isoformat()
 
+# The files whose contents decide the model's numbers. `run_park` calls
+# `predict_game_fouls`, which reaches `trajectory`, `stadium` (park geometry
+# and `PARK_PARAMS` both live there), `batter_profiles`, `validators` and
+# `log`, and nothing else in the package.
+#
+# `netting` and `seat_map` are deliberately absent. They are in the import
+# closure — `stadium` attaches a park's netting to the Stadium, and `netting`
+# reads printed labels out of `seat_map` — but neither is consulted while
+# fouls are being simulated or matched to a zone: they decide what the page
+# says about a zone, not how many balls reach it. Including them would make
+# every map read invalidate an eight-minute simulation for nothing.
+# `tests/test_site.py::test_model_sources_cover_the_model_imports` walks the
+# imports and fails if a new one appears that is not listed or excluded here.
+MODEL_SOURCES = ('batter_profiles', 'log', 'matchup_engine', 'stadium',
+                 'trajectory', 'validators')
+DISPLAY_ONLY_SOURCES = ('netting', 'seat_map')
+
+
+def model_fingerprint() -> str:
+    """A hash of everything that decides the model's numbers.
+
+    The cache key used to be park + sims + seed, which meant an edit to
+    `stadium.py`, `trajectory.py`, `matchup_engine.py` or `PARK_PARAMS` left
+    the cached run in place and the site kept serving the old numbers with no
+    sign anything was wrong. Halving Fenway's foul territory and running the
+    normal build rebuilt the pages byte for byte and never simulated. The
+    fingerprint goes into every cache entry, so a model edit invalidates the
+    cache by itself.
+    """
+    h = hashlib.sha256()
+    for name in MODEL_SOURCES:
+        with open(os.path.join(ROOT, 'foulball', f'{name}.py'), 'rb') as fh:
+            # Line endings are normalised because this repo is worked on
+            # under `core.autocrlf`: the same file is CRLF in one checkout
+            # and LF in the next, and that must not read as a model change.
+            h.update(name.encode() + b':' + fh.read().replace(b'\r\n', b'\n'))
+    # The run configuration this file holds rather than imports: the seed, the
+    # pitch mix, and which two lineups take the plate appearances.
+    h.update(json.dumps({
+        'seed': SEED,
+        'mix': STANDARD_RHP_MIX,
+        'lineups': [[repr(b) for b in side] for side in standard_lineups()],
+    }, sort_keys=True).encode())
+    return h.hexdigest()[:16]
+
 
 # ============================================================
 # The model run
@@ -95,7 +148,7 @@ def standard_lineups():
             list(YANKEES_2024_PROFILES.values())]
 
 
-def run_park(park_key: str, sims: int) -> dict:
+def run_park(park_key: str, sims: int, fingerprint: str | None = None) -> dict:
     """One full game at one park: both lineups, summed.
 
     A single `predict_game_fouls` call covers one team's plate appearances and
@@ -128,6 +181,7 @@ def run_park(park_key: str, sims: int) -> dict:
         'park': park_key,
         'sims': sims,
         'seed': SEED,
+        'model': fingerprint if fingerprint is not None else model_fingerprint(),
         'zone_fouls': fouls,
         'zone_ev': {sid: (ev_weight.get(sid, 0.0) / w if w > 0 else 0.0)
                     for sid, w in fouls.items()},
@@ -138,20 +192,33 @@ def run_park(park_key: str, sims: int) -> dict:
 
 
 def load_stats(refresh: bool, sims: int, cache_path: str = CACHE) -> dict:
-    """Model stats for every park, from cache where possible."""
+    """Model stats for every park, from cache where possible.
+
+    An entry is reused only when its simulation count and its model
+    fingerprint both match the current ones, so a change anywhere in
+    `MODEL_SOURCES` re-simulates every park without anyone having to remember
+    to pass `--refresh`.
+    """
     cached: dict = {}
     if os.path.exists(cache_path) and not refresh:
         with open(cache_path, encoding='utf-8') as fh:
             cached = json.load(fh)
 
+    fingerprint = model_fingerprint()
     keys = list(STADIUMS)
     out = dict(cached)
+    stale = [k for k, e in cached.items()
+             if isinstance(e, dict) and e.get('model') != fingerprint]
+    if stale and not refresh:
+        print(f'  model has changed since {len(stale)} cached park(s) were '
+              f'run; re-simulating those.')
     for i, key in enumerate(keys, 1):
         entry = cached.get(key)
-        if entry and entry.get('sims') == sims and not refresh:
+        if (entry and entry.get('sims') == sims
+                and entry.get('model') == fingerprint and not refresh):
             continue
         print(f'  [{i}/{len(keys)}] simulating {key} ...', flush=True)
-        out[key] = run_park(key, sims)
+        out[key] = run_park(key, sims, fingerprint)
 
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     with open(cache_path, 'w', encoding='utf-8') as fh:
@@ -1296,6 +1363,17 @@ def build(out_dir: str, base_url: str, sims: int, refresh: bool = False,
         missing = set(STADIUMS) - set(stats)
         if missing:
             raise SystemExit(f'cache is missing {sorted(missing)}')
+        # --no-model is an explicit instruction not to simulate, so this warns
+        # rather than refusing — but it says so, because the numbers it is
+        # about to render came out of a model that no longer exists.
+        fingerprint = model_fingerprint()
+        behind = sorted(k for k, e in stats.items()
+                        if e.get('model') != fingerprint)
+        if behind:
+            print(f'  WARNING: the model has changed since {len(behind)} of '
+                  f'these {len(stats)} entries were run, starting with '
+                  f'{behind[0]}. These pages will carry the old numbers. '
+                  f'Rebuild without --no-model to fix them.')
     else:
         print('Model run:')
         stats = load_stats(refresh=refresh, sims=sims, cache_path=cache_path)
