@@ -21,10 +21,10 @@ WHAT THIS FILE IS NOT ALLOWED TO DO
 Four constraints come out of `AUDIT.md` and `NOTES.md` and are enforced by
 `tests/test_site.py` rather than by care:
 
-1. **No printed section numbers.** Nineteen of the 31 zone tables in
-   `stadium.py` are suspect on their numbering (`AUDIT.md`, Step 10 update):
-   nine contradicted by the club's own seating map, ten more carrying labels
-   that cannot describe a continuous bowl. Zones are named in words.
+1. **No printed section numbers.** Every seating map this project holds has
+   now been read against the zone tables in `stadium.py` (`MAP_FINDINGS.md`,
+   Steps 11-16): thirty maps covering thirty of the 31 parks, and twenty-seven
+   of them disagree with their table. Zones are named in words.
 2. **Netting leads; the model follows.** The netting section is above the model
    section on every page, because netting is sourced and the model is an
    estimate. Where netting is a gap the page says so in the same position, at
@@ -35,14 +35,15 @@ Four constraints come out of `AUDIT.md` and `NOTES.md` and are enforced by
    "lower risk".
 4. **No accuracy claims.** The model has never been compared with observed foul
    landings, and every page has to be readable by someone who knows that.
-5. **No foul line is named at a park whose sides are not established.** Nine of
-   the 31 parks have a source that names a side alongside a section number
-   (`seat_map.SIDE_ANCHORS`); at the other twenty-two, a reversal of the two
+5. **No foul line is named at a park whose sides are not established.** Sixteen
+   of the 31 parks have a deciding source that names a side alongside a section
+   number (`seat_map.SIDE_ANCHORS`); at the other fifteen, a reversal of the two
    sides would be invisible to every check this project has, and one park —
    Oriole Park — was reversed, mapped and cited for the whole of Step 10. So at
-   those twenty-two the two foul lines are folded into one row per matching
-   pair, described as both lines at once. `_merge_foul_lines` does the folding
-   and `PAIR_ZONE_WORDS` supplies the words.
+   those fifteen the two foul lines are folded into one row per matching pair,
+   described as both lines at once. `_merge_foul_lines` does the folding and
+   `PAIR_ZONE_WORDS` supplies the words. Do not write that count out again: it
+   has moved five times and `side_counts()` computes it.
 """
 import argparse
 import html
@@ -233,6 +234,28 @@ def netting_counts() -> dict[str, int]:
     return _COUNTS
 
 
+_SIDES: dict[str, int] = {}
+
+
+def side_counts() -> dict[str, int]:
+    """How many parks may name a foul line, and how many may not.
+
+    Same reason as `netting_counts`, and the same lesson learned twice: this
+    number was written out in prose in three places and moved five times
+    between Step 11 and Step 16 as the seating maps were read. `named` is the
+    count of parks where a deciding source establishes which line is which;
+    `unnamed` is the count whose two foul lines are folded into one row.
+    """
+    if not _SIDES:
+        named = 0
+        for key in STADIUMS:
+            sc = check_side_anchors(STADIUMS[key](), key)
+            if sc.status == 'ok' and sc.deciding:
+                named += 1
+        _SIDES.update(named=named, unnamed=len(STADIUMS) - named)
+    return _SIDES
+
+
 def split_phrase(z: dict) -> str:
     """What a folded pair whose two halves disagree can honestly be said to be.
 
@@ -249,7 +272,8 @@ def split_phrase(z: dict) -> str:
 def _merge_foul_lines(zones: list[dict]) -> list[dict]:
     """Fold each matching pair of foul-line zones into one row.
 
-    For the twenty-two parks where nothing establishes which line is which.
+    For the parks where nothing establishes which line is which — fifteen of
+    the 31 as of Step 16, and `side_counts()` is where that number lives.
     The alternative considered and rejected was to keep two rows and rename
     them "one foul line" and "the other" — which reads as an ordering the
     figures cannot support, and which still invites a reader to believe the
@@ -610,18 +634,23 @@ def netting_section(p: dict) -> str:
                 'areas at all. Not mentioned is not the same as not netted, so '
                 'nothing is claimed about them here.</p>')
         if net['sides_differ']:
+            # Only worth saying where the map actually moved the plate. Every
+            # park but one now has a map read, and three of those reads agree
+            # with the model, so the test can no longer be "is there a read".
+            mr = p['map_read']
             tail = (' &mdash; and at this park the map shows the seats behind '
                     'home plate sitting somewhere other than where this model '
                     'puts them, so the edge of the netted run is softer than '
                     'the lists above make it look'
-                    if p['map_read'] else '')
+                    if mr and mr['outcome'] == 'disagrees' else '')
             out.append(
                 '<div class="warn"><p><strong>The netting comes out different '
                 'on the two foul lines here, so the two lines are named '
                 'separately above.</strong> That naming is sourced at this '
                 'ballpark &mdash; the next section says what establishes it, '
-                'which is more than exists at twenty-two of the 31 parks on '
-                'this site. But what it establishes is only which line is '
+                f'which is more than exists at {side_counts()["unnamed"]} of '
+                'the 31 parks on this site. But what it establishes is only '
+                'which line is '
                 f'which. It does not establish where the boundary between one '
                 f'area and the next falls{tail}.</p></div>')
     else:
@@ -680,8 +709,10 @@ def labels_section(p: dict) -> str:
     netting listing above is a join onto these labels, and the distribution
     below is attached to them. It is the section `MAP_FINDINGS.md` made
     necessary — before the maps were read there was nothing to put in it
-    except the standing caveat, and afterwards there were five parks with
-    specific, checkable findings and twenty-six with none.
+    except the standing caveat. Now every park but one has a specific,
+    checkable finding here, and twenty-seven of the thirty are disagreements.
+    The three that are not are rendered differently and say so: an agreement
+    that looks like a disagreement is as misleading as the reverse.
     """
     label, para = SIDE_STATE_WORDS[p['sides']['state']]
     out = ['<h2 id="labels">The seat labels these areas are built from</h2>',
@@ -689,9 +720,9 @@ def labels_section(p: dict) -> str:
            'printed seat labels. Nothing in this model measured them; they '
            'were written down from seating charts, and the areas above and '
            'below are only as good as they are. This section says what is '
-           'known about them here, because at every ballpark whose own seating '
-           'map has been read against them so far, they turned out to '
-           'disagree with it.</p>',
+           'known about them here, because of the thirty ballparks whose own '
+           'seating map has been read against these labels, twenty-seven '
+           'turned out to disagree with it.</p>',
            '<h3>Which foul line is which</h3>']
 
     box = 'ok' if p['sides']['named'] else 'gap'
@@ -700,23 +731,39 @@ def labels_section(p: dict) -> str:
 
     mr = p['map_read']
     if mr:
+        agrees = mr['outcome'] == 'agrees'
+        verdict = ('It agrees with this model on both of the questions a map '
+                   'can settle &mdash; which foul line is which, and where '
+                   'the seats behind home plate are. It is one of three '
+                   'ballparks of the thirty read that does. What it found, '
+                   'including what it does not cover, is below.'
+                   if agrees else
+                   'It disagrees with this model in the following ways.')
         out.append('<h3>What this ballpark\'s own seating map shows</h3>')
         out.append(
             f'<p>{e(mr["map_of"][0].upper() + mr["map_of"][1:])} was read '
             f'directly on '
-            f'{e(MAP_READ_DATE)}, at magnification, and compared with the '
-            f'labels this model carries. It is {e(mr["landmark"])}, and as a '
-            f'source it is {e(mr["quality"])}. It disagrees with this model in '
-            f'the following ways.</p>')
+            f'{e(mr.get("read_on", MAP_READ_DATE))}, at magnification, and '
+            f'compared with the labels this model carries. It is '
+            f'{e(mr["landmark"])}. As a source it is {e(mr["quality"])}. '
+            f'{verdict}</p>')
+        box = 'ok' if agrees else 'gap'
         for head, body in mr['findings']:
-            out.append(f'<div class="gap"><p><strong>{e(head)}.</strong> '
+            out.append(f'<div class="{box}"><p><strong>{e(head)}.</strong> '
                        f'{e(body)}</p></div>')
         out.append(
             '<p class="note">None of this has been corrected in the model. '
             'Correcting it means rebuilding this park\'s seating table against '
             'the map, which is a change to the model and not to this page, and '
             'it has not been done. The figures below are what the model '
-            'currently produces, attached to the areas it currently names.</p>')
+            'currently produces, attached to the areas it currently names.</p>'
+            if not agrees else
+            '<p class="note">Nothing here was corrected in the model, because '
+            'nothing needed correcting on the two questions this map settles. '
+            'That is not a statement about the figures below: the map fixes '
+            'which foul line is which and where the plate sits, and it says '
+            'nothing at all about how many foul balls reach any of these '
+            'seats, which nothing on this site has ever checked.</p>')
     else:
         out.append('<h3>What this ballpark\'s own seating map shows</h3>')
         out.append(f'<p>{NO_MAP_READ}</p>')
@@ -944,7 +991,13 @@ def figures_section(p: dict) -> str:
 
 
 def limits_section(p: dict) -> str:
-    items = ''.join(f'<h3>{e(t)}</h3><p>{body}</p>' for t, body in MODEL_LIMITS)
+    # One of the limits quotes the fleet-wide count of parks whose two foul
+    # lines cannot be told apart. It moved five times as the seating maps were
+    # read, so it is substituted here rather than written out in the copy.
+    items = ''.join(
+        f'<h3>{e(t)}</h3>'
+        f'<p>{body.replace("{unnamed_sides}", str(side_counts()["unnamed"]))}</p>'
+        for t, body in MODEL_LIMITS)
     return f'''<h2 id="limits">What this model does not know</h2>
 <p>Written out rather than buried, because a reader who does not know these
 things will read the figures above as more than they are.</p>
@@ -953,14 +1006,15 @@ things will read the figures above as more than they are.</p>
 <p>This model carries a printed seat label for every area it tracks. Checked
 against what the clubs publish, at nine of the 31 parks the club's netting page
 contradicts them outright; at ten more, the labels cannot describe a continuous
-seating bowl at all. Five clubs' full seating maps have since been read directly
-and compared label by label, and <strong>all five disagreed</strong> &mdash; one
-with its two foul lines reversed, three with the seats behind home plate
-attached to the wrong block, one with more than half its field-level labels
-naming sections that are not in the building. Nothing suggests the twenty-six
-unread parks are in better shape; they are simply unread. So the areas on this
-page are described by where they are, and no seat number is printed anywhere on
-this site.</p>'''
+seating bowl at all. Every seating map this project holds has since been read
+directly and compared label by label &mdash; thirty maps, covering thirty of the
+31 parks &mdash; and <strong>twenty-seven of the thirty disagreed</strong>: four
+with their two foul lines cleanly reversed, nine more with the two lines crossed
+in a way no single swap would fix, twenty-four with the seats behind home plate
+attached to a block somewhere else in the building, and several naming whole
+decks that are not there at all. Three agreed. So the areas on this page are
+described by where they are, and no seat number is printed anywhere on this
+site.</p>'''
 
 
 def park_page(p: dict, base_url: str) -> str:
@@ -1163,17 +1217,28 @@ each and no area is called first-base or third-base. Every park page states its
 own position on this, in the same place, whichever of the four it is in.</p>
 
 <h2>Why there are no section numbers here</h2>
-<p>This model carries printed seat labels for every area it tracks. Checked
-against what the clubs publish, nine parks' labels are contradicted outright and
-ten more cannot describe a continuous seating bowl. Five clubs' full seating
-maps have since been read directly, at magnification, and compared label by
-label &mdash; and all five disagreed with the model: one with its two foul lines
-reversed, three with the seats behind home plate attached to the wrong block,
-one with more than half its field-level labels naming sections that are not in
-the building. The other twenty-six parks are unread, which is not the same as
-sound. So seating is described by position &mdash; the lower bowl behind the
-plate, the dugout boxes down the foul lines &mdash; and no seat number appears
-anywhere on this site.</p>
+<p>This model carries printed seat labels for every area it tracks. The first
+check on them was against the clubs' netting pages alone: nine parks' labels are
+contradicted outright there, and ten more cannot describe a continuous seating
+bowl. Every seating map this project holds has since been read directly, at
+magnification, and compared label by label &mdash; a far stronger check, and one
+the netting pages could not make. <strong>Thirty maps, covering thirty of the 31
+parks, and twenty-seven of them disagreed with the model.</strong></p>
+<p>Four ballparks have their two foul lines cleanly reversed, and at nine more
+the two lines are crossed in a way no single swap would fix &mdash; an area the
+model calls third base sitting out in right field, or a ballpark that numbers
+one foul line odd and the other even, so every area the model draws there is
+half one line and half the other. At twenty-four the seats behind home plate are
+not the seats this model calls the seats behind home plate, in one case eighteen
+positions away at a corner of the ballpark. Several name whole decks that are
+not in the building.</p>
+<p>Three ballparks agreed, on both questions a map can settle. They are stated
+on their own pages in the same place and at the same length as the twenty-seven,
+because they were checked the same way, and an agreement nobody publishes reads
+as an absence of evidence. The thirty-first park has no map to read at all, and
+its page says so. So seating is described by position &mdash; the lower bowl
+behind the plate, the dugout boxes down the foul lines &mdash; and no seat
+number appears anywhere on this site.</p>
 
 <h2>The same figures read two ways</h2>
 <p>A net in front of a seat means opposite things depending on why you are

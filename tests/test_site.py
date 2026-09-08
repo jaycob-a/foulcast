@@ -350,9 +350,9 @@ def test_every_page_states_its_own_side_position(built, key):
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
 def test_the_map_read_is_on_the_page_where_there_is_one(built, key):
-    """Five maps read, five disagreements. A park with a read has it stated;
-    a park without has the absence stated, because an unread park has not
-    passed anything."""
+    """Thirty maps read, twenty-seven disagreements. A park with a read has
+    every one of its findings stated; the one park without has the absence
+    stated, because an unread park has not passed anything."""
     slug = PARK_SOURCES[key]['slug']
     text = flat(built['pages'][slug])
     if key in MAP_READS:
@@ -365,9 +365,50 @@ def test_the_map_read_is_on_the_page_where_there_is_one(built, key):
             f'{slug}: does not say its seating map has never been read'
 
 
-def test_five_seating_maps_have_been_read(built):
-    assert len(MAP_READS) == 5
-    assert 'all five disagreed' in flat(built['pages'][''])
+def test_thirty_seating_maps_have_been_read(built):
+    """Every map in `seating_maps/` is written up for the site.
+
+    The count moved from five to thirty when Steps 12-16 were transcribed into
+    `MAP_READS`. Las Vegas Ballpark is the one park with no map in the folder
+    at all, and it is the only one that may fall through to `NO_MAP_READ`.
+    """
+    assert len(MAP_READS) == 30
+    assert set(STADIUMS) - set(MAP_READS) == {'las_vegas_ballpark'}
+    assert 'twenty-seven of them disagreed' in flat(built['pages'][''])
+
+
+def test_the_three_agreeing_maps_are_not_dressed_as_failures(built):
+    """Three tables came out right, and a page has to be able to say so.
+
+    An agreement rendered in the same red box as a contradiction is as
+    misleading as a contradiction rendered as a pass, which is the defect this
+    whole section exists to prevent. So the outcome drives the box class and
+    the lead sentence, and this test holds both ends of it.
+    """
+    agreeing = {k for k, v in MAP_READS.items() if v['outcome'] == 'agrees'}
+    assert agreeing == {'minute_maid', 'yankee_stadium', 'dodger_stadium'}
+    for key, mr in MAP_READS.items():
+        text = flat(built['pages'][PARK_SOURCES[key]['slug']])
+        labels = text.split('id="labels"')[1].split('id="zones"')[0]
+        if mr['outcome'] == 'agrees':
+            assert 'It agrees with this model on both of the questions' in labels
+            assert 'nothing needed correcting' in labels
+        else:
+            assert 'It disagrees with this model in the following ways' in labels
+            assert 'None of this has been corrected in the model' in labels
+
+
+def test_the_fleet_wide_side_count_is_computed_not_written_out(built):
+    """The count of parks that cannot name a foul line moved five times
+    between Step 11 and Step 16. Every place the site states it reads from
+    `side_counts()`, so it cannot go stale in one place and not another."""
+    unnamed = site_build.side_counts()['unnamed']
+    assert unnamed == sum(1 for p in built['parks'].values()
+                          if not p['sides']['named'])
+    for slug, p in built['parks'].items():
+        text = flat(built['pages'][slug])
+        assert f'at {unnamed} of the 31 parks nothing available establishes' \
+            in text, f'{slug}: stale or missing side count in the limits'
 
 
 # ============================================================

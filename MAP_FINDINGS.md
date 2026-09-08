@@ -3289,3 +3289,84 @@ Downstream:
    If they are instead two different series sharing numbers, the field-level
    count of 43 is wrong. The side reading is not affected — both rows are on
    the same arm either way.
+
+---
+
+# Step 17 — the thirty reads, written up for the public site
+
+Steps 12 to 16 each closed by noting that `site_data.MAP_READS` still carried
+the five Step 11 parks only. Those three sentences (lines 2327, 2903 and 3228)
+were true when written and are left in place as the record of each step's
+state; **this section supersedes them.** `MAP_READS` now carries all thirty.
+
+No map was re-read and nothing above was revised. This step is transcription:
+each park's read, restated positionally for a page that may not print a section
+number, plus the site-wide counts that moved as a result.
+
+## What went into `MAP_READS`
+
+Thirty entries, one per map in `seating_maps/`, covering thirty of the 31
+parks. Las Vegas Ballpark has no map in the folder and falls through to
+`NO_MAP_READ`, which now says it is the only park that does.
+
+Two fields were added to the entry shape, because the five-park version could
+not express what the thirty contain:
+
+- **`read_on`** — the five Step 11 parks were read on 2026-08-11 and the other
+  twenty-five on 2026-09-07. The page used to print one hard-coded date for
+  every read.
+- **`outcome`** — `'agrees'` at Daikin Park, Yankee Stadium and Dodger Stadium,
+  `'disagrees'` at the other twenty-seven. The page rendered every finding in
+  the same red box and led with "It disagrees with this model in the following
+  ways", which would have printed three agreements as failures. Agreements now
+  render green and lead with what they settle. `tests/test_site.py::
+  test_the_three_agreeing_maps_are_not_dressed_as_failures` holds both ends.
+
+Every finding is stated by position and deck. The constraint bit hardest here
+of anywhere on the site, because a map finding is *about* section numbers: no
+entry names a label, quotes a range, or prints a digit that could be read as
+one. Counts are spelled out, and "positions" always means printed seat labels
+counted along the bowl.
+
+## Counts that moved on the site
+
+| Statement | Was | Now |
+|---|---|---|
+| Maps read | five | **thirty** |
+| Maps disagreeing | five of five | **twenty-seven of thirty** |
+| Parks that may name a foul line | six on the built page | **sixteen** |
+| Parks folding both foul lines into one row | twenty-five on the built page | **fifteen** |
+| Netting sourced and joinable | ten on the built page | **seven** |
+| Netting gaps | twenty-one on the built page | **twenty-four** |
+
+The right-hand column is what the committed `site/` now serves. The middle
+column is what it served before this step, and the gap is larger than this
+step's own work: **`site/` had not been rebuilt since Step 11.** Every code
+change from Steps 12 to 16 — the twenty-five new side anchors, the three joins
+those anchors rejected, the ten parks that gained a foul-line name — was
+committed but never rendered. Rebuilding was half of what this step changed on
+the public pages, and it is worth separating from the copy.
+
+## The count that had gone stale in three places
+
+"Twenty-two of the 31 parks" — the number that cannot name a foul line — was
+written out in prose in `site_data.MODEL_LIMITS`, in the side-asymmetric
+netting hedge in `site_build.netting_section`, and in two module docstrings. It
+moved five times between Step 11 and Step 16 and none of the four followed it.
+
+It is now computed once, by `site_build.side_counts()`, the same way
+`netting_counts()` already computed the netting figures and for the same
+reason. `test_the_fleet_wide_side_count_is_computed_not_written_out` asserts
+the rendered number against the built parks on all 31 pages, so a future step
+that moves it again cannot leave one page behind.
+
+## What this step did not do
+
+- **No map was re-read**, and no reading above was revised or softened.
+- **Nothing in `stadium.py` changed.** Twenty-seven zone tables disagree with
+  their club's own drawing and all twenty-seven are still wrong in exactly the
+  way this file records. Every park page says so, and says the figures below it
+  are attached to the areas the model currently names.
+- **No netting gap was closed.** Kauffman's drawn netting is described on its
+  page as a line on a drawing rather than a published extent, in the same terms
+  Step 15 recorded it.
