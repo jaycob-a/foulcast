@@ -81,32 +81,30 @@ SEAMHEADS_ABOUT = 'https://www.seamheads.com/ballparks/about.php'
 # Read on this date, for every figure in this file.
 RESEARCH_DATE = '2026-08-09'
 
-# The standing caveat on every foul-territory figure on the site.
+# The standing caveats on the three published figures. One sentence of
+# provenance and one of doubt: the reader needs the size of the doubt, not the
+# history of how it was established.
 FOUL_AREA_CAVEAT = (
-    'Foul territory area has one source in public circulation, not three. '
-    'Andrew Clem estimates it from his own scale diagrams and states that the '
-    'figures "are subject to revision"; Seamheads credits Philip Lowry\'s '
-    '<em>Green Cathedrals</em> and matches Clem at 26 of the 28 parks where '
-    'both publish; FanGraphs credits Clem. Read it as good to about a thousand '
-    'square feet, not to the hundred the figure implies.'
+    "One source in public circulation, not three: Clem estimates it from his "
+    "own diagrams and says the figures \u201care subject to revision\u201d, "
+    "Seamheads matches him at 26 of the 28 parks where both publish, FanGraphs "
+    "credits him. Good to about a thousand square feet, not to the hundred the "
+    "figure implies."
 )
 
-# The standing caveat on every backstop figure on the site.
 BACKSTOP_CAVEAT = (
-    'Backstop distance is the figure the sources least agree on, and they '
-    'disagree because they measure different things: Clem gives the distance '
-    'to the fence at the rear, Seamheads the distance to the stands, and clubs '
-    'define nothing. This site uses Clem wherever he publishes, for one '
-    'reference point across all parks rather than the best number at each.'
+    "The figure the sources least agree on, because they measure different "
+    "things &mdash; Clem to the fence at the rear, Seamheads to the stands, "
+    "clubs define nothing. Clem is used throughout, for one reference point "
+    "across all parks rather than the best number at each."
 )
 
-# The standing caveat on every overhang figure on the site.
 OVERHANG_CAVEAT = (
-    'Deck cover is a 2016 figure, recovered from an archived copy of Clem\'s '
-    'table after he stopped publishing the column, so renovations since then '
-    'are not in it. Clem gives a percentage and never says what is casting the '
-    'cover; whether a given park\'s figure counts as something a foul ball '
-    'would hit is a judgment made in this model, not a sourced fact.'
+    "A 2016 figure, recovered from an archived copy of Clem\u2019s table after "
+    "he stopped publishing the column, so renovations since are not in it. He "
+    "gives a percentage and never says what casts the cover; whether it is "
+    "something a foul ball would hit is a judgment made here, not a sourced "
+    "fact."
 )
 
 
@@ -681,94 +679,76 @@ AREA_WORDS = {
 # does not fit".
 
 GAP_WORDS: dict[str, tuple[str, str]] = {
-    # gap_kind: (short label, full sentence)
+    # gap_kind: (short label, the reason, in two sentences at most). The
+    # sentence every one of these used to end on — that nothing on the page is
+    # marked as behind netting — is said once, by the panel, rather than ten
+    # times here.
     'club_publishes_no_sections': (
         'The club describes its netting but names no seating areas',
-        'The club states how far its netting runs in words, but does not say '
-        'which seating areas that covers. There is no way to attach the '
-        'statement to a specific part of this ballpark without guessing, so '
-        'nothing on this page is marked as behind netting.',
+        "It states how far the netting runs in words, without saying which "
+        "seats that covers. There is no way to attach the statement to a part "
+        "of this ballpark without guessing.",
     ),
     'club_declines_to_publish': (
         'The club declines to publish where its netting is',
-        'The club states outright that it will not give the locations — its '
-        'own map, it says, shows only the general area, and "it is not '
-        'possible for a map like this to show the precise location of the '
-        'netting". So nothing on this page is marked as behind netting.',
+        "It states outright that it will not give the locations: its own map, "
+        "it says, shows only the general area, and \u201cit is not possible for "
+        "a map like this to show the precise location of the netting\u201d.",
     ),
     'no_primary_source': (
         'The club publishes no netting information',
-        'Nothing on the club\'s own pages describes the netting. A '
-        'second-hand figure exists but has not been verified against a primary '
-        'source, so it is not used here and nothing on this page is marked as '
-        'behind netting.',
+        "Nothing on the club's own pages describes the netting. A second-hand "
+        "figure exists but has never been checked against a primary source, so "
+        "it is not used here.",
     ),
     'no_source_at_all': (
         'No netting information exists for this park',
-        'Neither the club nor the ballpark publishes anything about the extent '
-        'of its netting. The only authority that reaches this park is a '
-        'league-wide requirement that Professional Development League clubs '
-        'install netting foul pole to foul pole "unless the configuration of '
-        'the ballpark makes such coverage unnecessary", by the 2025 opener. '
-        'That is a rule placed on the club, not an observation of what is '
-        'actually installed, so it is not turned into seating areas here.',
+        "Neither the club nor the ballpark publishes anything about the extent "
+        "of its netting. The one authority that reaches this park is a rule "
+        "placed on the club, not an observation of what is installed.",
     ),
     'source_conflict': (
-        'The club\'s own netting page contradicts itself',
-        'The club\'s netting page carries two statements that cannot both '
-        'describe the same installation — one running the netting the full '
-        'length of both foul lines, the other stopping it near the plate. One '
-        'of the two appears to be stale text that was never removed. Until the '
-        'club resolves it, nothing on this page is marked as behind netting.',
+        "The club's own netting page contradicts itself",
+        "It carries two statements that cannot both describe the same "
+        "installation &mdash; one running the netting the full length of both "
+        "foul lines, the other stopping it near the plate. One of them appears "
+        "to be stale text nobody removed.",
     ),
     'arc_endpoints_unresolved': (
         'The published endpoints sit on a numbering that wraps behind the plate',
-        'The club gives the two ends of its netting run, but this park\'s seat '
-        'numbering wraps around behind home plate at a point nobody publishes. '
-        'Without that wrap point, the run between the endpoints cannot be read '
-        'off, so nothing on this page is marked as behind netting.',
+        "The club gives the two ends of its netting run, but this park's seat "
+        "numbering wraps behind home plate at a point nobody publishes. "
+        "Without that wrap point, the run between the endpoints cannot be read "
+        "off.",
     ),
     'labels_contradict_model': (
-        'The club\'s netting map and this model\'s seating labels disagree',
-        'The club does publish where its netting runs. But the seat labels '
-        'this model carries for this park cannot be reconciled with it — under '
-        'the model\'s labels, the club\'s netting would either miss the seats '
-        'behind home plate entirely or skip a nearer area and resume at a '
-        'further one, and netting does not do either. The club\'s page is the '
-        'sourced side of that disagreement and this model is the unsourced '
-        'one, so nothing on this page is marked as behind netting.',
+        "The club's netting map and this model's seating labels disagree",
+        "The club does publish where its netting runs. Under the labels this "
+        "model carries, that netting would either miss the seats behind home "
+        "plate or skip a nearer area and resume at a further one, and netting "
+        "does neither &mdash; so the club's page is the sourced side of the "
+        "disagreement and this model is the unsourced one.",
     ),
     'labels_wrap_unpublished': (
-        'This model\'s own seating labels cannot describe a continuous bowl here',
-        'A seating bowl is normally numbered so that one foul line runs below '
-        'the seats behind the plate and the other runs above them. At this '
-        'park, the labels this model carries put one foul line on both sides '
-        'of the plate at once — so the numbering has to wrap somewhere no '
-        'source states. Any published netting range read against those labels '
-        'would net the far end of a foul line and leave the near end open, '
-        'which is not how netting is installed. Nothing on this page is marked '
-        'as behind netting.',
+        "This model's own seating labels cannot describe a continuous bowl here",
+        "They put one foul line on both sides of the plate at once, so the "
+        "numbering has to wrap somewhere no source states. Any published range "
+        "read against them would net the far end of a foul line and leave the "
+        "near end open, which is not how netting is installed.",
     ),
     'sides_unverifiable': (
         'Nothing establishes which side of this park is which',
-        'The labels this model carries for this park run outward from home '
-        'plate in both directions rather than around the bowl, and no source '
-        'says which of the two blocks is the first-base side and which is the '
-        'third. The published netting does not cover the whole field level, so '
-        'the answer would change which seats came out behind netting. Nothing '
-        'on this page is marked as behind netting.',
+        "The labels run outward from the plate in both directions rather than "
+        "around the bowl, and no source says which of the two blocks is the "
+        "first-base side. The published netting stops short of the whole field "
+        "level, so the answer would change which seats came out behind it.",
     ),
     'sides_flipped': (
-        'This model has this park\'s two sides the wrong way round',
-        'The ballpark\'s own seating map shows the lower bowl numbered one way '
-        'around the plate, and the labels this model carries run the opposite '
-        'way — so every seating area this model calls first-base side is in '
-        'fact on the third-base side, and the reverse. The map is the sourced '
-        'side of that disagreement and this model is the unsourced one. Until '
-        'the labels are corrected, nothing on this page is marked as behind '
-        'netting, and no area below is described as being on one line or the '
-        'other &mdash; printing this model\'s own labels here would print them '
-        'backwards.',
+        "This model has this park's two sides the wrong way round",
+        "The ballpark's own map numbers the lower bowl one way around the "
+        "plate and this model's labels run the opposite way, so every area it "
+        "calls first-base side is in fact on the third-base side. The map is "
+        "the sourced side of that disagreement.",
     ),
 }
 
@@ -790,46 +770,40 @@ GAP_WORDS: dict[str, tuple[str, str]] = {
 SIDE_STATE_WORDS: dict[str, tuple[str, str]] = {
     'confirmed': (
         'Established, against a source that names a side',
-        'Something outside this model says which foul line is which here — '
-        'either the club named a side alongside specific seats on its own '
-        'page, or the park\'s published seating map was read directly with a '
-        'landmark fixing which way round the drawing runs. Every seat label '
-        'this model puts on one line lands on that same line in the source. '
-        'That is why this page names the first-base and third-base sides at '
-        'all. It establishes nothing else: not where the boundaries between '
-        'areas fall, not whether the areas exist.',
+        "A source outside this model says which foul line is which &mdash; the "
+        "club naming a side beside specific seats, or the park's own seating "
+        "map read with a landmark fixing which way round the drawing runs "
+        "&mdash; and every seat label this model puts on one line lands on "
+        "that line in the source. That is why this page names the two sides. "
+        "It establishes nothing else: not where the boundaries between areas "
+        "fall, not whether the areas exist.",
     ),
     'untested': (
-        'Never tested — this model could have the two lines swapped',
-        'Nothing available for this park says which foul line is which. A '
-        'published netting range cannot settle it: it gives the two ends of '
-        'the run, not which line each end is on. Neither can this model\'s own '
-        'figures, because every park here is built as an exact left-right '
-        'mirror, so a park with its two sides swapped produces figures '
-        'identical to one with them the right way round. At another park this '
-        'exact silence hid a genuine reversal for the whole of the model\'s '
-        'life. So the two foul lines are shown here as one seating area, and '
-        'no area on this page is called first-base or third-base.',
+        'Never tested \u2014 this model could have the two lines swapped',
+        "Nothing available for this park says which foul line is which. A "
+        "published netting range cannot settle it, and neither can this "
+        "model's own figures: every park here is built as an exact left-right "
+        "mirror, so a park with its sides swapped produces figures identical "
+        "to one the right way round. That exact silence hid a real reversal at "
+        "another park for the whole of this model's life. So the two lines are "
+        "shown here as one seating area, and neither is named.",
     ),
     'flipped': (
-        'Reversed — and this page will not print the labels backwards',
-        'This is one of the ballparks where a source settles which foul line '
-        'is which and this model gets it wrong. Not one of the seat '
-        'labels the ballpark\'s own map anchors lands where the map puts it; '
-        'they all land on the other line. Because that is a clean reversal '
-        'rather than a drift, the <em>figures</em> below are unaffected — '
-        'every park here is built as an exact left-right mirror, so the two '
-        'lines carry the same distribution whichever way round they are '
-        'labelled. What is affected is the labelling, which is why no area on '
-        'this page is called first-base or third-base.',
+        'Reversed \u2014 and this page will not print the labels backwards',
+        "A source settles which foul line is which and this model gets it "
+        "wrong: not one of the seat labels the ballpark's own map anchors "
+        "lands where the map puts it. Because that is a clean reversal rather "
+        "than a drift, the <em>figures</em> are unaffected &mdash; the mirror "
+        "gives both lines the same distribution whichever way round they are "
+        "labelled. The labelling is what is affected, so neither line is named "
+        "here.",
     ),
     'inconsistent': (
         'Contradicted, and not by a simple reversal',
-        'Some of this model\'s seat labels for this park land on the side '
-        'their source names and some land on the other, so swapping the two '
-        'sides would not fix it — the table is wrong in a way that has no '
-        'single correction. No area on this page is called first-base or '
-        'third-base.',
+        "Some of this model's seat labels land on the side their source names "
+        "and some land on the other, so swapping the two sides would not fix "
+        "it. The table is wrong in a way that has no single correction, and "
+        "neither foul line is named here.",
     ),
 }
 
@@ -2185,18 +2159,12 @@ MAP_READS: dict[str, dict] = {
 # anything, and its page has to say so in the same place the thirty say what
 # their map found.
 NO_MAP_READ = (
-    'No published seating map has been read for this ballpark, and this is the '
-    'only one of the 31 for which that is true &mdash; there is no map for it '
-    'in this project\'s collection at all. The other thirty have been read, at '
-    'magnification, against the seat labels this model carries, and '
-    'twenty-seven of them disagreed: four with their two foul lines cleanly '
-    'reversed, nine more with the two lines crossed in a way no single swap '
-    'would fix, most of the rest with the seats behind home plate attached to '
-    'a block somewhere down a foul line, several with whole decks named out of '
-    'labels that are not in the building. Three agreed. This park has not been '
-    'checked. That is not the '
-    'same as having passed, and the difference is the whole reason this '
-    'section exists.'
+    "No published seating map has been read for this ballpark &mdash; the only "
+    "one of the 31 for which that is true, because there is no map for it in "
+    "this project's collection at all. The other thirty were read at "
+    "magnification against the seat labels this model carries, and "
+    "twenty-seven of them disagreed. This park has not been checked, which is "
+    "not the same as having passed."
 )
 
 
@@ -2210,59 +2178,50 @@ NO_MAP_READ = (
 MODEL_LIMITS = [
     (
         'No foul ball has ever been checked against it',
-        'This model has never been compared with a record of where real foul '
-        'balls actually landed, at this park or any other. No such record '
-        'exists publicly — Statcast logs that a foul happened, not where it '
-        'came down. The largest hand-collected set anyone has published is '
-        'FiveThirtyEight\'s <a href="https://github.com/fivethirtyeight/data/'
-        'tree/master/foul-balls" rel="nofollow">906 fouls</a>, taken from one '
-        'game at each of ten parks in 2019 and placed by eye, off camera '
-        'footage, into broad zones rather than seating areas. Everything '
-        'below is an estimate from physics and published park dimensions. '
-        'Nothing on this page is a measurement of foul balls.'
+        "This model has never been compared with a record of where real foul "
+        "balls landed, at this park or any other, and no such record exists "
+        "publicly &mdash; Statcast logs that a foul happened, not where it "
+        "came down. The largest hand-collected set anyone has published is "
+        "FiveThirtyEight's <a href=\"https://github.com/fivethirtyeight/data/"
+        "tree/master/foul-balls\" rel=\"nofollow\">906 fouls</a>, one game at "
+        "each of ten parks, placed by eye off camera footage into broad zones. "
+        "Everything here is an estimate from physics and published dimensions."
     ),
     (
         'The seating shape is not surveyed',
-        'How far each seating area sits from home plate is set by the park\'s '
-        'published foul territory and backstop figures. The <em>angles</em> '
-        'and <em>heights</em> are not: no public source gives the angle of a '
-        'seating area off the foul line or the elevation of a deck in feet for '
-        'any ballpark, so every park here shares one bowl shape, scaled and '
-        'placed by its own measurements. Every park is also modelled as an '
-        'exact left-right mirror, which is certainly wrong — one park has a '
-        'published statement that its foul ground is lopsided, and nothing '
-        'measures the rest.'
+        "The park's published foul territory and backstop figures set how far "
+        "each area sits from home plate. The <em>angles</em> and "
+        "<em>heights</em> are published nowhere, for any ballpark, so every "
+        "park here shares one bowl shape, scaled and placed by its own "
+        "measurements. Every park is also modelled as an exact left-right "
+        "mirror, which one club's published statement about its own lopsided "
+        "foul ground says is wrong."
     ),
     (
         'Some fouls land where the model has no seats',
-        'A substantial share of the fouls this model produces come down '
-        'somewhere it has no seating area to put them — deep down the lines '
-        'near the poles, in the gap between the plate and the front row, or '
-        'under a covered deck. Those balls are counted in the park total and '
-        'then dropped. The share is stated on this page, and it is large '
-        'enough that the zone figures should be read as a shape, not a census.'
+        "A substantial share come down where there is no seating area to put "
+        "them &mdash; deep near the poles, in the gap in front of the first "
+        "row, or under a covered deck. They are counted in the park total and "
+        "then dropped. The share is stated on this page, and it is large "
+        "enough that these figures are a shape, not a census."
     ),
     (
         'The rate of balls hit straight back is a guess',
-        'Roughly a quarter to a third of the fouls in this model are '
-        'deflections that carry back over the catcher, which is what fills the '
-        'seats behind the plate. The rate driving that was chosen because it '
-        'produces a plausible game, not because anything measured it. It is '
-        'the single largest unvalidated number in the model, and the seats '
-        'behind home plate are exactly where it lands.'
+        "Roughly a quarter to a third of the fouls here are deflections "
+        "carrying back over the catcher, which is what fills the seats behind "
+        "the plate. The rate driving that was chosen because it produces a "
+        "plausible game, not because anything measured it. It is the single "
+        "largest unvalidated number in the model, and it lands exactly there."
     ),
     (
         'One foul line is not distinguishable from the other',
-        'Every park here is built as an exact left-right mirror, so the two '
-        'foul lines at a given park differ only by simulation noise: across '
-        'all 31 parks the split between them varies by less than two runs of '
-        'the same park vary from each other. Read a matching pair of areas on '
-        'the two lines as one number, not two. Worse, at {unnamed_sides} of '
-        'the 31 parks nothing available establishes which of the two lines is '
-        'which '
-        '&mdash; and because the mirror makes a reversed park produce figures '
-        'identical to a correct one, this model cannot detect the difference '
-        'from the inside. It went undetected at one park for the whole of this '
-        'model\'s life until the ballpark\'s own map was read.'
+        "The mirror leaves the two lines at a park differing only by "
+        "simulation noise, so read a matching pair of areas as one number "
+        "rather than two. Worse, at {unnamed_sides} of the 31 parks nothing "
+        "available establishes which of the two lines is which &mdash; and "
+        "because the mirror makes a reversed park produce figures identical to "
+        "a correct one, this model cannot detect the difference from the "
+        "inside. It went undetected at one park for the whole of this model's "
+        "life until the ballpark's own map was read."
     ),
 ]
