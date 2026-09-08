@@ -77,6 +77,27 @@ netting verdict is the largest type below the `h1` because it is the only
 sourced thing on the page. The standing "never checked against a foul ball"
 caveat is a hairline strip above it rather than a block, so that it states
 itself without out-shouting the one fact somebody published.
+
+**Prose never runs past 72 characters a line, at any width.** The cap is in
+`ch` and not in `rem`, because these pages set text at four sizes and one rem
+cap gave the 16px prose eighty characters and the .8rem strip a hundred and
+twenty-eight. Everything wider than the cap is a table, a listing or a column,
+never a paragraph.
+
+Three widths, and the layout is checked at all three:
+
+* **Below 34rem** — one column, 15px, edge to edge.
+* **34rem to 64rem** — one column capped at 42rem. A 768px tablet reads a
+  672px column, which is the measure, not the viewport.
+* **64rem and up** — a two-column grid capped at 69rem (1104px). Panels pair
+  in DOM order, so the reading sequence above survives: netting across both
+  columns, then the distribution beside its two readings, then the sourced
+  figures beside the seating-map read, then the limits across both. The two
+  full-width panels fill the width rather than sitting in it: the netting
+  verdict takes one column with its source beside it (`split_cols`), the
+  seating listings run two-up, and the limits flow into two columns a block
+  at a time. Rows are start-aligned, so a short panel leaves its column short
+  rather than stretching a hairline box around empty space.
 """
 import argparse
 import hashlib
@@ -569,7 +590,7 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:#fff;color:#16181d;word-wrap:break-word;
  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,
  "Helvetica Neue",sans-serif}
-header,main,footer{max-width:47rem;margin:0 auto;padding:0 .85rem}
+header,main,footer{max-width:42rem;margin:0 auto;padding:0 .85rem}
 a{color:#0b6a74;text-decoration:underline;text-underline-offset:.12em}
 a:hover{color:#084950}
 p{margin:.55rem 0}
@@ -583,7 +604,7 @@ h1{font-size:1.45rem;line-height:1.15;letter-spacing:-.02em;font-weight:700;
 .club b{color:#16181d;font-weight:700;border-left:3px solid #0b6a74;
  padding-left:.42rem;margin-right:.15rem}
 .strip{font-size:.8rem;line-height:1.45;color:#4a505c;padding:.6rem 0;
- border-bottom:1px solid #dcdfe4;margin:0}
+ border-bottom:1px solid #dcdfe4;margin:0;max-width:72ch}
 .strip b{color:#16181d}
 .panel{border:1px solid #d5d9df;margin:1.15rem 0}
 .panel>h2{margin:0;padding:.45rem .65rem;font-size:.74rem;font-weight:700;
@@ -592,6 +613,7 @@ h1{font-size:1.45rem;line-height:1.15;letter-spacing:-.02em;font-weight:700;
 .pb{padding:.7rem .65rem .85rem}
 .pb>:first-child{margin-top:0}
 .pb>:last-child{margin-bottom:0}
+.pb p,.verdict,.warn,.ok,.gap{max-width:72ch}
 h3{font-size:.94rem;font-weight:700;letter-spacing:-.01em;margin:1.2rem 0 .3rem}
 h3.hs{border-left:3px solid #7b828e;padding-left:.5rem}
 h3.hs-net{border-left-color:#0b6a74}
@@ -620,7 +642,8 @@ td.k{font-weight:600}
 .sub2+.sub2{margin-top:.35rem}
 .area{color:#5b6270;font-weight:400}
 .note{font-size:.83rem;line-height:1.45;color:#4a505c;
- border-left:2px solid #d5d9df;padding-left:.65rem;margin:.75rem 0}
+ border-left:2px solid #d5d9df;padding-left:.65rem;margin:.75rem 0;
+ max-width:72ch}
 .warn,.ok,.gap{border:1px solid #d5d9df;padding:.55rem .65rem;margin:.8rem 0;
  font-size:.88rem;line-height:1.45}
 .warn{border-left:3px solid #7b828e}
@@ -663,6 +686,26 @@ hr{border:0;border-top:1px solid #d5d9df;margin:1.5rem 0}
  header,main,footer{padding:0 1.1rem}
  .pb{padding:.85rem .85rem 1rem}
  .panel>h2{padding:.5rem .85rem}
+}
+@media (min-width:64rem){
+ header,main,footer{max-width:69rem;padding:0 1.5rem}
+ main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  column-gap:1.4rem;align-items:start}
+ main>.strip,main>.wide{grid-column:1/-1}
+ .panel{margin:1.4rem 0 0}
+ .wide .pb>h3{max-width:72ch}
+ .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  column-gap:1.6rem;align-items:start}
+ .split .verdict{max-width:none}
+ .wide ul.areas{columns:2;column-gap:2.2rem;margin-top:.2rem}
+ .wide ul.areas li{break-inside:avoid}
+ .cols{columns:2;column-gap:2.2rem}
+ .cols>div{break-inside:avoid;padding-bottom:.15rem}
+ .cols>div>h3{margin-top:0}
+ .cols>div+div>h3{margin-top:1.15rem}
+ ul.parklist .rk{display:flex;flex-wrap:wrap;align-items:baseline;
+  gap:.1rem .6rem}
+ ul.parklist .rk .sub2{display:inline;margin-top:0}
 }
 @media (prefers-color-scheme:dark){
  body{background:#101216;color:#e4e7ee}
@@ -721,16 +764,36 @@ def page(title: str, description: str, body: str, canonical: str | None,
     return '\n'.join(head) + '\n' + body + '\n</html>\n'
 
 
-def panel(anchor: str, heading: str, body: str) -> str:
+def panel(anchor: str, heading: str, body: str, wide: bool = False) -> str:
     """A hairline box with its heading in the one accent colour this site has.
 
     Every block on a park page is one of these, so the page reads as a stack
     of equal-weight panels and nothing inside them competes with the netting
     verdict at the top. The anchor stays on the `h2`, because
     `tests/test_site.py` reads the section order off those ids.
+
+    `wide` puts a panel across both columns of the desktop grid. It is for the
+    two that are about the whole page rather than one part of it — the netting
+    verdict at the top and the limits at the foot — and it does nothing at all
+    below 64rem, where there is one column and every panel is already the
+    width of the page.
     """
-    return (f'<section class="panel"><h2 id="{anchor}">{e(heading)}</h2>'
+    cls = 'panel wide' if wide else 'panel'
+    return (f'<section class="{cls}"><h2 id="{anchor}">{e(heading)}</h2>'
             f'<div class="pb">\n{body}\n</div></section>')
+
+
+def split_cols(lead: str, rest: str) -> str:
+    """Two columns of a panel body on a wide screen, a stack on a narrow one.
+
+    It exists for the netting panel at a park where the netting is a gap.
+    That panel is full width because the verdict has to be, and at a gap park
+    there is no seating listing to fill the second column — so on a 1440 the
+    panel was a thousand pixels of border around six hundred of text. The
+    statement takes one column and what kind of gap it is takes the other.
+    """
+    return (f'<div class="split"><div>\n{lead}\n</div>'
+            f'<div>\n{rest}\n</div></div>')
 
 
 def rows(pairs, head=None) -> str:
@@ -773,13 +836,17 @@ def netting_section(p: dict) -> str:
                 f'read {e(join.park.retrieved)}.</p>')
 
     if net['state'] == 'mapped':
-        out.append(
+        # The source sits beside the verdict rather than at the foot of the
+        # panel. It is what the verdict rests on, and a reader who wants to
+        # check it should not have to pass five seating lists to find it.
+        out.append(split_cols(
             f'<div class="verdict"><p class="vl">Published, and it matches the '
             f'seating areas on this page.</p>'
             f'<p>The club states where the netting runs, and the areas it '
             f'names line up with the areas this model carries for {e(name)}. '
             f'That is true at {counts["mapped"]} of the 31 parks on this '
-            f'site.</p></div>')
+            f'site.</p></div>',
+            src_line + f'\n<p class="note">{NETTING_CLUB_CAVEAT}</p>'))
 
         def listing(zs, mark, lead):
             """One netting state, its areas under it.
@@ -851,10 +918,12 @@ def netting_section(p: dict) -> str:
                 f'which. It does not establish where the boundary between one '
                 f'area and the next falls{tail}.</p></div>')
     else:
-        out.append(
-            f'<div class="verdict vgap"><p class="vl">Not verified at '
-            f'{e(name)}. {e(net["gap_label"])}.</p>'
-            f'<p>{net["gap_text"]}</p></div>')
+        # A gap park has no listing to put beside the verdict, so the panel
+        # body is assembled as two columns instead: `lead` is the verdict,
+        # `out` is everything that qualifies it.
+        lead = (f'<div class="verdict vgap"><p class="vl">Not verified at '
+                f'{e(name)}. {e(net["gap_label"])}.</p>'
+                f'<p>{net["gap_text"]}</p></div>')
         # Whose gap it is. `join.status` already separates the two and the
         # page has to as well: a reader who is told only "not verified" will
         # read it as the club's failing at every one of these parks, and at
@@ -885,7 +954,8 @@ def netting_section(p: dict) -> str:
                 out.append(f'<p class="note">The only rule that reaches this '
                            f'park: {e(PDL_RULE)}.</p>')
             return panel('netting', 'Protective netting',
-                         '\n'.join(x for x in out if x))
+                         split_cols(lead, '\n'.join(x for x in out if x)),
+                         wide=True)
 
     if p['net_height']:
         out.append(f'<h3>Published net height</h3><p>{e(p["net_height"])}.</p>')
@@ -895,10 +965,13 @@ def netting_section(p: dict) -> str:
                        'numbers, for the reason given at the foot of the page, '
                        'so the same statement is given by position instead.</p>')
 
+    if net['state'] == 'mapped':
+        return panel('netting', 'Protective netting',
+                     '\n'.join(x for x in out if x), wide=True)
     out.append(src_line)
     out.append(f'<p class="note">{NETTING_CLUB_CAVEAT}</p>')
     return panel('netting', 'Protective netting',
-                 '\n'.join(x for x in out if x))
+                 split_cols(lead, '\n'.join(x for x in out if x)), wide=True)
 
 
 def zones_section(p: dict) -> str:
@@ -1222,14 +1295,17 @@ def limits_section(p: dict) -> str:
     # One of the limits quotes the fleet-wide count of parks whose two foul
     # lines cannot be told apart. It moved five times as the seating maps were
     # read, so it is substituted here rather than written out in the copy.
+    # Each limit is its own block, so that on a wide screen the set can flow
+    # into two columns without a heading parting company with its paragraph.
     items = ''.join(
-        f'<h3>{e(t)}</h3>'
-        f'<p>{body.replace("{unnamed_sides}", str(side_counts()["unnamed"]))}</p>'
+        f'<div><h3>{e(t)}</h3>'
+        f'<p>{body.replace("{unnamed_sides}", str(side_counts()["unnamed"]))}'
+        f'</p></div>'
         for t, body in MODEL_LIMITS)
     inner = f'''<p>Written out rather than buried, because a reader who does not know these
 things will read the figures above as more than they are.</p>
-{items}
-<h3>Why there are no section numbers on this page</h3>
+<div class="cols">{items}
+<div><h3>Why there are no section numbers on this page</h3>
 <p>This model carries a printed seat label for every area it tracks. Checked
 against what the clubs publish, at nine of the 31 parks the club's netting page
 contradicts them outright; at ten more, the labels cannot describe a continuous
@@ -1241,8 +1317,9 @@ in a way no single swap would fix, twenty-four with the seats behind home plate
 attached to a block somewhere else in the building, and several naming whole
 decks that are not there at all. Three agreed. So the areas on this page are
 described by where they are, and no seat number is printed anywhere on this
-site.</p>'''
-    return panel('limits', 'What this model does not know', inner)
+site.</p></div></div>'''
+    return panel('limits', 'What this model does not know', inner,
+                 wide=True)
 
 
 def park_page(p: dict, base_url: str) -> str:
@@ -1498,7 +1575,7 @@ has never seen a real foul ball. Seats are described as behind netting or not
 behind netting; risk is described as higher or lower.</p>
 </div></section>
 
-<section class="panel"><h2 id="parks">All 31 ballparks</h2>
+<section class="panel wide"><h2 id="parks">All 31 ballparks</h2>
 <div class="pb">
 <p>Grouped by what is actually known, not by how good the ballpark is. The tag
 against each park is whether anything establishes which of its two foul lines is
