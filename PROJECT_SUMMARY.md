@@ -19,8 +19,15 @@ always tell which of the two they are looking at, and the netting always comes
 first on the page, because it is the part that is sourced.
 
 There is no login, no ticket search, no live game data. It is 32 pages of
-plain text and a little styling — no images, no scripts. A page loads in one
-request and works on a phone.
+plain text, one drawing apiece, and a little styling — no images, no scripts.
+A page loads in one request and works on a phone.
+
+The drawing is a schematic plan of the ballpark's foul ground, sitting
+directly above the table of figures: home plate at the bottom, the two foul
+lines running out, and the seating areas as segments of an arc behind them,
+shaded in five steps by how busy the model thinks each one is. It is drawn as
+geometry inside the page rather than as a picture file, so it costs no extra
+request, scales to any screen, and can be read aloud.
 
 ---
 
@@ -164,7 +171,7 @@ A fair summary for a visitor:
   most cases to seat groupings the ballpark's own map contradicts.
 
 The site is built to make all three of those legible at a glance, and there are
-1,660 automated tests whose main job is to stop a future change from quietly
+1,880 automated tests whose main job is to stop a future change from quietly
 making a claim the project cannot support.
 
 ---
@@ -196,3 +203,21 @@ committed page differs by so much as a character. The second half fingerprints
 the files the simulation actually reads, so editing a ballpark's dimensions
 now discards the stored run instead of silently reusing it. Rebuilding after a
 change is still a human step. Noticing that nobody did it is not.
+
+The drawing added on 8 September 2026 is checked the same way, because a
+picture can make a claim quietly in a way a sentence cannot. Its shading has
+to come from exactly the figures printed in the table underneath it; it may
+not name a foul line at any of the fifteen ballparks whose sides are
+unestablished; it marks netting only where a club published an extent this
+project could attach to specific seats, and where it does not, it says so in
+words rather than leaving a blank arc to be read as an open one; and two
+ballparks with different published foul territory may not produce the same
+drawing.
+
+One judgement in that group is worth stating rather than burying. The two foul
+lines are shaded identically at every ballpark, including the sixteen that may
+name their sides. The model builds every ballpark as an exact left-right
+mirror, so the small difference between a ballpark's two foul-line rows is
+simulation noise; the table prints both because it prints what the run
+produced, but a *map* that shaded them differently would be asserting a
+lopsidedness the model does not contain.

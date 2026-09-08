@@ -64,6 +64,17 @@ compared with a foul ball, and a drawn length puts it on a scale and says it
 was measured to that scale. Label left, figure right-aligned, hairline between,
 and nothing else. `rows()` is the only thing that lays a figure out.
 
+**The one drawing on the page carries its figures in five discrete steps of
+fill, and never in a length.** `site_diagram.py` puts a plan-view schematic
+above the distribution table. The lengths in it — how deep the bowl sits, how
+far the stands stand off the plate — are the two *sourced* measurements this
+site already prints, so drawing them as distances claims nothing the page does
+not already claim in words. The model's own figures are carried by shade, in
+bands with printed boundaries, because the run cannot resolve the difference
+between 2.1 and 2.3 fouls a game and a smooth ramp would say it could. That
+file's docstring is where the rest of the argument lives, including why the
+two foul lines are shaded alike at every park.
+
 **Red belongs to one state and nothing else**: a seating area the club's own
 statement places outside its netting. Not to gaps, not to disagreements, not to
 this project's own defects — those are grey and ink, because a reader who sees
@@ -117,6 +128,7 @@ from foulball.matchup_engine import predict_game_fouls
 from foulball.stadium import STADIUMS, PARK_PARAMS
 from foulball.netting import join_park, PDL_RULE
 from foulball.seat_map import check_side_anchors
+from site_diagram import park_diagram, CSS as DIAGRAM_CSS
 from site_data import (
     PARK_SOURCES, ZONE_WORDS, PAIR_ZONE_WORDS, AREA_WORDS, GAP_WORDS,
     NET_HEIGHT_WORDS, COVER_WORDS, COVER_APPLIED, MODEL_LIMITS, RESEARCH_DATE,
@@ -546,6 +558,10 @@ def build_park(park_key: str, stats: dict) -> dict:
         'key': park_key,
         'slug': src['slug'],
         'name': stadium.name,
+        # The finished section table, for the schematic above the distribution
+        # table. It is the same object the zone figures were simulated
+        # against, so the drawing cannot fall out of step with them.
+        'stadium': stadium,
         'city': stadium.city,
         'team': stadium.team,
         'src': src,
@@ -801,11 +817,19 @@ hr{border:0;border-top:1px solid #d5d9df;margin:1.5rem 0}
 """
 
 # Whitespace is not free on a phone, and this is served static.
-CSS_MIN = re.sub(r'\s*\n\s*', '', CSS).strip()
+def _min(css: str) -> str:
+    return re.sub(r'\s*\n\s*', '', css).strip()
+
+
+CSS_MIN = _min(CSS)
+# The schematic's styling is served only on the 31 pages that carry one. It is
+# 1.7 KB, which is nothing beside a park page's drawing and 6% of a home page
+# that has no drawing on it.
+DIAGRAM_CSS_MIN = _min(DIAGRAM_CSS)
 
 
 def page(title: str, description: str, body: str, canonical: str | None,
-         base_url: str) -> str:
+         base_url: str, extra_css: str = '') -> str:
     head = [
         '<!doctype html>',
         '<html lang="en">',
@@ -816,7 +840,7 @@ def page(title: str, description: str, body: str, canonical: str | None,
     ]
     if base_url and canonical is not None:
         head.append(f'<link rel="canonical" href="{e(base_url + canonical)}">')
-    head.append(f'<style>{CSS_MIN}</style>')
+    head.append(f'<style>{CSS_MIN}{extra_css}</style>')
     return '\n'.join(head) + '\n' + body + '\n</html>\n'
 
 
@@ -1091,11 +1115,19 @@ def netting_section(p: dict) -> str:
 
 
 def zones_section(p: dict) -> str:
-    """The distribution, as a plain table and nothing else.
+    """The distribution: a schematic plan of the park, then a plain table.
 
     Label left, figure right, a hairline between. No bar and no filled share:
     the figures rest on estimated geometry, and a drawn length would put them
     on a scale and claim a precision none of it has.
+
+    The schematic above the table does not break that. It draws the ground —
+    radii in feet, stretched by this park's published foul territory and
+    pinned to its published backstop, both sourced measurements — and carries
+    the model's figures in five discrete fill steps rather than in any length.
+    A continuous ramp would be a length by another name; `site_diagram.py` is
+    where that argument is written out, along with why the two foul lines are
+    always shaded alike.
 
     What qualifies the table is a disclosure under it, and the disclosure's
     visible line carries the qualification that matters — the share of fouls
@@ -1134,6 +1166,7 @@ simulation noise in any case.</p>''')
     inner = f'''<p>One full game, both lineups, the same 18 batters at every park on this site,
 so the park is the only thing that changes. Foul balls per game reaching each
 area, largest first.</p>
+{park_diagram(p)}
 {table}
 <p class="sub">Model estimate. {p['sims']} simulations per batter, fixed seed.
 Not a count of anything observed.</p>
@@ -1510,7 +1543,8 @@ Andrew Clem's stadium statistics, cross-checked against the Seamheads ballpark
 database. Model figures rebuilt {e(BUILT)}.</p>
 </footer>
 </body>'''
-    return page(title, desc, body, f'/{p["slug"]}/', base_url)
+    return page(title, desc, body, f'/{p["slug"]}/', base_url,
+                extra_css=DIAGRAM_CSS_MIN)
 
 
 # ============================================================

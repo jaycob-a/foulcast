@@ -45,6 +45,7 @@ from foulball.stadium import STADIUMS
 from foulball.netting import join_park
 from foulball.seat_map import build_printed_index, printed_range_display
 import site_build
+import site_diagram
 from site_data import (
     PARK_SOURCES, ZONE_WORDS, MAP_READS, NO_MAP_READ, SIDE_STATE_WORDS,
 )
@@ -294,12 +295,31 @@ PRINTED_RANGE = re.compile(r'\b\d{2,3}\s*[-–—]\s*\d{2,3}\b')
 # Prefixed labels: FB17, LB101, RS12, FD1, DG1, G5, and the same with a space.
 PREFIXED_LABEL = re.compile(r'\b(?:FB|LB|RS|FD|DG|GS|HPPC|EMCC|PB|RFB|COR|HRP)'
                             r'\s?\d+\b')
+# The schematic above each distribution table, and the attributes inside it
+# that carry drawing coordinates rather than words. See `_strip_numeric_prose`.
+SCHEMATIC = re.compile(r'<figure class="dia">.*?</figure>', re.S)
+SVG_GEOMETRY = re.compile(r'\s(?:d|x|y|transform|viewBox)="[^"]*"')
 
 
 def _strip_numeric_prose(text: str) -> str:
     """Remove figures that legitimately carry digit runs, so the label search
     does not trip over '22,900 sq ft', a year, or Tropicana Field's 100% upper
-    deck cover — which collides with a real printed label at that park."""
+    deck cover — which collides with a real printed label at that park.
+
+    The schematic's coordinates go with them, for the same reason and no
+    other: this is a search for a seat label a *reader* could see, and the
+    numbers inside a `d` or an `x` attribute are never rendered as characters.
+    A drawing that puts a wedge corner at 134 feet is not printing Wrigley's
+    section 134, and before Step 21 blanked them, at 30 of the 31 parks it
+    looked exactly like it was.
+
+    The blanking is as narrow as it can be made: geometry attributes, inside
+    the schematic figure, and nowhere else on the page. Every part of the
+    drawing a reader can actually read — its alt text, its two foul-line
+    labels, its legend, its caption — stays in the text and is searched like
+    any other prose.
+    """
+    text = SCHEMATIC.sub(lambda m: SVG_GEOMETRY.sub(' G="" ', m.group(0)), text)
     text = re.sub(r'\b\d{4}-\d{2}-\d{2}\b', ' D ', text)      # ISO dates
     text = re.sub(r'\d{1,3}(?:,\d{3})+', ' N ', text)
     text = re.sub(r'\b(?:19|20)\d{2}\b', ' Y ', text)
@@ -696,6 +716,190 @@ def test_gap_parks_exclude_nothing_and_say_so(built):
         assert 'Nothing is excluded from this list' in text
         assert all(not z['blocks_catch'] for z in p['zones'])
 
+# ============================================================
+# The schematic
+# ============================================================
+#
+# The drawing above each distribution table is the one thing on this site that
+# is not words or a right-aligned figure, so every claim it can make silently —
+# a shade, a mark, a label, a size — is checked here rather than reviewed.
+
+DIA_PATH = re.compile(r'<path class="([a-z0-9]+)" d="([^"]+)"')
+
+
+def diagram(text: str) -> str:
+    m = SCHEMATIC.search(text)
+    assert m, 'no schematic on this page'
+    return m.group(0)
+
+
+def drawn_steps(text: str) -> set:
+    """Which of the five shading steps this page's drawing actually uses."""
+    return {int(cls[1:]) for cls, _ in DIA_PATH.findall(diagram(text))
+            if re.fullmatch(r'z\d', cls)}
+
+
+def zone_rows(p: dict) -> dict:
+    return {z['id']: z for z in p['zones']}
+
+
+def drawn_rows(p: dict):
+    """Every (section id, row) pair the drawing puts ground on."""
+    rows = zone_rows(p)
+    for _, _, bands in site_diagram.wedges(p['stadium']):
+        for sid, _, _ in bands:
+            yield sid, site_diagram._row_for(sid, rows)
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_every_park_page_carries_a_schematic_above_its_table(built, key):
+    slug = PARK_SOURCES[key]['slug']
+    text = built['pages'][slug]
+    assert text.index('<figure class="dia">') < text.index('<table>'), \
+        f'{slug}: the schematic is not above the distribution table'
+    assert 'Schematic, not to scale' in flat(diagram(text))
+    assert 'role="img"' in text and 'aria-label="Schematic plan' in text
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_schematic_draws_every_area_the_table_lists(built, key):
+    """A row with no ground on the drawing would read as an area that does not
+    exist, and a shape with no row would be an area nobody can look up."""
+    slug = PARK_SOURCES[key]['slug']
+    p = built['parks'][slug]
+    rows = zone_rows(p)
+    covered = set()
+    for sid, row in drawn_rows(p):
+        assert row is not None, f'{slug}: {sid} is drawn with no row behind it'
+        # Only the first-base half is computed; the third-base half is that
+        # half mirrored, so a first-base wedge covers its counterpart row and
+        # the folded row a pair may have become.
+        covered |= {i for i in (sid, '3B-' + sid[3:], 'LINES-' + sid[3:])
+                    if i in rows} if sid[:3] == '1B-' else {sid}
+    assert covered == set(rows), \
+        f'{slug}: the drawing and the table list different areas'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_schematic_shades_from_the_figures_the_table_prints(built, key):
+    """The invariant the whole drawing rests on.
+
+    A shade that disagreed with the row under it would be worse than no
+    drawing at all, because a reader has no way to check it. The steps the
+    page emits have to be exactly the steps its own printed figures fall in.
+    """
+    slug = PARK_SOURCES[key]['slug']
+    expected = {site_diagram.step_of(row['fouls'])
+                for _, row in drawn_rows(built['parks'][slug])}
+    assert drawn_steps(built['pages'][slug]) == expected, \
+        f'{slug}: shaded from figures the table beneath it does not print'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_schematic_shades_the_two_foul_lines_alike(built, key):
+    """Every park here is built as an exact mirror, so a left-right difference
+    in the drawing would be simulation noise presented as ground — and at the
+    fifteen folded parks it would leak a side as well."""
+    p = built['parks'][PARK_SOURCES[key]['slug']]
+    rows = zone_rows(p)
+    for z in p['zones']:
+        if z['id'][:3] not in ('1B-', '3B-'):
+            continue
+        a = site_diagram._row_for('1B-' + z['id'][3:], rows)
+        b = site_diagram._row_for('3B-' + z['id'][3:], rows)
+        assert site_diagram.step_of(a['fouls']) \
+            == site_diagram.step_of(b['fouls']), \
+            f'{key}: the two foul lines would draw in different shades'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_schematic_names_no_foul_line_where_nothing_establishes_one(
+        built, key):
+    """Constraint 5, in the one place on the page that is not prose."""
+    slug = PARK_SOURCES[key]['slug']
+    fig = diagram(built['pages'][slug])
+    named = built['parks'][slug]['sides']['named']
+    for word in ('First base', 'Third base'):
+        assert (word in fig) is named, \
+            f'{slug}: schematic labels "{word}" but sides-named is {named}'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_schematic_marks_netting_only_where_it_is_sourced(built, key):
+    """A mark means a club places those seats fully behind netting.
+
+    No mark means no source, and the drawing has to say which of the two a
+    reader is looking at rather than leaving an unmarked arc to be read as an
+    open one.
+    """
+    slug = PARK_SOURCES[key]['slug']
+    p = built['parks'][slug]
+    fig = diagram(built['pages'][slug])
+    marked = 'class="nm" d=' in fig
+    netted = any(row['status'] == 'netted' for _, row in drawn_rows(p))
+    assert marked == netted, f'{slug}: netting mark does not match the sources'
+    if p['net']['state'] != 'mapped':
+        assert not marked, f'{slug}: netting marked at a park with no join'
+    if not marked:
+        assert 'No netting is marked here' in flat(fig)
+        assert 'missing source, not as a missing net' in flat(fig)
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_schematic_emits_no_negative_coordinate(built, key):
+    """`_n` clamps, and this is why.
+
+    A minus sign between two path coordinates is indistinguishable from a
+    printed seat range to `test_no_section_numbers_on_any_park_page`, so a
+    regression here would surface as a baffling failure in a test about
+    something else. It surfaces here instead.
+    """
+    fig = diagram(built['pages'][PARK_SOURCES[key]['slug']])
+    for _, d in DIA_PATH.findall(fig):
+        assert '-' not in d, f'{key}: negative coordinate in path data'
+
+
+def test_two_parks_with_different_foul_territory_draw_differently(built):
+    """The drawing responds to the sourced figures, or it is decoration.
+
+    Every park shares one generic bowl and one viewBox, so the only thing that
+    can separate two drawings is what `stadium.py` did to the radii with the
+    park's published foul-territory area and backstop. Wrigley has the
+    smallest foul ground in the registry and Rogers Centre the largest; they
+    must not come out the same size, and no two parks may come out identical.
+    """
+    geom = {key: site_diagram.wedges(built['parks'][
+                PARK_SOURCES[key]['slug']]['stadium'])
+            for key in STADIUMS}
+    outer = {k: max(b1 for _, _, bands in w for _, _, b1 in bands)
+             for k, w in geom.items()}
+    assert outer['wrigley_field'] < outer['rogers_centre'], \
+        'the park with more published foul ground does not draw larger'
+    shapes = [repr(w) for w in geom.values()]
+    assert len(set(shapes)) == len(shapes), \
+        'two parks produce identical drawings'
+
+
+def test_the_step_legend_matches_the_step_boundaries(built):
+    """The legend is the only thing telling a reader what a shade is worth, so
+    it is generated from `STEPS` rather than written out beside them."""
+    assert len(site_diagram.STEP_WORDS) == len(site_diagram.STEPS) + 1
+    fig = flat(diagram(built['pages']['fenway-park']))
+    for word in site_diagram.STEP_WORDS:
+        assert word in fig
+    assert site_diagram.step_of(0.9) == 0 and site_diagram.step_of(1.0) == 1
+    assert site_diagram.step_of(3.99) == 3 and site_diagram.step_of(4.0) == 4
+
+
+def test_the_shading_uses_every_step_somewhere_and_none_at_only_one_park(built):
+    """Five steps that only ever resolve to two would be four steps of
+    decoration and one of meaning. Each has to earn its place on the ramp."""
+    used = {}
+    for key in STADIUMS:
+        for step in drawn_steps(built['pages'][PARK_SOURCES[key]['slug']]):
+            used[step] = used.get(step, 0) + 1
+    assert sorted(used) == [0, 1, 2, 3, 4], f'unused shading step: {used}'
+    assert min(used.values()) > 1, f'a step reached by one park only: {used}'
 
 # ============================================================
 # Search and delivery
@@ -731,7 +935,14 @@ def test_pages_are_mobile_first_and_self_contained(built, slug):
     assert '<script' not in text
     assert '<img' not in text
     assert 'rel="stylesheet"' not in text
-    assert len(text.encode('utf-8')) < 40_000, 'page is getting heavy'
+    # A budget, not a claim. It was 40 KB against a 32.4 KB worst page until
+    # Step 21 put an inline SVG schematic on every park page, which cost the
+    # heaviest park (Yankee Stadium, 21 drawn wedges) about 5.8 KB — path data,
+    # the legend, and the alt text. The ceiling moved by what the drawing cost
+    # plus the headroom the old one carried, and not by a byte more, so it
+    # still catches drift. Raising it again should mean the same kind of
+    # deliberate addition, not room for prose.
+    assert len(text.encode('utf-8')) < 46_000, 'page is getting heavy'
 
 
 def test_canonical_tags_only_when_a_base_url_is_given(built, tmp_path):
