@@ -15,8 +15,20 @@ page. Each ballpark page answers two questions about that ballpark:
 
 The first answer is copied from what the club itself publishes. The second is
 a guess produced by a physics simulation. The site is built so a visitor can
-always tell which of the two they are looking at, and the netting always comes
-first on the page, because it is the part that is sourced.
+always tell which of the two they are looking at, and what the club says about
+the netting always comes ahead of what the model guesses, because it is the
+part that is sourced.
+
+A ballpark page answers before it explains. The top of the screen carries four
+things and nothing else: the ballpark's name and team, the drawing, one plain
+sentence saying where the netting runs — "netting covers the seats at field
+level behind home plate and runs out along both foul lines past the dugouts" —
+and the table of figures. Directly under the table, on one line, is the
+standing warning that none of this has ever been checked against a real foul
+ball. Everything else — where the netting statement came from, how the figures
+were produced, what the model cannot do, what the ballpark's own seating map
+says — is further down, most of it behind a heading you click to open. None of
+it has been removed; none of it stands in front of the answer any more.
 
 There is no login, no ticket search, no live game data. It is 32 pages of
 plain text, one drawing apiece, and a little styling — no images, no scripts.

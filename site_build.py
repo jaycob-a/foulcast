@@ -82,12 +82,20 @@ the same red on a missing source and on an unnetted seat learns nothing from
 either. One accent teal does the section headings, links and structural marks;
 everything else is ink on white.
 
-The park page runs park and team, netting, distribution, the two readings, the
-sourced figures, the seating-map read, and the limits, in that order. The
-netting verdict is the largest type below the `h1` because it is the only
-sourced thing on the page. The standing "never checked against a foul ball"
-caveat is a hairline strip above it rather than a block, so that it states
-itself without out-shouting the one fact somebody published.
+**The page answers first and shows its receipts underneath.** Above the fold
+there are four things and nothing else: the ballpark and its team, the
+schematic, one sentence saying where the netting runs, and the distribution
+table. None of them explains its own status before saying anything — the
+netting sentence states where the net is, not that a club published it, not
+how many of the 31 parks match, not what the club's coverage hedge says.
+
+Under the table, and nowhere above it, the standing "never checked against a
+real foul ball" caveat, on one line, where it qualifies the figures it is
+about. Then the receipts, in the order that keeps the sourced thing ahead of
+the estimated one: where the netting statement came from and every area it
+touches, how the figures were produced, the two readings, the sourced park
+figures, the seating-map read, the limits. All of it is still on the page and
+none of it is in front of the answer.
 
 **Prose never runs past 72 characters a line, at any width.** The cap is in
 `ch` and not in `rem`, because these pages set text at four sizes and one rem
@@ -100,15 +108,18 @@ Three widths, and the layout is checked at all three:
 * **Below 34rem** — one column, 15px, edge to edge.
 * **34rem to 64rem** — one column capped at 42rem. A 768px tablet reads a
   672px column, which is the measure, not the viewport.
-* **64rem and up** — a two-column grid capped at 69rem (1104px). Panels pair
-  in DOM order, so the reading sequence above survives: netting across both
-  columns, then the distribution beside its two readings, then the sourced
-  figures beside the seating-map read, then the limits across both. The two
-  full-width panels fill the width rather than sitting in it: the netting
-  verdict takes one column with its source beside it (`split_cols`), the
-  seating listings run two-up, and the limits flow into two columns a block
-  at a time. Rows are start-aligned, so a short panel leaves its column short
-  rather than stretching a hairline box around empty space.
+* **64rem and up** — a two-column grid capped at 69rem (1104px). The answer
+  block runs across both columns and stays a stack, because its four parts
+  are an argument in order and setting them side by side would break it; the
+  schematic grows instead. Panels below it pair in DOM order, so the reading
+  sequence survives: the netting source across both columns, then the
+  methodology beside the two readings, then the sourced figures beside the
+  seating-map read, then the limits across both. The full-width panels fill
+  the width rather than sitting in it: the netting source takes one column
+  with the club's caveat beside it (`split_cols`), the seating listings run
+  two-up, and the limits flow into two columns a block at a time. Rows are
+  start-aligned, so a short panel leaves its column short rather than
+  stretching a hairline box around empty space.
 """
 import argparse
 import hashlib
@@ -658,6 +669,13 @@ h1{font-size:1.45rem;line-height:1.15;letter-spacing:-.02em;font-weight:700;
 .strip{font-size:.8rem;line-height:1.45;color:#4a505c;padding:.6rem 0;
  border-bottom:1px solid #dcdfe4;margin:0;max-width:72ch}
 .strip b{color:#16181d}
+.answer{margin:.7rem 0 0}
+.answer .strip{border-bottom:0;padding:.5rem 0 0}
+.netline{font-size:1.18rem;line-height:1.3;font-weight:700;
+ letter-spacing:-.015em;border-left:3px solid #0b6a74;padding-left:.65rem;
+ margin:.85rem 0 1.1rem;max-width:58ch}
+.ah{font-size:.7rem;font-weight:700;letter-spacing:.09em;
+ text-transform:uppercase;color:#0b6a74;margin:1.1rem 0 0}
 .panel{border:1px solid #d5d9df;margin:1.15rem 0}
 .panel>h2{margin:0;padding:.45rem .65rem;font-size:.74rem;font-weight:700;
  letter-spacing:.09em;text-transform:uppercase;color:#0b6a74;
@@ -673,15 +691,10 @@ details[open]>summary .dh::after{content:"\\2212"}
 summary:hover .dh{color:#084950}
 .ds{display:block;font-size:.83rem;line-height:1.45;color:#4a505c;
  margin-top:.22rem;max-width:72ch}
-details.in{border-top:1px solid #d5d9df;margin:.95rem 0 0}
-details.in>summary{padding:.5rem 0 .45rem}
-.db{padding:.15rem 0 .1rem}
-.db>:first-child{margin-top:.4rem}
-.db>:last-child{margin-bottom:0}
 .pb{padding:.7rem .65rem .85rem}
 .pb>:first-child{margin-top:0}
 .pb>:last-child{margin-bottom:0}
-.pb p,.verdict,.warn,.ok,.gap{max-width:72ch}
+.pb p,.warn,.ok,.gap{max-width:72ch}
 h3{font-size:.94rem;font-weight:700;letter-spacing:-.01em;margin:1.2rem 0 .3rem}
 h3.hs{border-left:3px solid #7b828e;padding-left:.5rem}
 h3.hs-net{border-left-color:#0b6a74}
@@ -690,11 +703,6 @@ h3.hs-open{border-left-color:#a01523;color:#a01523}
 ul.areas{list-style:none;padding:0;margin:.5rem 0 .2rem}
 ul.areas li{padding:.4rem .1rem;border-bottom:1px solid #e4e7eb;font-weight:600}
 ul.areas li:last-child{border-bottom:1px solid #b9bfc8}
-.verdict{border:1px solid #c8ced6;border-top:3px solid #0b6a74;
- padding:.65rem .7rem;margin:0 0 .9rem}
-.verdict .vl{font-size:1.14rem;line-height:1.28;font-weight:700;
- letter-spacing:-.015em;margin:0 0 .3rem}
-.verdict.vgap{border-top-color:#16181d;background:#f4f5f7}
 table{width:100%;border-collapse:collapse;margin:.6rem 0;font-size:.9rem}
 th,td{text-align:left;vertical-align:top;padding:.4rem .1rem;
  border-bottom:1px solid #e4e7eb;line-height:1.4}
@@ -759,12 +767,12 @@ hr{border:0;border-top:1px solid #d5d9df;margin:1.5rem 0}
  header,main,footer{max-width:69rem;padding:0 1.5rem}
  main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   column-gap:1.4rem;align-items:start}
- main>.strip,main>.wide{grid-column:1/-1}
+ main>.strip,main>.wide,main>.answer{grid-column:1/-1}
+ .netline{font-size:1.3rem}
  .panel{margin:1.4rem 0 0}
  .wide .pb>h3{max-width:72ch}
  .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   column-gap:1.6rem;align-items:start}
- .split .verdict{max-width:none}
  .wide ul.areas{columns:2;column-gap:2.2rem;margin-top:.2rem}
  .wide ul.areas li{break-inside:avoid}
  .cols{columns:2;column-gap:2.2rem}
@@ -783,17 +791,17 @@ hr{border:0;border-top:1px solid #d5d9df;margin:1.5rem 0}
  .club b{color:#e4e7ee;border-left-color:#4fb6c0}
  .strip{border-bottom-color:#262b34}
  .strip b{color:#e4e7ee}
- .panel,.verdict,.warn,.ok,.gap{border-color:#2b313b}
+ .netline{border-left-color:#4fb6c0}
+ .ah{color:#4fb6c0}
+ .panel,.warn,.ok,.gap{border-color:#2b313b}
  .panel>h2,.dh{color:#4fb6c0}
  .panel>h2{border-bottom-color:#2b313b}
- .panel>details[open]>summary,details.in{border-color:#2b313b}
+ .panel>details[open]>summary{border-color:#2b313b}
  summary:hover .dh{color:#7fd0d8}
  .ds{color:#98a0b0}
- h3,.verdict .vl{color:#e4e7ee}
+ h3{color:#e4e7ee}
  th,td{border-bottom-color:#232830}
  thead th,tbody tr:last-child td{border-bottom-color:#3a414d}
- .verdict{border-top-color:#4fb6c0}
- .verdict.vgap{border-top-color:#8891a0;background:#171a20}
  .note{border-left-color:#2b313b}
  .warn{border-left-color:#6d7482}
  .ok{border-left-color:#4fb6c0}
@@ -847,16 +855,16 @@ def page(title: str, description: str, body: str, canonical: str | None,
 def panel(anchor: str, heading: str, body: str, wide: bool = False) -> str:
     """A hairline box with its heading in the one accent colour this site has.
 
-    Every block on a park page is one of these, so the page reads as a stack
-    of equal-weight panels and nothing inside them competes with the netting
-    verdict at the top. The anchor stays on the `h2`, because
+    Every block below the answer is one of these, so the receipts read as a
+    stack of equal-weight panels and nothing inside them competes with the
+    answer above them. The anchor stays on the `h2`, because
     `tests/test_site.py` reads the section order off those ids.
 
     `wide` puts a panel across both columns of the desktop grid. It is for the
     two that are about the whole page rather than one part of it — the netting
-    verdict at the top and the limits at the foot — and it does nothing at all
-    below 64rem, where there is one column and every panel is already the
-    width of the page.
+    source at the head of the receipts and the limits at the foot — and it
+    does nothing at all below 64rem, where there is one column and every panel
+    is already the width of the page.
     """
     cls = 'panel wide' if wide else 'panel'
     return (f'<section class="{cls}"><h2 id="{anchor}">{e(heading)}</h2>'
@@ -868,15 +876,16 @@ def fold(anchor: str, heading: str, summary: str, body: str,
     """A panel whose body is closed until the reader asks for it.
 
     The reason a park page has these at all: the answer a reader came for is
-    the netting verdict and the distribution, and everything else on the page
-    is the working behind them. The working has to stay — none of it is
-    removed — but it was standing between the reader and the answer, four
-    screens of it.
+    the drawing, the netting sentence and the distribution, and everything
+    else on the page is the working behind them. The working has to stay —
+    none of it is removed — but it was standing between the reader and the
+    answer, four screens of it.
 
     `summary` is the one line that stays visible when the section is shut, and
     it is not a label. It carries the finding, so that a reader who never
     opens the section still gets what the section concluded: the figures, the
-    map's verdict, which side is which. Opening it gets the evidence.
+    map's verdict, which side is which, how many areas the netting leaves
+    outside it. Opening it gets the evidence.
 
     Native `<details>`, because this site is one request per page with no
     scripts, and it has to keep being one.
@@ -888,28 +897,15 @@ def fold(anchor: str, heading: str, summary: str, body: str,
             f'<div class="pb">\n{body}\n</div></details></section>')
 
 
-def infold(heading: str, summary: str, body: str) -> str:
-    """The same disclosure, nested inside a panel that stays open.
-
-    For the two panels above the fold. The netting verdict is the answer and
-    stays; the area-by-area listing that backs it is one click below it. The
-    distribution table is the answer and stays; what qualifies it sits under
-    a summary line that states the qualification rather than hiding it.
-    """
-    return (f'<details class="in"><summary>'
-            f'<span class="dh">{e(heading)}</span>'
-            f'<span class="ds">{summary}</span></summary>'
-            f'<div class="db">\n{body}\n</div></details>')
-
-
 def split_cols(lead: str, rest: str) -> str:
     """Two columns of a panel body on a wide screen, a stack on a narrow one.
 
-    It exists for the netting panel at a park where the netting is a gap.
-    That panel is full width because the verdict has to be, and at a gap park
-    there is no seating listing to fill the second column — so on a 1440 the
-    panel was a thousand pixels of border around six hundred of text. The
-    statement takes one column and what kind of gap it is takes the other.
+    It exists for the netting-source panel, whose opening statement is a
+    single paragraph while the panel itself is full width because the seating
+    listings inside it are — so on a 1440 the top of it was a thousand pixels
+    of border around six hundred of text. The statement and its source take
+    one column; what qualifies them, the club's own coverage hedge or the kind
+    of gap this is, takes the other.
     """
     return (f'<div class="split"><div>\n{lead}\n</div>'
             f'<div>\n{rest}\n</div></div>')
@@ -934,20 +930,166 @@ def rows(pairs, head=None) -> str:
 # ============================================================
 # The park page
 # ============================================================
+#
+# The top of a park page answers the question it was opened with and nothing
+# else: the ballpark's name, the drawing, one sentence saying where the net
+# is, and the distribution. Everything that qualifies those four things —
+# where the netting statement came from, how the figures were produced, what
+# the model cannot do, how the same figures read two opposite ways — is below
+# them or behind a disclosure. It is all still here; none of it is first.
 
-def netting_section(p: dict) -> str:
-    """Netting first, on every page, whatever its state.
 
-    Three states, and a reader has to be able to tell them apart at a glance:
-    the club published an extent and it fits this model's seating areas; the
-    club published one and it does not fit; nobody published one at all. The
-    verdict is the largest type on the page below the ballpark's name, because
-    it is the only thing here that is sourced.
+# How far a published netting run reaches down one foul line, in the plain
+# words this site is allowed to use. `netting.py` already enforces that every
+# extent in the file runs from behind the plate outward, so the only question
+# left is how far — and the dugout is the one landmark on the field-level
+# chain this site names anywhere else. `ZONE_WORDS` puts the infield boxes
+# between the plate and the dugout, and the dugout boxes from the dugout
+# outward, which is what makes the two of them a chain and not a pair.
+_REACH_WORDS = {
+    ('DUG', 'netted'): 'past the {dugout}',
+    ('DUG', 'partially_netted'):
+        'past the {dugout} and over part of the seats beyond',
+    ('FB1', 'netted'): 'as far as the {dugout}',
+    ('FB1', 'partially_netted'): 'part of the way to the {dugout}',
+}
 
-    The verdict and its source stay open. The area-by-area listing that backs
-    it is a disclosure below them, with the tally of what came out where on
-    the line that stays visible — a reader who never opens it still learns how
-    many areas the netting covers and how many it leaves.
+# The areas the sentence below can describe by their position on that chain.
+# Anything else the sources place behind netting is named outright instead, so
+# a netting run that one day covers a deck cannot go unmentioned just because
+# the chain has no word for it.
+_CHAIN = {'HOME-DC', 'HOME-F', 'FB1', 'DUG'}
+
+
+def _reach(statuses: dict[str, str]) -> str | None:
+    """The outermost area on one foul line the published run covers.
+
+    Outermost wins: a run over the dugout boxes covers the infield boxes
+    inside them, and it is the far end a reader is asking about. `None` where
+    the run does not reach this line at all.
+    """
+    for suffix in ('DUG', 'FB1'):
+        word = _REACH_WORDS.get((suffix, statuses.get(suffix)))
+        if word:
+            return word
+    return None
+
+
+def _line_clause(reach: str | None, side: str) -> str:
+    """One foul line's worth of the sentence, where the two lines differ.
+
+    The side comes first. A run that reaches different distances on the two
+    lines needs the reader to know which line each distance belongs to before
+    they read the distance, and trailing the side made the longer of the two
+    phrases unreadable.
+    """
+    if reach is None:
+        return f'no distance at all along the {side}-base line'
+    return f'along the {side}-base line {reach.format(dugout="dugout")}'
+
+
+def netting_line(p: dict) -> str:
+    """One sentence, above the fold: where the net is.
+
+    Not whether anyone published it, not how many of the 31 parks match, not
+    what the club's own coverage hedge says. All three are true, all three are
+    further down this page, and none of them is the question a reader arrived
+    with. The sentence is composed from the same join the area listing below
+    it is built from, so it cannot say anything that listing contradicts.
+    """
+    net, name = p['net'], e(p['name'])
+
+    if net['state'] != 'mapped':
+        # There is no fact to lead with, so the sentence leads with what that
+        # costs the reader instead, and says whose fault it is in the same
+        # breath — at most of these parks it is this model's, not the club's.
+        if p['join'].status == 'join_gap':
+            return (f'The club does publish where its netting runs at {name}, '
+                    f'and the seat labels this model carries cannot be '
+                    f'reconciled with it, so no area below is marked as '
+                    f'behind netting.')
+        return (f'Nothing published says where the netting runs at {name} in '
+                f'a form that can be attached to a seat, so no area below is '
+                f'marked as behind netting.')
+
+    by_side: dict[str, dict[str, str]] = {}
+    for z in p['zones']:
+        prefix, _, suffix = z['id'].partition('-')
+        by_side.setdefault(prefix, {})[suffix] = z['status']
+    home = by_side.get('HOME', {})
+
+    # "at field level" is not padding. Every park in the registry has a second
+    # deck behind the plate as well, and at all seven mapped parks the club's
+    # extent covers the field-level seats and not the deck above them — so a
+    # sentence that said "the seats behind home plate" would tell a reader in
+    # that deck the opposite of what the table three inches below it says.
+    if any(home.get(k) == 'netted' for k in ('DC', 'F')):
+        plate = 'Netting covers the seats at field level behind home plate'
+    elif any(home.get(k) == 'partially_netted' for k in ('DC', 'F')):
+        plate = ('Netting covers part of the seats at field level behind home '
+                 'plate')
+    else:
+        plate = None
+
+    if p['sides']['named']:
+        first = _reach(by_side.get('1B', {}))
+        third = _reach(by_side.get('3B', {}))
+        if first == third:
+            reach = (f'runs out along both foul lines '
+                     f'{first.format(dugout="dugouts")}' if first else None)
+        else:
+            reach = ('runs out ' + _line_clause(first, 'first') + ', and '
+                     + _line_clause(third, 'third'))
+    else:
+        # Constraint 5 in the one sentence most tempted to break it: where
+        # nothing establishes which line is which, the pair is one folded row
+        # and the sentence may say only that the two differ.
+        lines = by_side.get('LINES', {})
+        if 'split' in (lines.get('DUG'), lines.get('FB1')):
+            reach = ('runs out along both foul lines, further along one of '
+                     'the two than the other, with nothing here to say which')
+        else:
+            out = _reach(lines)
+            reach = (f'runs out along both foul lines '
+                     f'{out.format(dugout="dugouts")}' if out else None)
+
+    if plate and reach:
+        sentence = f'{plate} and {reach}'
+    elif plate:
+        sentence = f'{plate} and reaches neither foul line'
+    elif reach:
+        sentence = (f'Netting {reach}, and does not cover the seats behind '
+                    f'home plate')
+    else:
+        return (f'No seating area on this page is behind the netting the club '
+                f'publishes at {name}.')
+
+    # Anything netted that the chain above has no position for. Never fires on
+    # the current sources — no club nets a deck — and it is here so that one
+    # that did could not go unsaid.
+    off_chain = [z for z in p['zones']
+                 if z['status'] in ('netted', 'partially_netted')
+                 and z['id'].partition('-')[2] not in _CHAIN
+                 and z['id'] not in _CHAIN]
+    if off_chain:
+        named = comma_list([z['heading'][0].lower() + z['heading'][1:]
+                            for z in off_chain])
+        sentence += f', and it also stands in front of {named}'
+    return sentence + '.'
+
+
+def netting_source_section(p: dict) -> str:
+    """Where the sentence above the fold came from, and every area it covers.
+
+    The receipts, not the answer. `netting_line` says where the net is; this
+    says who published that, which of the three states this park is in — the
+    club published an extent and it fits this model's seating areas, the club
+    published one and it does not fit, nobody published one at all — and then
+    lists every area the join touched, including the ones it leaves outside.
+
+    Shut, with the tally of what came out where on the line that stays
+    visible, so a reader who never opens it still learns how many areas the
+    netting covers and how many it leaves.
     """
     net, join, name = p['net'], p['join'], p['name']
     counts = netting_counts()
@@ -961,12 +1103,11 @@ def netting_section(p: dict) -> str:
     out = []
 
     if net['state'] == 'mapped':
-        lead = (f'<div class="verdict"><p class="vl">Published, and it matches '
-                f'the seating areas on this page.</p>'
-                f'<p>The club states where its netting runs, and the areas it '
-                f'names line up with the ones this model carries for '
-                f'{e(name)} &mdash; true at {counts["mapped"]} of the 31 '
-                f'parks here.</p></div>')
+        lead = (f'<p>The sentence at the top of this page is the club\'s own '
+                f'statement of where its netting runs, read onto the seating '
+                f'areas this model carries for {e(name)}. The two line up '
+                f'here, which is true at {counts["mapped"]} of the 31 parks '
+                f'and not at the other {counts["gaps"]}.</p>')
 
         def listing(zs, mark, head):
             """One netting state, its areas under it.
@@ -1052,26 +1193,22 @@ def netting_section(p: dict) -> str:
                  (len(net['unknown']), 'not mentioned either way')]
         summary = ('Areas on this page: '
                    + comma_list([f'{count_word(n)} {w}' for n, w in tally if n])
-                   + '.')
-        body = (split_cols(lead, src_line + '\n' + club_caveat)
-                + infold('Every area, and where the netting leaves off',
-                         summary, '\n'.join(x for x in out if x)))
-        return panel('netting', 'Protective netting', body, wide=True)
+                   + '. And what the club itself says its netting is worth.')
+        body = (split_cols(lead + '\n' + src_line, club_caveat)
+                + '\n'.join(x for x in out if x))
+        return fold('netting-source', 'Where that netting statement comes from',
+                    summary, body, wide=True)
 
-    # A gap park. The verdict is that there is no verdict, and the sentence a
-    # reader actually needs off it — that nothing below is marked as netted —
-    # sits beside it rather than inside the disclosure.
-    lead = (f'<div class="verdict vgap"><p class="vl">Not verified at '
-            f'{e(name)}. {e(net["gap_label"])}.</p>'
-            f'<p>{net["gap_text"]}</p></div>')
-    beside = ('<p class="note">Nothing on this page is marked as behind '
-              'netting. Read everything below knowing that some of the areas '
-              'the model puts fouls into may be entirely behind a net.</p>')
-
-    # Whose gap it is. `join.status` already separates the two and the page has
-    # to as well: a reader told only "not verified" will read it as the club's
-    # failing at every one of these parks, and at most of them it is this
-    # model's.
+    # A gap park. There is no extent to source, so what this section carries
+    # is whose gap it is: `join.status` already separates the two and the page
+    # has to as well, because a reader told only "not verified" will read it
+    # as the club's failing at every one of these parks, and at most of them
+    # it is this model's.
+    lead = (f'<p><strong>{e(net["gap_label"])}.</strong> '
+            f'{net["gap_text"]}</p>')
+    beside = ('<p class="note">Read everything on this page knowing that some '
+              'of the areas the model puts fouls into may be entirely behind '
+              'a net.</p>')
     if join.status == 'join_gap':
         whose = (f'<strong>This one is this model\'s fault, not the '
                  f'club\'s.</strong> The club does publish where its netting '
@@ -1105,33 +1242,34 @@ def netting_section(p: dict) -> str:
                        'the same statement is given by position instead.</p>')
     out.append(club_caveat)
 
-    body = (split_cols(lead, beside)
-            + infold('Whose gap this is, and what was checked',
-                     f'{counts["gaps"]} of the 31 parks here are gaps, and at '
-                     f'{counts["join_gap"]} of those the failure is this '
-                     f'model\'s rather than the club\'s.',
-                     '\n'.join(x for x in out if x)))
-    return panel('netting', 'Protective netting', body, wide=True)
+    body = split_cols(lead, beside) + '\n'.join(x for x in out if x)
+    return fold('netting-source', 'Whose gap this is, and what was checked',
+                f'{counts["gaps"]} of the 31 parks here are gaps, and at '
+                f'{counts["join_gap"]} of those the failure is this model\'s '
+                f'rather than the club\'s.', body, wide=True)
 
 
-def zones_section(p: dict) -> str:
-    """The distribution: a schematic plan of the park, then a plain table.
+def answer_section(p: dict) -> str:
+    """The whole of the top of the page: drawing, one sentence, table.
+
+    Nothing here explains itself first. The drawing is the answer to where
+    foul balls land and so it is the first thing on screen; the sentence under
+    it is the answer to where the net is, in the fewest plain words the join
+    supports; the table is the same answer in figures. The provenance of all
+    three is below, and the one caveat that qualifies the table sits directly
+    under the table rather than in front of the page.
 
     Label left, figure right, a hairline between. No bar and no filled share:
     the figures rest on estimated geometry, and a drawn length would put them
     on a scale and claim a precision none of it has.
 
-    The schematic above the table does not break that. It draws the ground —
-    radii in feet, stretched by this park's published foul territory and
-    pinned to its published backstop, both sourced measurements — and carries
-    the model's figures in five discrete fill steps rather than in any length.
-    A continuous ramp would be a length by another name; `site_diagram.py` is
+    The schematic does not break that. It draws the ground — radii in feet,
+    stretched by this park's published foul territory and pinned to its
+    published backstop, both sourced measurements — and carries the model's
+    figures in five discrete fill steps rather than in any length. A
+    continuous ramp would be a length by another name; `site_diagram.py` is
     where that argument is written out, along with why the two foul lines are
     always shaded alike.
-
-    What qualifies the table is a disclosure under it, and the disclosure's
-    visible line carries the qualification that matters — the share of fouls
-    the model drops — rather than a label promising it somewhere inside.
     """
     table = rows([
         (zone_label(z)
@@ -1146,6 +1284,31 @@ def zones_section(p: dict) -> str:
          fouls_str(z['fouls']))
         for z in p['zones']], head=('Seating area', 'Fouls a game'))
 
+    # The standing caveat. It is not gone and it is not softened; it has moved
+    # to where it bites, under the figures it is about, instead of standing in
+    # front of the page ahead of anything it could qualify.
+    caveat = ('<p class="strip"><b>Never checked against a real foul '
+              'ball.</b> No public record of where fouls land exists '
+              'anywhere, so every figure here is a physics model that has '
+              'never been validated against an observed landing.</p>')
+
+    return f'''<section class="answer">
+{park_diagram(p)}
+<p class="netline" id="netting">{netting_line(p)}</p>
+<h2 class="ah" id="zones">Foul balls a game, by seating area</h2>
+{table}
+{caveat}
+</section>'''
+
+
+def model_section(p: dict) -> str:
+    """How the figures above the fold were produced, and what they drop.
+
+    Methodology, which is not an answer to anything a reader arrived with, so
+    it is shut. The two things a reader would be misled without — the share of
+    fouls the model cannot place, and whether the two foul lines are one row
+    or two — are on the line that stays visible.
+    """
     notes = [f'''<div class="warn"><p><strong>About {p['unmatched_pct']:.0f}% of
 the fouls this model produces at {e(p['name'])} land where it has no seating
 area to put them</strong> &mdash; deep down the lines near the poles, in the gap
@@ -1164,14 +1327,11 @@ simulation noise in any case.</p>''')
         summary += ' The two foul lines are one row here, not two.'
 
     inner = f'''<p>One full game, both lineups, the same 18 batters at every park on this site,
-so the park is the only thing that changes. Foul balls per game reaching each
-area, largest first.</p>
-{park_diagram(p)}
-{table}
-<p class="sub">Model estimate. {p['sims']} simulations per batter, fixed seed.
-Not a count of anything observed.</p>
-{infold('How to read these figures', summary, chr(10).join(notes))}'''
-    return panel('zones', 'Where the model puts the fouls', inner)
+so the park is the only thing that changes. {p['sims']} simulations per batter,
+fixed seed. The table above is foul balls per game reaching each area, largest
+first &mdash; a model estimate, not a count of anything observed.</p>
+{chr(10).join(notes)}'''
+    return fold('model', 'How these figures were produced', summary, inner)
 
 
 def readings_section(p: dict) -> str:
@@ -1249,10 +1409,7 @@ def readings_section(p: dict) -> str:
             'stands in front of, and so cannot tell you which of them is lower '
             'risk than the order above suggests.</p>')
 
-    inner = f'''<p>Whether a net in front of a seat is good news depends on why you are asking.
-One field decides both readings, and they point opposite ways.</p>
-
-<h3>If you want to catch a ball</h3>
+    inner = f'''<h3>If you want to catch a ball</h3>
 <p>Ranked by modelled foul traffic, with anything the sources place fully behind
 netting removed &mdash; a ball cannot be caught through a net.</p>
 <ol class="ranked">{souvenir}</ol>
@@ -1353,11 +1510,7 @@ def figures_section(p: dict) -> str:
         used = caveat = ''
     pairs.append((cell('Deck under cover', head, used, caveat), val))
 
-    out = ['<p>Two published measurements place this park\'s seating in the '
-           'model, and a third decides whether its upper deck can be reached '
-           'at all. Each is given with where it came from and what disagrees '
-           'with it.</p>',
-           rows(pairs, head=('Figure', 'Published'))]
+    out = [rows(pairs, head=('Figure', 'Published'))]
 
     if src.get('extra'):
         out.append(f'<div class="note"><p>{src["extra"]}</p></div>')
@@ -1473,9 +1626,7 @@ def limits_section(p: dict) -> str:
         f'<p>{body.replace("{unnamed_sides}", str(side_counts()["unnamed"]))}'
         f'</p></div>'
         for t, body in MODEL_LIMITS)
-    inner = f'''<p>Written out rather than buried, because a reader who does not know these
-things will read the figures above as more than they are.</p>
-<div class="cols">{items}
+    inner = f'''<div class="cols">{items}
 <div><h3>Why there are no section numbers on this page</h3>
 <p>This model carries a printed seat label for every area it tracks. At nine of
 the 31 parks the club's own netting page contradicts them outright; at ten more,
@@ -1508,10 +1659,12 @@ def park_page(p: dict, base_url: str) -> str:
     if len(desc) > 300:
         desc = desc[:297] + '...'
 
-    # The standing caveat is a hairline strip rather than a block, so that the
-    # netting verdict below it is the largest thing on the page. It says the
-    # same words it always did; it is the netting that has to lead the eye,
-    # because the netting is the part of this page anybody sourced.
+    # Four things above the fold and nothing else: the ballpark, the drawing,
+    # where the net is, the distribution. The order under them is unchanged in
+    # the one way that matters — the netting statement's provenance still
+    # comes before the model's — but none of it is in front of the answer any
+    # more, and the standing caveat now sits under the figures it qualifies
+    # instead of ahead of everything it cannot.
     body = f'''<body>
 <header>
 <p class="crumb"><a href="../">FoulCast</a></p>
@@ -1519,14 +1672,11 @@ def park_page(p: dict, base_url: str) -> str:
 <p class="club"><b>{e(p['team'])}</b> &middot; {e(p['city'])}</p>
 </header>
 <main>
-<p class="strip"><b>Never checked against a real foul ball.</b> No public
-record of where fouls land exists anywhere. The netting below is sourced from the
-club; everything under it is a physics model that has never been validated
-against an observed landing.</p>
+{answer_section(p)}
 
-{netting_section(p)}
+{netting_source_section(p)}
 
-{zones_section(p)}
+{model_section(p)}
 
 {readings_section(p)}
 

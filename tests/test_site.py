@@ -387,20 +387,70 @@ def test_netting_section_precedes_the_model_section(built, slug):
     assert net < zones < readings, f'{slug}: model output is above the netting'
 
 
+def netting_sentence(text: str) -> str:
+    """The one sentence above the fold that says where the net is."""
+    assert 'id="netting"' in text, 'no netting statement on this page'
+    return text.split('id="netting"')[1].split('</p>')[0]
+
+
+@pytest.mark.parametrize('slug', sorted(s['slug'] for s in PARK_SOURCES.values()))
+def test_the_answer_stands_above_everything_that_qualifies_it(built, slug):
+    """Step 22. Four things above the fold, in this order, and nothing else.
+
+    Two passes before this one shortened the copy at the top of a park page
+    and it still opened with three paragraphs of caveats, because the problem
+    was never length: the page was organised around this project's
+    epistemology instead of around the reader's question. So the order is
+    enforced here rather than trusted, including the two things that would
+    slide back up first — a panel of working above the table, and the standing
+    caveat above the drawing it does not qualify.
+    """
+    text = built['pages'][slug]
+    order = [('the ballpark', text.index('<h1')),
+             ('the schematic', text.index('<figure class="dia">')),
+             ('where the netting runs', text.index('id="netting"')),
+             ('the distribution table', text.index('<table>')),
+             ('the standing caveat',
+              text.index('checked against a real foul ball'))]
+    for (before, a), (after, b) in zip(order, order[1:]):
+        assert a < b, f'{slug}: {after} is above {before}'
+    assert text.index('<section class="panel') > order[-1][1], \
+        f'{slug}: a panel of working stands above the answer'
+    assert text.index('id="netting"') < text.index('id="netting-source"'), \
+        f'{slug}: the netting sourcing is above the netting statement'
+
+
 @pytest.mark.parametrize('key', sorted(STADIUMS))
 def test_netting_state_is_stated_either_way(built, key):
     """A gap is stated as a gap, not left blank; a sourced extent names its
-    source and the date it was read."""
+    source and the date it was read.
+
+    Both halves are read off the sentence at the top of the page rather than
+    off the page as a whole. Step 22 moved the netting statement above the
+    fold and its sourcing below, and a gap stated only four screens down would
+    satisfy a whole-page substring check while the top of the page still read
+    as though the netting were known.
+    """
     slug = PARK_SOURCES[key]['slug']
     text = built['pages'][slug]
+    said = netting_sentence(text)
     stadium = STADIUMS[key]()
     join = join_park(stadium, key)
     if join.status == 'mapped':
+        assert said.startswith(">Netting "), \
+            f'{slug}: the sentence above the fold does not say where the net is'
+        # Lead with the fact. Who published it, how many parks match and what
+        # the club's coverage hedge says are all true, all on this page, and
+        # none of them belongs in the sentence that answers the question.
+        for word in ('publish', 'source', 'club', 'of the 31', 'matches'):
+            assert word not in said.lower(), \
+                f'{slug}: the netting sentence leads with "{word}", not the net'
         assert 'behind netting' in text
         assert join.park.source in text
         assert join.park.retrieved in text
     else:
-        assert 'Not verified' in text, f'{slug}: gap not stated'
+        assert 'no area below is marked as behind netting' in said, \
+            f'{slug}: gap not stated above the fold'
         assert 'gap' in text.lower()
 
 

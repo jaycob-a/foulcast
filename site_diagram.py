@@ -377,8 +377,14 @@ def _alt(p: dict) -> str:
             f'game. {heaviest} {sides}')
 
 
-def _legend(p: dict, marked: bool) -> str:
-    """The step boundaries, and what the netting mark does and does not cover.
+def _legend(p: dict, marked: bool) -> tuple[str, str]:
+    """(what a reader needs to read the drawing, what qualifies it).
+
+    The split is the point. The shading steps and the netting mark are the
+    key to the picture — without them the drawing means nothing, so they stay
+    visible above the fold. Everything else the drawing has to admit to is
+    prose about the drawing rather than the drawing itself, and it goes into
+    the disclosure with the caption.
 
     The netting line is not decoration. At 24 of the 31 parks there is no mark
     anywhere on the drawing, and a reader has to be told that this means the
@@ -387,7 +393,7 @@ def _legend(p: dict, marked: bool) -> str:
     """
     swatches = ''.join(f'<span><i class="z{i}"></i>{w}</span>'
                        for i, w in enumerate(STEP_WORDS))
-    out = [f'<p class="leg"><b>Fouls a game</b>{swatches}</p>']
+    key = [f'<p class="leg"><b>Fouls a game</b>{swatches}</p>']
 
     if marked:
         note = ('the club\'s own page puts these seats behind netting')
@@ -400,17 +406,17 @@ def _legend(p: dict, marked: bool) -> str:
         ) if present]
         tail = (f' Areas that are {" or ".join(others)} carry no mark.'
                 if others else '')
-        out.append(f'<p class="leg"><span><i class="nm"></i>{note}</span></p>'
-                   f'<p class="dcap">The mark runs along the front of an area '
-                   f'the club places fully behind netting.{tail} No mark is '
-                   f'not no net: it is no published extent this site could '
-                   f'attach to those seats.</p>')
+        key.append(f'<p class="leg"><span><i class="nm"></i>{note}</span></p>')
+        qualifier = (f'<p>The mark runs along the front of an area the club '
+                     f'places fully behind netting.{tail} No mark is not no '
+                     f'net: it is no published extent this site could attach '
+                     f'to those seats.</p>')
     else:
-        out.append('<p class="dcap"><strong>No netting is marked here</strong>, '
-                   'because nothing published could be attached to these '
-                   'seating areas. Read the absence as a missing source, not '
-                   'as a missing net.</p>')
-    return ''.join(out)
+        qualifier = ('<p><strong>No netting is marked here</strong>, because '
+                     'nothing published could be attached to these seating '
+                     'areas. Read the absence as a missing source, not as a '
+                     'missing net.</p>')
+    return ''.join(key), qualifier
 
 
 def park_diagram(p: dict) -> str:
@@ -493,15 +499,22 @@ def park_diagram(p: dict) -> str:
            f'aria-label="{_esc(_alt(p))}">'
            f'{"".join(paths)}{"".join(labels)}</svg>')
 
-    return (f'<figure class="dia">{svg}'
-            f'{_legend(p, bool(marks))}'
-            f'<figcaption class="dcap">Schematic, not to scale and not a '
-            f"seating chart: one generic bowl, its depth set by this park's "
-            f'published foul territory and backstop, on a scale shared by all '
-            f'31 parks. Shade carries the figures and size does not, and both '
-            f'foul lines are always shaded alike &mdash; the model builds them '
-            f'as exact mirrors, so the gap between the two rows below is '
-            f'simulation noise.</figcaption></figure>')
+    # The key stays on screen; what the drawing has to admit to is one click
+    # under it. The summary line is not a label — it carries the admission
+    # that matters, so a reader who never opens it has still been told the
+    # drawing is not a seating chart.
+    key, qualifier = _legend(p, bool(marks))
+    return (f'<figure class="dia">{svg}{key}'
+            f'<figcaption class="dcap"><details class="dfold"><summary>'
+            f'Schematic, not to scale and not a seating chart</summary>'
+            f'<div>{qualifier}'
+            f"<p>One generic bowl, its depth set by this park's published "
+            f'foul territory and backstop, on a scale shared by all 31 '
+            f'parks. Shade carries the figures and size does not, and both '
+            f'foul lines are always shaded alike &mdash; the model builds '
+            f'them as exact mirrors, so the gap between the two rows in the '
+            f'table is simulation noise.</p></div></details></figcaption>'
+            f'</figure>')
 
 
 def _esc(s: str) -> str:
@@ -519,7 +532,7 @@ def _esc(s: str) -> str:
 # one thing, a seating area the club's own statement places outside its
 # netting, and a shading ramp must not borrow it.
 CSS = """
-.dia{margin:.8rem 0 .2rem}
+.dia{margin:.7rem 0 .2rem}
 .dia svg{display:block;width:100%;max-width:31rem;height:auto;margin:0 auto}
 .dia path{stroke:#fff;stroke-width:1.5;stroke-linejoin:round}
 .z0{fill:#dfebed;background:#dfebed}
@@ -544,6 +557,14 @@ CSS = """
 .dcap{font-size:.76rem;line-height:1.45;color:#5b6270;margin:.35rem 0 0;
  max-width:72ch}
 .dcap strong{color:#16181d}
+.dfold>summary{color:#0b6a74;font-weight:700}
+.dfold>summary:hover{color:#084950}
+.dfold>summary::after{content:" +"}
+.dfold[open]>summary::after{content:" \\2212"}
+.dfold p{margin:.4rem 0 0}
+@media (min-width:64rem){
+ .dia svg{max-width:40rem}
+}
 @media (prefers-color-scheme:dark){
  .dia path{stroke:#101216}
  .z0{fill:#1f434e;background:#1f434e}
@@ -560,5 +581,7 @@ CSS = """
  .leg i{border-color:#3a414d}
  .leg i.nm{border-top-color:#e4e7ee}
  .dcap strong{color:#e4e7ee}
+ .dfold>summary{color:#4fb6c0}
+ .dfold>summary:hover{color:#7fd0d8}
 }
 """
