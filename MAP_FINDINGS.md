@@ -2965,3 +2965,327 @@ Downstream:
    different series that happen to share numbers, the deck-level ranges I quote
    for that park would be describing two things at once. The side readings do
    not depend on it — both rows are on the same arm either way.
+
+# Step 16 — the last map (2026-09-07)
+
+## What was left
+
+The folder was listed and cross-referenced against this file before anything
+was read. `seating_maps/` holds **30 files**. Twenty-nine of them are written up
+above: five in Step 11, six each in Steps 12, 13, 14 and 15. Exactly **one** had
+never been read:
+
+| Park | File | Pixels | Type | Legibility |
+|---|---|---|---|---|
+| Citi Field | `citi_field.png` | 1500x1520 | flat plan, palette PNG | excellent |
+
+So this step reads one map, not six. Step 15's own closing notes already
+predicted this — "`citi_field.png` is the one file in that folder that no step
+has read yet, and it is the obvious next one". The two parks that remain
+`untestable` after this step are Las Vegas Ballpark, which has no map in the
+folder at all, and Petco Park, which is untestable by the overlap guard by
+design. Neither is fixable by reading a file that is not there.
+
+**Nothing in `stadium.py` was changed.** The code changes are six entries in
+`seat_map.SIDE_ANCHORS` and the named-sides list, count and name of one test in
+`tests/test_site.py`.
+
+## Summary of Step 16
+
+| Park | Sides | Plate zone | Severity |
+|---|---|---|---|
+| **Citi Field** | **correct** — on all three of the rings its table numbers | **field level ≈0** — `HOME-F` 115–120 is centred on the plate; Excelsior off ≈2 toward 3B; Promenade off ≈5 toward 3B | Mild |
+
+This is the mildest verdict any park has drawn. It is also the only park in the
+thirty whose behind-plate block at field level is already in the right place.
+
+### Which convention it uses
+
+Monotone from pole to pole with the plate mid-range, with the low numbers at
+the **right-field (first-base) pole** — the same shape as American Family
+Field, loanDepot park, Rogers Centre, Target Field and T-Mobile Park, and the
+shape that produces correct side blocks. Every one of the five numbered rings
+does it:
+
+| Ring | Runs | Plate lands at |
+|---|---|---|
+| 100 (field) | 101 at the RF pole → 131 at the LF pole, then 132–143 close the loop through the outfield | boundary **117/118** |
+| 200 | 201 (1B arm) → 239 (3B arm) | **222** |
+| 300 (Excelsior) | 306 (1B arm) → 333, then 334–339 into the left-field bank; 301–305 drawn detached out in right field | **319** |
+| 400 | 401 (1B arm) → 431, then 432–437 into the left-field bank | **414/415** |
+| 500 (Promenade) | 501 (1B arm) → 532, then 533–538 into the left-field bank | **514** |
+
+Note the loop. Citi Field is one of the few parks in the thirty whose field
+level closes all the way round: 101 sits at the right-field foul-pole corner,
+the numbers climb anticlockwise past the plate to 131 at the left-field corner,
+carry on through left field as 132–139, and come back through right-centre as
+140–143 to meet 101 again. The upper rings do not close — they stop dead at
+401/501 on the first-base side and run on to 437/538 in left field, which is
+why the drawn bowl is lopsided.
+
+## Citi Field — `citi_field.png`
+
+Flat plan, home plate at the bottom, outfield at the top. Excellent legibility:
+every number below was resolved at 3x–8x, and the plate rings at 6x are sharp
+enough to read the cell boundaries, not just the labels.
+
+### The landmark problem, and how it was settled
+
+**This map names no base and no field side anywhere on the sheet.** Every piece
+of text on it was magnified and read. In full, they are: `TASTE OF THE CITY`,
+`SCOREBOARD`, `BULLPEN`, `CADILLAC CLUB AT PAYSON'S`, `CAESARS SPORTSBOOK AT
+THE METROPOLITAN MARKET`, `EMPIRE CLUB`, `HOME`, `VISITORS`, `PIAZZA 31 CLUB`,
+`HUDSON WHISKEY NY CLUB`. There is no legend, no level names, no netting key
+and no "1st Base" / "Left Field" heading of the kind Comerica, Angel Stadium,
+Target Field, loanDepot and Tropicana supplied. On the face of it this is
+American Family Field and Kauffman Stadium again — orientation resting on the
+plan convention alone, which Step 15 called its single largest exposure.
+
+It is not, quite, because this park's outfield is asymmetric and the asymmetry
+is published. **The drawn field was measured rather than eyeballed.** Home
+plate was located at the convergence of the two drawn foul lines, at
+(754, 887); the two lines leave it at 48.9° and 44.3° from vertical, so the
+centre-field axis is tilted 3.4° to the left of straight up and every angle
+below is taken from that axis, not from the image's vertical. The playing
+surface was flood-filled from its own two fill colours, its holes closed, and
+rays cast out from the plate:
+
+| Off the CF axis | 0° | 20° | 25° | 30° | 45° |
+|---|---|---|---|---|---|
+| Drawn left | 527 | 459 | 452 | 465 | 420 |
+| Drawn right | 527 | **517** | **487** | **484** | **442** |
+
+The drawn right side is deeper than the drawn left at every angle from 20°
+out. Citi Field's published dimensions are LF 335, LCF 358, CF 408, RCF 398,
+RF 330 — right-centre is 40 ft deeper than left-centre. Scaling dead centre
+(527 px) to 408 ft gives 0.774 ft/px, and then:
+
+- drawn left at 30° = **360 ft** against a published left-centre of **358**
+- drawn right at 20° = **400 ft** against a published right-centre of **398**
+
+Under the mirror hypothesis those same two readings would have to be 398 and
+358, and each misses by about 40 ft. That is not proof — I chose the scale from
+centre field, and the angles at which a club paints its alley markers are not
+published — but it is a two-sided quantitative fit that the mirror fails, and
+it is a great deal better than the plan convention on its own.
+
+Two weaker things agree with it:
+
+- **`BULLPEN`** is printed inside the image, in the grey wedge beyond the wall
+  between section 143 and the field, on the right-hand side of centre. Citi
+  Field's two bullpens are stacked in right-centre. It is the only bullpen
+  drawn on the sheet.
+- **`HOME`** is printed against the right-hand dugout and `VISITORS` against
+  the left. The Mets' dugout is on the first-base line, so this agrees — but
+  Step 15 found two parks whose home dugout is on the third-base side, and this
+  file does not let a dugout label carry an orientation. It is recorded, not
+  used.
+
+One label does **not** obviously agree, and it is recorded rather than
+explained away. See "What I am least confident about" below.
+
+### Behind home plate
+
+Six concentric products sit behind the plate. Innermost first, reading the
+drawn arc left to right (3B side to 1B side):
+
+- **Lettered club ring** (blue): `H G F E D C B A`. The plate ray passes at the
+  **D/C** boundary; the ring is not quite symmetric because B and A are drawn
+  wider than the rest.
+- **Bare gold ring**: `19 18 17 16 15 14 13 12 11`. The plate ray passes
+  through **15**, which is the middle section of the nine. Clean and symmetric.
+- **Bare grey ring**: `10 9 8 7 6A 6 5 5A 4 3 2 1`. The plate ray passes at the
+  **6/5** boundary. The four central cells — 6A, 6, 5, 5A — are drawn much
+  deeper than the rest of the ring, and reach back to the same radius as the
+  100-series sections beside them.
+- **100 ring** (navy at this end): `… 120 119 118` on the left and
+  `117 116 115 …` on the right, with the deep 6A/6/5/5A block filling the arc
+  between them. **No 100-series section is directly behind the plate.** 118 and
+  117 are the innermost pair, and the boundary between them is where the plate
+  ray falls.
+- **200 ring**: the plate ray passes through **222**, which sits dead centre —
+  225/219, 224/220 and 223/221 are symmetric pairs about it.
+- **300 ring**: the plate ray passes through **319**, in its left half.
+  The `PIAZZA 31 CLUB` strip runs along the outside of 318–322.
+
+Further out, the 400 ring's plate falls at the **414/415** boundary and the 500
+ring's inside **514**, with the `HUDSON WHISKEY NY CLUB` strip under 514/515.
+
+**A corroboration from outside the map.** `SOURCED_DATA.md` carries a
+secondary, unverified compilation for Citi Field netting: sections 107–128,
+with the net proper 111–124. Both ranges are exactly symmetric about **117.5**
+— 107→117.5 is 10.5 sections and 117.5→128 is 10.5; 111→117.5 is 6.5 and
+117.5→124 is 6.5. That is the boundary this map puts the plate on, arrived at
+by an unrelated route. It says nothing about which side is which, and it does
+not close the netting gap: `join_park` still returns `source_gap /
+no_primary_source` for this park, because the Mets publish nothing.
+
+### Lower bowl, pole to pole
+
+Reading the 100 ring anticlockwise from the right-field foul pole:
+
+- **101 102 103 104** (pink) sit past the foul-pole corner, facing the
+  outfield. The `CADILLAC CLUB AT PAYSON'S` strip runs in front of 101–102.
+- **105** sits on the corner itself, where the drawn wall makes its V.
+- **106 107 108 109 110** (green) run down the first-base line. 108 is a narrow
+  wedge squeezed between 107 and 109.
+- **111 112 113 114** (yellow), the first-base infield, with a second thin
+  orange row carrying the same four numbers between them and the `HOME` dugout.
+- **115 116 117** (navy) into the backstop bend. **[plate]** **118 119 120**
+  (navy) out of it.
+- **121 122 123 124** (yellow), the third-base infield, with the same doubled
+  thin orange row against the `VISITORS` dugout.
+- **125 126 127 128 129 130 131** (green) up the third-base line; 127, like
+  108, is a narrow wedge.
+- **132 133** at the left-field foul-pole corner, then **134–139** (pink)
+  across left field, the batter's eye and the Home Run Apple, then **140 141
+  142 143** (teal) in right-centre above the bullpen, closing the loop at 101.
+
+Both foul-line arms therefore run **toward** the plate in increasing numbers
+from their own pole. There is no outward-from-the-plate block anywhere on this
+map.
+
+### Netting drawn on the map
+
+**None.** No net line, no hatch, no shaded band, no legend entry. Checked at 6x
+along the whole backstop arc and at 3x down both foul lines. This is the same
+answer as most of the thirty; Kauffman is still the only map in the folder that
+draws one.
+
+### Deck levels and number ranges
+
+| Level | Printed range | Count | Named by the table? |
+|---|---|---|---|
+| Lettered club ring | A–H | 8 | no |
+| Gold field ring | 11–19 | 9 | no |
+| Grey field ring | 1–10, plus 5A and 6A | 12 | no |
+| 100 (field) | 101–143, a closed loop | 43 | 104–132 only |
+| 200 | 201–239 | 39 | **no** |
+| 300 (Excelsior) | 301–339; 301–305 detached in right field | 39 | 309–329 only |
+| 400 | 401–437 | 37 | **no** |
+| 500 (Promenade) | 501–538 | 38 | 506–531 only |
+
+The map prints **225** section labels. `_make_citi_field_sections()` names
+**76** of them across three rings and is silent about the 200 ring, the 400
+ring and all three premium field rings. The level names in the table —
+"Excelsior", "Promenade" — are Citi Field's real ones, but they do not come
+from this map: it prints no level names at all.
+
+### Against the zone table
+
+`_make_citi_field_sections()` carries eleven zones. Set against the map:
+
+| Zone | Table's label range | Table's side | Where the map puts it | Verdict |
+|---|---|---|---|---|
+| `1B-DUG` | 104–110 | 1B | right-hand arm (104 on the pole corner, 105–110 down the line) | **correct** |
+| `1B-FB1` | 111–114 | 1B | right-hand arm, infield | **correct** |
+| `HOME-F` | 115–120 | HOME | straddles the plate, 115–117 on the 1B side and 118–120 on the 3B side | **correct, and centred** |
+| `3B-FB1` | 121–125 | 3B | left-hand arm, infield | **correct** |
+| `3B-DUG` | 126–132 | 3B | left-hand arm up to the pole corner | **correct** |
+| `1B-LB1` | 309–316 | 1B | right-hand arm | **correct** |
+| `HOME-B` | 317–325 | HOME | plate is at 319; the block's midpoint is 321 | **off ≈2 toward 3B** |
+| `3B-LB1` | 326–329 | 3B | left-hand arm | **correct** |
+| `1B-UB` | 506–514 | 1B | right-hand arm; 514 is the plate section itself | **correct** |
+| `HOME-U` | 515–523 | HOME | plate is at 514; the block's midpoint is 519, and every one of its nine sections is on the 3B side of the plate | **off ≈5 toward 3B** |
+| `3B-UB` | 524–531 | 3B | left-hand arm | **correct** |
+
+So: **sides correct** everywhere, and a plate block that is exact at the field
+level, two sections out one ring up and five out two rings up. The drift is all
+in the same direction, toward third base. The rings are not concentric with
+each other at this park — the 400 ring's own centre of symmetry sits about
+25 px to the right of the 200 and 300 rings' — so a table that divides each
+ring into three equal-ish arcs will drift the same way on every ring it does
+not measure.
+
+`HOME-U` is the one worth naming. The table calls 515–523 the behind-plate
+Promenade block, and all nine of those sections are up the third-base line.
+
+## What changed in code
+
+`seat_map.SIDE_ANCHORS` gains a `citi_field` entry with six anchors:
+
+| Anchors added | Verdict before | Verdict after |
+|---|---|---|
+| 106–114, 306–316 and 506–513 → 1B; 121–130, 322–332 and 518–530 → 3B | `untestable` | **`ok`** (46 agreeing, 0 disagreeing, 16 unmatched) |
+
+Every range is restricted to numbers the map prints and stops clear of its
+ring's plate bend — which is why the first-base anchors stop at 114, 316 and
+513 and the third-base ones start at 121, 322 and 518, and why 101–105 are left
+out at the field level (101–104 are past the foul-pole corner and 105 is on
+it).
+
+Downstream:
+
+- `tests/test_site.py::test_only_fifteen_parks_may_name_a_foul_line` becomes
+  `..._sixteen_...`. Citi Field joins the list; none left it. The index page's
+  count moves from 15 to 16 of 31 on its own — the number is computed.
+- No park changed `join_park` status. Citi Field stays `source_gap /
+  no_primary_source`; the netting-gap count stays at 24.
+- Across all 31 parks the side check now reads: **16 `ok`, 9 `inconsistent`, 4
+  `flipped`, 2 `untestable`**. The two untestable are Las Vegas Ballpark (no
+  map in the folder) and Petco Park (untestable by the overlap guard, by
+  design). Every map in `seating_maps/` has now been read.
+- `site_data.MAP_READS` still carries the five Step 11 parks only. The
+  twenty-five parks read in Steps 12–16 are not yet written up for the site.
+
+## What I am least confident about, after Step 16
+
+1. **The orientation still has no label behind it.** The dimension fit above is
+   the best evidence in this step and I believe it, but it is a fit, not a
+   printed word: I picked the scale from centre field, and where a club paints
+   its 358 and 398 markers is not something the map or the club publishes as an
+   angle. What makes me willing to sign it is that the mirror fails on both
+   sides at once and by about 40 ft each — a mirrored sheet would have to make
+   the shallow alley the deep one. If it is wrong anyway, all six anchors flip
+   together and Citi Field goes straight from `ok` to `flipped`. This is the
+   largest exposure in the step, and it is the same exposure American Family
+   Field and Kauffman Stadium carry, only partly retired.
+2. **`SCOREBOARD`, and I could not resolve it.** The map floats two grey
+   label boxes above the top of the bowl, stacked: `TASTE OF THE CITY` and,
+   under it, `SCOREBOARD`. The lower box spans x 684–968, and the centre-field
+   axis at that height is at x≈714 — so it covers the axis and leans right, and
+   would read as right-centre if it is meant geographically. I could not settle
+   where Citi Field's main videoboard actually is well enough to say whether
+   that agrees with my orientation or contradicts it, and the two boxes are
+   drawn outside the seating footprint and attached to no section, which is how
+   a legend behaves rather than how a map feature does. **I have therefore used
+   it in neither direction.** It is the one thing on this sheet I looked at and
+   could not turn into evidence, and a later reader should know I saw it rather
+   than discover it themselves.
+3. **"No 100-series section is directly behind the plate."** This rests on
+   reading 6A, 6, 5 and 5A as unusually deep cells of the bare grey ring rather
+   than as members of the 100 ring drawn without their hundreds digit. At 6x
+   the cell boundaries favour the first reading — 7, 8, 9, 10 and 1, 2, 3, 4
+   are visibly shallower cells with 118/119/120 and 117/116/115 behind them,
+   while 6A through 5A run the full depth with nothing behind them — but I
+   would not call it beyond argument. Nothing depends on it: both readings put
+   the plate on the 117/118 boundary, and that is what the anchors and the
+   `HOME-F` verdict use.
+4. **The Promenade plate at 514, and so the "off ≈5".** I took the plate normal
+   as the bisector of the two drawn foul lines, which is tilted 3.4° from the
+   image's vertical. On the 500 ring, 3° of angle is most of a section wide. A
+   plain vertical from the plate lands on the 514/515 boundary instead of
+   inside 514, so the offset could as easily be ≈4 as ≈5. The direction —
+   `HOME-U` sitting entirely up the third-base line — does not depend on which
+   of those two it is.
+5. **The 400 ring's plate at 414/415 is the weakest number in the section.**
+   That ring's own centre of symmetry sits about 25 px right of the 200 and 300
+   rings', so it is not concentric with them, and a single number for it is
+   traced through two rings that disagree about where the middle is. No anchor
+   and no verdict uses it; it is quoted because the ring exists and the table
+   ignores it.
+6. **Section 105.** I read it as sitting on the foul-pole corner itself, where
+   the drawn wall makes its V, rather than cleanly on the first-base line or
+   cleanly in the outfield. That is why the first-base field-level anchor
+   starts at 106. If 105 is really on the line, the anchor is one section
+   shorter than it could be, which costs nothing; if it were really in the
+   outfield and I had included it, that would have been a false anchor. The
+   conservative direction was the cheap one.
+7. **The doubled orange rows at 111–114 and 121–124.** Each of those eight
+   numbers is printed twice, once on a thin strip against the dugout and once
+   on the wide block behind it, in different fills. I have read that as one
+   numbering split across two rows, the same call Step 15 made for four other
+   parks, because the two rows sit on the same radials and the numbers line up.
+   If they are instead two different series sharing numbers, the field-level
+   count of 43 is wrong. The side reading is not affected — both rows are on
+   the same arm either way.

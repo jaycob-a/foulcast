@@ -1461,6 +1461,85 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                    basis='same labels as the 112 anchor above'),
     ),
 
+    # --- Step 16 -----------------------------------------------------------
+    #
+    # The last unread file in `seating_maps/`. Citi Field's sheet names no
+    # base and no field side anywhere on it, so the orientation rests on the
+    # drawn plan — plate at the bottom, outfield at the top, first base the
+    # right-hand arm — as American Family Field's and Kauffman Stadium's do.
+    # Unlike those two it can be checked against the park's own published
+    # outfield dimensions, and that check is the reason these anchors are
+    # `map_read` rather than a shrug. Measured out from the drawn plate along
+    # rays off the centre-field axis, the drawn field runs 459 / 452 / 465 px
+    # at 20 / 25 / 30 degrees to the left and 517 / 487 / 484 px at the same
+    # three angles to the right; scaling dead centre (527 px) to Citi Field's
+    # published 408 ft puts the left alley at 360 ft against a published
+    # left-centre of 358, and the right at 400 ft against a published
+    # right-centre of 398. Mirrored, those same two readings would have to be
+    # 398 and 358, and each misses by about 40 ft. The map's own BULLPEN
+    # label, beyond the wall on the right-hand side of centre, agrees: Citi
+    # Field's two bullpens are in right-centre. The HOME dugout is drawn on
+    # the right-hand arm too, and carries no weight — see Step 15.
+
+    'citi_field': (
+        SideAnchor('', 106, 114, '1B',
+                   'right-hand arm ascending toward the plate: 106 107 108 '
+                   '109 110 111 112 113 114, then the Field Box block 115 '
+                   '116 117 at the backstop bend',
+                   'seating_maps/citi_field.png (Citi Field seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom, outfield at the '
+                         'top, so first base is the right-hand arm. Fixed '
+                         "against the park's published outfield "
+                         "dimensions and the map's BULLPEN label; see the "
+                         'comment above this entry. Stops at 114 to stay '
+                         'clear of the 117/118 plate bend, and starts at 106 '
+                         'because 101-104 are past the foul-pole corner in '
+                         'right field and 105 sits on it'),
+        SideAnchor('', 121, 130, '3B',
+                   'left-hand arm ascending away from the plate: 121 122 123 '
+                   '124 125 126 127 128 129 130, then 131 and the 132/133 '
+                   'pair at the foul-pole corner',
+                   'seating_maps/citi_field.png (Citi Field seating map)',
+                   'map_read', '2026-09-07',
+                   basis='the arm opposite the one the BULLPEN and the deep '
+                         'alley fix; the VISITORS dugout is drawn against '
+                         '121-124 on it. Starts at 121 to stay clear of the '
+                         '117/118 plate bend and stops at 130 to stay clear '
+                         'of the corner'),
+        SideAnchor('', 306, 316, '1B',
+                   'Excelsior ring, right-hand arm ascending toward the '
+                   'plate: 306 307 ... 316 317 318, then 319 behind the '
+                   'plate. 301-305 are drawn detached, out in right field',
+                   'seating_maps/citi_field.png (Citi Field seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same orientation as the 106-114 anchor. Stops at '
+                         '316 to stay clear of the plate section 319'),
+        SideAnchor('', 322, 332, '3B',
+                   'Excelsior ring, left-hand arm ascending away from the '
+                   'plate: 320 321 322 ... 332 333, after which 334-339 turn '
+                   'into the left-field bank',
+                   'seating_maps/citi_field.png (Citi Field seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same orientation as the 121-130 anchor. Starts at '
+                         '322 to stay clear of the plate section 319'),
+        SideAnchor('', 506, 513, '1B',
+                   'Promenade ring, right-hand arm ascending toward the '
+                   'plate: 501 502 ... 513, then 514 behind the plate',
+                   'seating_maps/citi_field.png (Citi Field seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same orientation as the 106-114 anchor. Stops at '
+                         '513 because 514 is the plate section itself'),
+        SideAnchor('', 518, 530, '3B',
+                   'Promenade ring, left-hand arm ascending away from the '
+                   'plate: 515 516 ... 530 531 532, after which 533-538 turn '
+                   'into the left-field bank',
+                   'seating_maps/citi_field.png (Citi Field seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same orientation as the 121-130 anchor. Starts at '
+                         '518 to stay clear of the plate section 514'),
+    ),
+
 }
 
 

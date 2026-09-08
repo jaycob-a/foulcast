@@ -293,7 +293,7 @@ def test_no_foul_line_is_named_where_it_is_not_established(built, key):
         f'{slug}: sides are unestablished but the pair was not folded'
 
 
-def test_only_fifteen_parks_may_name_a_foul_line(built):
+def test_only_sixteen_parks_may_name_a_foul_line(built):
     """Three parks joined the list in Step 13, off their seating maps:
     Daikin Park, Wrigley Field and Yankee Stadium. Yankee Stadium is the
     instructive one — it always had two club-page anchors, but they name
@@ -315,15 +315,24 @@ def test_only_fifteen_parks_may_name_a_foul_line(built):
     foul lines and only the behind-plate block is misplaced — the shape Target
     Field and T-Mobile Park have. The plate offset is real at both (≈13 at
     American Family, ≈13 at loanDepot) and this list cannot see it; that is
-    what `check_side_anchors` says an 'ok' does and does not mean."""
+    what `check_side_anchors` says an 'ok' does and does not mean.
+
+    Step 16 added one, Citi Field, and moved none off. It is the last file in
+    `seating_maps/` to be read, and it has the same shape again: 101 at the
+    right-field pole, 143 at the end of the loop, the plate mid-range, so both
+    side blocks land right on all three of the rings its table numbers. The
+    behind-plate block is the interesting part — at the field level it is the
+    only one in the repo that is already centred, and two rings up it is five
+    sections off. An 'ok' cannot see either."""
     named = sorted(p['key'] for p in built['parks'].values()
                    if p['sides']['named'])
-    assert named == ['american_family', 'chase_field', 'citizens_bank',
-                     'dodger_stadium', 'fenway_park', 'great_american',
-                     'guaranteed_rate', 'loan_depot', 'minute_maid',
-                     'rogers_centre', 'target_field', 'tmobile_park',
-                     'truist_park', 'wrigley_field', 'yankee_stadium']
-    assert '15 of the 31 parks have one' in flat(built['pages'][''])
+    assert named == ['american_family', 'chase_field', 'citi_field',
+                     'citizens_bank', 'dodger_stadium', 'fenway_park',
+                     'great_american', 'guaranteed_rate', 'loan_depot',
+                     'minute_maid', 'rogers_centre', 'target_field',
+                     'tmobile_park', 'truist_park', 'wrigley_field',
+                     'yankee_stadium']
+    assert '16 of the 31 parks have one' in flat(built['pages'][''])
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
