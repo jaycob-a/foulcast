@@ -2377,3 +2377,591 @@ parks read in Steps 12, 13 and 14 are not yet written up for the site.
    just used two of those published extents (PNC's 101→130, T-Mobile's 126–134)
    as evidence *about the map*. That works in this direction only. A map that
    does not draw netting is not evidence that a park has none.
+
+---
+
+# Step 15 — six more maps (2026-09-07)
+
+Six further maps, read the same way as the twenty-three above: cropped and
+upsampled 2.5x–12x around the plate, both foul lines, the deck edges and the
+legend, and read at that magnification. Where a colour carried the argument it
+was not eyeballed — the legend swatch was sampled for its RGB value and the map
+searched for connected regions of that exact colour, so that "this fill appears
+here and nowhere else" is a measurement rather than an impression. Anything I
+could not resolve is marked as such rather than inferred.
+
+**Nothing in `stadium.py` was changed.** The code changes are entries in
+`seat_map.SIDE_ANCHORS` for five parks and an addition to a sixth, one recorded
+gap kind in `tests/test_netting.py`, and the named-sides list and count in
+`tests/test_site.py`.
+
+The folder was listed first. All six files were present under names close to
+but not identical with the park names: `american_field.jpg`,
+`loandepot_park.png`, `kauffman_stadium.jpg`, `globe_life.jpg`,
+`rogers_centre.jpg`, `tropicana_field.png`. No file had to be re-encoded.
+
+| Park | File | Pixels | Type | Legibility |
+|---|---|---|---|---|
+| American Family Field | `american_field.jpg` | 1536x1920 | flat plan | excellent |
+| loanDepot park | `loandepot_park.png` | 3300x2100 | rotated plan, plate at lower right | excellent |
+| Kauffman Stadium | `kauffman_stadium.jpg` | 1536x1536 | flat plan | excellent |
+| Globe Life Field | `globe_life.jpg` | 2208x2758 | rotated plan, mild perspective | fair — the densest of the twenty-nine, five concentric label rings |
+| Rogers Centre | `rogers_centre.jpg` | 1536x1988 | flat plan | good |
+| Tropicana Field | `tropicana_field.png` | 1024x1024 | flat plan | good |
+
+## Summary of Step 15
+
+| Park | Sides | Plate zone | Severity |
+|---|---|---|---|
+| **American Family Field** | **correct** — low at 1B, high at 3B, on all four rings | off ≈13 toward 1B at field level, ≈11 on the Loge, ≈9 on the Terrace | Moderate |
+| **loanDepot park** | **correct** — on both bowl blocks and both Vista blocks | off ≈13 toward 1B in the bowl, ≈8 on the Legends ring, ≈7 on the Vista ring | Moderate |
+| **Rogers Centre** | **correct** — and the club's own netting page already said so | off ≈13 toward 1B at the 100 level, ≈7 on the 200 and 500 rings | Moderate |
+| Kauffman Stadium | **scrambled** — `1B Infield` (114–120) and `1B Dugout` (121–131) are the *third*-base line, `3B Dugout` (133–143) is the *first* | off ≈16 toward 3B at field level; the 400 ring's plate block is nearly right | Severe |
+| Globe Life Field | **scrambled** — `1B Infield` (6–11) is the third-base line, `3B Infield` (25–30) is the first-base line and the right-field corner | off ≈10 toward 3B in the bowl, ≈9 on the mezzanine | Severe |
+| Tropicana Field | **scrambled by parity** — the park numbers one foul line odd and the other even, and every zone range spans both | not a meaningful number on a parity-split ring | Severe |
+
+None of the six was unreadable. A handful of details inside them were, and each
+is marked where it appears and again at the end.
+
+### Which convention each of the six uses
+
+Step 14 found that most zone tables assume the bowl is numbered outward from a
+plate block in the middle, while most parks number monotonically from one foul
+pole to the other with the plate mid-range. All six of these parks number
+monotonically. Not one numbers outward from the plate. What separates them is
+which pole the low numbers are at — and Tropicana's third answer:
+
+| Park | Low numbers at | Plate lands at |
+|---|---|---|
+| American Family Field | right field (1B) | 117/118 of 101–131 |
+| loanDepot park | right field (1B) | 14/15 of 1–33 |
+| Rogers Centre | right field (1B) | 123/124 of 101–148 |
+| Kauffman Stadium | **left field (3B)** | 126–129 of 101–152 |
+| Globe Life Field | **left field (3B)** | 13/14 of 1–33 |
+| Tropicana Field | **neither — parity split** | 101/102, odds up 3B, evens up 1B |
+
+That is the whole story of this step. The three parks whose rings run
+low-at-first-base come out with their side blocks on the right foul lines and
+only the behind-plate block misplaced, exactly as Target Field and T-Mobile
+Park did. The two that run the other way have their two infield blocks on each
+other's lines. Tropicana is a second Petco.
+
+### The dugout label is worth nothing, and two of these maps prove it
+
+`seat_map.SIDE_ANCHORS` has never used a HOME DUGOUT label as the landmark that
+fixes a map, and this step is the first to show what that would have cost.
+loanDepot park prints MARLINS DUGOUT on the **third-base** arm; Rogers Centre
+prints BLUE JAYS DUGOUT on the **third-base** arm. Both readings are backed by
+something better than a dugout — loanDepot by its own legend, Rogers by the Blue
+Jays' netting page, a `primary` anchor in this repo since Step 8. Anyone reading
+either map by "home dugout means first base" would have mirrored the park.
+
+That matters here because two of these six maps have **nothing else**. See
+"What I am least confident about, after Step 15".
+
+## American Family Field — sides correct, plate off ≈13
+
+Flat plan, plate at the bottom, outfield at the top, standard orientation. The
+cleanest of the six to read; every number below was resolved at 3x or better.
+
+**Landmark that fixed it — and this is the weak one.** This map names no field
+and no base anywhere on the sheet. I magnified the outfield band, both corners
+and the whole legend looking for a "Left Field" or "Right Field" heading of the
+kind Comerica, Angel Stadium and Target Field supplied, and there is none. Its
+only side-bearing labels are **HOME DUGOUT**, drawn against 112–115, and
+**VISITORS DUGOUT**, drawn against 120–123 — and per the section above, a dugout
+label is not a landmark. So the orientation here rests on the drawn plan alone:
+the map draws the diamond with home plate at the bottom and the outfield at the
+top, and in that projection first base is the right-hand arm. The dugout labels
+agree with that; they do not establish it.
+
+**Behind the plate.** 117 and 118 dead centre at the 100 level, in the Field
+Diamond Platinum maroon, with the map's centre line falling in the gap between
+them. 218/219 on the Loge ring, 329/330 on the Club ring, 420/421 on the
+Terrace ring.
+
+**Which way each line runs.** From the plate the numbers *descend* down the
+first-base line — 116 115 114 … 107 106 — ending in the pink Field Bleachers 104
+103 102 101 at the right-field corner, past the Visitors Bullpen and under the
+Miller High Life Loft. **105 is not printed**; a navy Field Bleachers Box strip
+occupies that arc. Going the other way the numbers *ascend* down the third-base
+line — 119 120 … 125 … 131 — ending at 131 under J. Leinenkugel's Barrel Yard,
+with the Home Bullpen and the Miller Lite Landing beyond.
+
+**Deck levels as printed.** 100 level 101–131 (no 105). Loge 201–236, the
+201–205 end being the yellow Loge Bleachers at the right-field corner and
+233–236 the Loge Bleachers at the left-field corner. Club level 306–345, with
+the gold Club Suites numbered 24–67 in a ring outside them (24 at the
+right-field end, 67 at the left-field end) and the grey Johnsonville Party Deck
+302–305 beyond the Loge Bleachers. Terrace 407–442. **The Terrace ring starts at
+407** — 401–406 are not printed anywhere.
+
+**Netting.** Drawn, in the red hatched fill the legend names "Netting", along
+the field-facing edge of the field-level sections. Its first-base end is the
+**109/110 boundary** and its third-base end is the **125/126 boundary**, so the
+run is 110 → 125 through the plate: seven or eight sections each side of
+117/118, which is symmetric and corroborates the plate block.
+
+**Against the table.**
+
+| Zone | Table says | Map says |
+|---|---|---|
+| `HOME-F` 103–106 | behind plate | **the right-field corner** — 103 and 104 are Field Bleachers by the Visitors Bullpen, ≈13 sections up the first-base line, and 105 is not printed |
+| `1B-FB1` 107–112 | 1B infield | 1B side, correct |
+| `1B-DUG` 113–122 | 1B baseline | 113–116 on 1B, 117–118 **behind the plate**, 119–122 on **3B** |
+| `3B-FB1` 125–130 | 3B infield | 3B side, correct |
+| `3B-DUG` 131–140 | 3B baseline | 131 is on 3B and is the last section of the ring; **132–140 do not exist** |
+| `HOME-B` 206–212 | behind plate, Loge | on the 1B side; the Loge plate block is 218/219 |
+| `1B-LB1` 213–222 | 1B Loge | 213–217 on 1B, 218–219 behind the plate, 220–222 on **3B** |
+| `3B-LB1` 223–232 | 3B Loge | 3B side, correct |
+| `HOME-U` 405–412 | behind plate, Terrace | 405 and 406 **do not exist**; 407–412 are on the 1B side, ≈9 short of the plate at 420/421 |
+| `1B-UB` 413–424 | 1B Terrace | 413–419 on 1B, 420–421 behind the plate, 422–424 on **3B** |
+| `3B-UB` 425–436 | 3B Terrace | 3B side, correct |
+
+The anchors recorded are 101–114 and 201–216 on the first-base side and 123–131
+and 223–236 on the third. The third-base anchors start at 123 and 223 rather
+than 119 and 220. That is deliberate, and it is the call Target Field got:
+119–122 and 220–222 are plainly on the third-base side of the bend, past the
+VISITORS DUGOUT label, and the table calls them `1B Field` and `1B Loge`, but
+they are close enough to the plate that an anchor there would be arguing about a
+boundary rather than about a side. The check therefore reports American Family
+Field as `ok`. The plate offset above is the finding; the check is not the place
+it lives.
+
+## loanDepot park — sides correct, plate off ≈13
+
+Rotated plan. Home plate sits at the lower right of the field with the outfield
+opening to the upper left; the first-base line runs up the right of the frame
+and the third-base line runs to the lower left.
+
+**Landmark that fixed it, named inside the image, three times over.** The legend
+names two products *by side and by section label*: **"FIRST BASE DUGOUT CLUB |
+FL1-FL3"** and **"THIRD BASE DUGOUT CLUB | FL9-FL11"**. FL1, FL2 and FL3 are
+drawn along the upper-right arm; FL9, FL10 and FL11 along the lower-left arm.
+Independently, the map prints **"1 FIRST BASE ENTRANCE"** outside the
+upper-right arm, **"3 THIRD BASE ENTRANCE"** outside the lower-left arm, and
+**"H HOME PLATE ENTRANCE"** directly outboard of Vista sections 316 and 317 —
+which fixes the plate block on that ring by name, with no geometry at all.
+Nothing outside the image was needed. The MARLINS DUGOUT label is on the
+third-base arm and would have mirrored the park; it decided nothing.
+
+**Behind the plate.** FL15 sits dead on the bisector of the two drawn foul
+lines, with FL14 and FL16 either side and FL4–FL8 curving around inboard of
+them. On the bowl ring the plate falls at **14/15**. On the Vista ring the map
+names it: 316/317.
+
+**Which way each line runs.** The bowl is one ring numbered 1 → 33. It starts at
+1 and 2 in the right-field corner by the Bullpen Zone and The Social, ascends up
+the first-base line past the VISITORS DUGOUT — 3 4 5 … 10 … 13 — to the plate at
+14/15, continues down the third-base line past the MARLINS DUGOUT — 16 17 … 26 …
+32 — and closes through the outfield 34–40, with the purple Home Run Porch
+134–141 above that in left-centre. Each bowl section is drawn twice, as a front
+wedge and a back wedge carrying the same number in different product colours;
+the numbering is one series, not two.
+
+**Deck levels as printed.** Field level FL1–FL11 and FL14–FL16 — **FL12 and FL13
+are not printed anywhere I could find, at any magnification**. Bowl 1–32 plus
+outfield 34–40 and Home Run Porch 134–141. Legends level 201–211 on the
+first-base side and 219–228 on the third; **212–218 do not exist**, the suite
+band S1–S14 and S23–S34 occupying that arc behind the plate, with S37–S42 beyond
+219–222. Vista level 302–327, with the plate at 316/317 as labelled.
+
+**Netting.** Drawn, in the diagonal hatch the legend names "Netting located at
+front of section" — the only hatched entry in the key. It runs **3 → 26**: from
+section 3 on the first-base side, through the plate, to section 26 on the third,
+with 1, 2, 27 and everything beyond drawn solid. Its midpoint is 14.5, which is
+where the drawn foul lines put the plate.
+
+**Against the table.**
+
+| Zone | Table says | Map says |
+|---|---|---|
+| `HOME-F` 1–3 | behind plate | **the right-field corner**, at the far end of the first-base line by the Bullpen Zone, ≈13 sections from the plate |
+| `1B-FB1` 4–9 | 1B infield | 1B side, correct |
+| `1B-DUG` 10–17 | 1B baseline | 10–13 on 1B, 14–15 **behind the plate**, 16–17 on **3B** |
+| `3B-FB1` 23–28 | 3B infield | 3B side, correct |
+| `3B-DUG` 29–37 | 3B baseline | 29–32 on 3B, correct; **33–37 are not on either foul line** — 34–40 run across the outfield |
+| `HOME-B` 203–209 | behind plate, Legends | on the 1B side; the Legends ring has **no** behind-plate block at all, 212–218 being suites |
+| `1B-LB1` 210–218 | 1B Legends | 210 and 211 are on 1B and correct; **212–218 do not exist** |
+| `3B-LB1` 219–227 | 3B Legends | 3B side, correct |
+| `HOME-U` 303–309 | behind plate, Vista | on the 1B side, ≈7 short of the 316/317 the map itself names |
+| `1B-UB` 310–320 | 1B Vista | 310–315 on 1B, 316–317 **behind the plate**, 318–320 on **3B** |
+| `3B-UB` 321–330 | 3B Vista | 321–327 on 3B, correct; **328–330 do not exist** |
+
+The anchors start at 18 (bowl) and 321 (Vista) on the third-base side for the
+same reason American Family's start at 123: 16, 17 and 318–320 are on the
+third-base side of the bend and the table calls them first base, but that is a
+boundary argument, not a side argument. loanDepot park reports `ok`.
+
+## Rogers Centre — sides correct, plate off ≈13
+
+Flat plan, plate at the bottom, standard orientation. The map draws the diamond
+explicitly — home plate as a ringed circle at the bottom apex, first and third
+base as white squares either side, second base as a white diamond at the top —
+so the projection is not in doubt.
+
+**Landmark that fixed it: the club's own netting page, which this repo already
+holds.** Rogers Centre is the one park of the six that did not need the map to
+establish its sides. `SIDE_ANCHORS` has carried *"down the first and third
+baseline walls to Sections 113C and 130C respectively"* from
+mlb.com/bluejays/ballpark/netting since Step 8, at `primary` strength. On the
+map, 113 is on the right-hand arm and 130 on the left. The map and the club page
+agree, and the map extends the coverage from two sections to twenty-six. The
+map's own BLUE JAYS DUGOUT label is on the **third-base** arm and would have
+mirrored the park.
+
+**Behind the plate.** 123 and 124 at the 100 level, with 124 the more central —
+home plate as drawn sits over the 124 radial, six pixels off its centre at
+original scale against twenty-six for 123. 223/224 on the 200 ring, 523/524 on
+the 500 ring. The 300 ring has no behind-plate section: the orange
+**Ticketmaster Lounge** band occupies that arc between 329 and 335.
+
+**Which way each line runs.** From the plate the numbers *descend* down the
+first-base line — 122 121 … 113 … 109 — past the VISITORS' DUGOUT, and *ascend*
+down the third-base line — 125 126 … 130 … 140 — past the BLUE JAYS DUGOUT and
+the BLUE JAYS BULLPEN. The ring then closes through the outfield: 141–148 across
+left field under the WestJet Flight Deck, "The Stop" gap, then 101 102 103 in
+right field.
+
+**Deck levels as printed.** Field level carries a separate short series — TD
+Lounge 1–5 behind the plate, theScore Bet Baseline Box 16–23 on the first-base
+side, Banner Club 24–32 on the third — which is not the 100 ring and is not what
+the zone table numbers. 100 level 101–148, one closed ring. 200 level 205–249
+with the plate at 223/224. 300 level 300–348 with the Ticketmaster Lounge in
+place of a plate block. 400-series small numbers (roughly 432–472) run between
+the 300 and 500 rings and the legend does not name that level at all. 500 level
+to at least 540, plate at 523/524.
+
+**Netting.** None drawn, and the legend has no netting entry. A light-blue arc
+does run along the back edge of 121–127 and at two points by the dugout ends,
+but it is on the concourse side of the sections rather than the field side and
+carries the accessible-seating icon, so it is a platform edge, not a net.
+
+**Against the table.**
+
+| Zone | Table says | Map says |
+|---|---|---|
+| `HOME-F` 108–111 | behind plate | on the 1B side, ≈13 sections up the first-base line from 123/124 |
+| `1B-FB1` 112–117 | 1B infield | 1B side, correct |
+| `1B-DUG` 118–126 | 1B baseline | 118–122 on 1B, 123–124 **behind the plate**, 125–126 on **3B** |
+| `3B-FB1` 126–131 | 3B infield | 3B side, correct — but the table claims **126 on both sides at once**, in `1B-DUG` and here |
+| `3B-DUG` 132–140 | 3B baseline | 3B side, correct; 140 is the last before the ring turns into left field |
+| `HOME-B` 210–217 | behind plate, 200 ring | on the 1B side; the 200 plate block is 223/224 |
+| `1B-LB1` 218–226 | 1B 200 ring | 218–222 on 1B, 223–224 behind the plate, 225–226 on **3B** |
+| `3B-LB1` 227–237 | 3B 200 ring | 3B side, correct |
+| `HOME-U` 510–517 | behind plate, 500 ring | on the 1B side; the 500 plate block is 523/524 |
+| `1B-UB` 518–528 | 1B 500 ring | 518–522 on 1B, 523–524 behind the plate, 525–528 on **3B** |
+| `3B-UB` 529–538 | 3B 500 ring | 3B side, correct |
+
+The 126 double-claim is worth naming on its own. `_zone_side_for` resolves it by
+parity — `1B-DUG` 118–126 has both endpoints even, `3B-FB1` 126–131 does not —
+so the check reads 126 as first base and no anchor trips over it. That is the
+tie-break doing exactly what it was written for, on a case it was not written
+for, and it is why the third-base anchor recorded here starts at 127.
+
+## Kauffman Stadium — scrambled, plate off ≈16
+
+Flat plan, plate at the bottom, outfield at the top, standard orientation.
+
+**Landmark that fixed it — the second weak one.** Like American Family Field,
+this map names no field and no base. GEORGE BRETT LOUNGE sits on the left arm
+and FRANK WHITE LOUNGE on the right, which is suggestive and is not evidence.
+Its only side-bearing labels are HOME DUGOUT against 131–134 and VISITOR DUGOUT
+against 119–122, and a dugout label is not a landmark. The orientation rests on
+the drawn plan alone.
+
+**Behind the plate.** 126, 127, 128, 129 at the 100 level, with the
+CommunityAmerica Crown Club boxes 1–6 inboard of them and the UMB Diamond Club
+A–F outboard.
+
+**Which way each line runs.** From the plate the numbers *descend* down the
+third-base line — 125 124 … 121 … 114 … 107 106 105 — past the VISITOR DUGOUT
+and VISITOR BULLPEN, ending 104 103 102 101 in the Sonic Slam Section at the
+left-field corner. They *ascend* down the first-base line — 130 131 … 140 … 148
+— past the HOME DUGOUT and HOME BULLPEN. **149 is not printed**; the arm ends
+150 151 152 beyond the bullpen, under the Rivals and Blue Moon Taproom decks.
+
+**Deck levels as printed.** 100 level 101–148 and 150–152. Plaza level 201–252,
+with **226–229 absent** (the UMB Diamond Club occupies that arc) and **220 and
+222 not printed** on the third-base arm, which runs …217 218 219 221 223 224
+225. Loge level 301–311 on the third-base side and 312–325 on the first; there
+is no behind-plate Loge section, the TRIPLE CROWN SUITES band taking that arc.
+View level 401–439, plate at ≈419–421.
+
+**Netting — and this is the find of the step.** The map draws it and labels it.
+A heavy black line runs along the field-facing edge of the bowl with
+**"PROTECTIVE NETTING"** printed along it in white, twice, once on each arm. At
+12x the third-base end resolves cleanly: the line begins at the **107/108
+boundary**, at the top corner of section 108. The first-base end terminates at
+the top of **148**. So the drawn run is 108 → 148 through the plate at 126–129 —
+eighteen sections one side, nineteen the other, which is symmetric and
+corroborates the plate block independently of everything above.
+
+That matters beyond this park's sides. `netting.py` records Kauffman Stadium as
+`source_gap / club_declines_to_publish` — "club states it will not give section
+numbers". The club's own seating map draws the extent with readable endpoints.
+This is **not** a published extent and must not be treated as one: it is a line
+on a drawing, whose ends I read off pixels, not a sentence a club has committed
+to. But the recorded reason for that gap is that the club will not give section
+numbers, and a reader of that gap should know this drawing exists. No code
+change was made on the strength of it.
+
+**Against the table.**
+
+| Zone | Table says | Map says |
+|---|---|---|
+| `3B-FB1` 103–109 | 3B infield | 3B side, correct — and the only field-level block in this table that is |
+| `HOME-F` 110–113 | behind plate | ≈16 sections up the **third-base** line, past the visitors' end of the infield |
+| `1B-FB1` 114–120 | 1B infield | **the third-base line** — 114 through 120 sit between the plate and the visitors' dugout, on the left arm |
+| `1B-DUG` 121–131 | 1B baseline | 121–125 on **3B**, 126–129 **behind the plate**, 130–131 on 1B |
+| `3B-DUG` 133–143 | 3B baseline | **the first-base line** — the middle of the right arm, past the HOME DUGOUT |
+| `HOME-B` 213–220 | behind plate, Loge | on the **3B** side of the Plaza ring; the Plaza has no plate block (226–229 absent) and 220 is not printed |
+| `1B-LB1` 221–231 | 1B Loge | 221–225 on **3B**, 230–231 on 1B; 226–229 and 222 not printed |
+| `3B-LB1` 232–243 | 3B Loge | **the first-base side** of the Plaza ring |
+| `HOME-U` 413–420 | behind plate, upper | **nearly right** — the View ring's plate is ≈419–421 |
+| `1B-UB` 421–431 | 1B upper | 1B side, correct |
+| `3B-UB` 432–443 | 3B upper | 432–439 are on the **1B** side; 440–443 do not exist |
+
+Kauffman is Comerica Park's problem in a mirror and reaches the same verdict
+from the opposite direction. It is not a simple flip: `3B-FB1` (103–109) and
+`1B-DUG`'s tail (130–131) land on the right lines while `1B-FB1` (114–120) and
+`3B-DUG` (133–143) land on the wrong ones, so swapping the two label ranges
+would fix two blocks and break two others. `check_side_anchors` returns
+`inconsistent` — 7 anchored sections agreeing, 20 disagreeing.
+
+The 400-ring result is the odd one and worth stating plainly: `HOME-U` 413–420
+is very close to right. That is a coincidence of two rings having different
+lengths, not evidence that the upper deck was done more carefully.
+
+## Globe Life Field — scrambled, plate off ≈10
+
+Rotated plan drawn in mild perspective, which is why the two drawn foul lines
+meet at 117° rather than 90°. Five concentric label rings around the bowl —
+HPFS suites, the numbered lower bowl in two rows, the FS/LS/CS/PS prefixed
+rings, the mezzanine and the upper deck — at 6–8px each. The densest map read so
+far.
+
+**Landmark that fixed it, measured rather than eyeballed.** The legend's **"3rd
+Base Box"** swatch is #d6ac01. Searching the map for connected regions within a
+tight tolerance of that colour returns exactly five blocks above 400px, all
+adjacent, all on the same arm: **sections 8, 9, 10, 11 and 12**. That arm is
+therefore the third-base line, stated by the map's own key. Two independent
+confirmations: the legend's **"Left Field Deck"** blue (#6ba9db) returns exactly
+five blocks, 240–244, across the top of the sheet at the head of that same arm;
+and the legend prints **"NETTING · Sections 2-25"**, whose midpoint is 13.5.
+
+**Behind the plate.** Tracing the perpendicular from the drawn home plate, the
+backstop apex falls at HPFS 07/08 — those two of the fourteen home-plate field
+suites are 447 and 454 px from the plate against 477 and 488 for their
+neighbours. Outboard of them the lower bowl reads **13/14** and the mezzanine
+**114/115**. The 200 ring's plate block I put at **217–219** and would not swear
+to; see the confidence list.
+
+**Which way each line runs.** The lower bowl is one closed ring, 1 → 33. It
+starts at 1 near the left-field pole, *descends* toward the plate — 2 3 … 8 9 10
+11 12, the 3rd Base Box gold — reaches 13/14 behind the plate, *ascends* up the
+first-base line — 15 16 … 25 26 — and closes through the outfield 27–33 back to
+1. The mezzanine does the same thing one ring out: 101 at the left-field pole,
+plate at 114/115, 133 at the right-field pole, outfield 134–142. So does the
+upper deck: 201 near left field round to 244, which is the Left Field Deck, back
+adjacent to 201.
+
+**Deck levels as printed.** HPFS 01–14 innermost. Lower bowl 1–33, drawn as two
+rows sharing one set of numbers (front rows Lexus Club green, back rows the
+product the legend names). FS 101–110, LS 101–122, CS 201–243, PS 101–108, HOF
+201b–207b, SB1–SB4 and TT 1–2 in intermediate rings. Mezzanine 101–142. Upper
+201–244. Outermost 301–326.
+
+**Netting.** Drawn as a black dotted line around the bowl edge, and the legend
+states its extent in words: **"NETTING · Sections 2-25"**. That is the only one
+of the twenty-nine maps read in this file to publish a netted section range in
+its own key.
+
+**Against the table.**
+
+| Zone | Table says | Map says |
+|---|---|---|
+| `HOME-F` 1–5 | behind plate | at the **left-field pole**, ≈10 sections up the third-base line |
+| `1B-FB1` 6–11 | 1B infield | **the third-base line** — this is the 3rd Base Box the legend names |
+| `1B-DUG` 12–19 | 1B baseline | 12 on **3B**, 13–14 **behind the plate**, 15–19 on 1B |
+| `3B-FB1` 25–30 | 3B infield | 25–26 are on the **first-base** line; 27–30 are the outfield ring |
+| `3B-DUG` 31–37 | 3B baseline | 31–33 are outfield; **34–37 do not exist** |
+| `HOME-B` 105–111 | behind plate, mezzanine | on the **3B** side, ≈9 short of 114/115 |
+| `1B-LB1` 112–119 | 1B mezzanine | 112–113 on **3B**, 114–115 behind the plate, 116–119 on 1B |
+| `3B-LB1` 120–128 | 3B mezzanine | **the first-base side** of the mezzanine ring |
+| `HOME-U` 204–211 | behind plate, upper | on the **3B** side of the upper ring |
+| `1B-UB` 212–222 | 1B upper | straddles the plate block |
+| `3B-UB` 223–233 | 3B upper | **the first-base side** of the upper ring |
+
+`check_side_anchors` returns `inconsistent` — 6 agreeing, 19 disagreeing. Globe
+Life Field's recorded gap kind moves with it, from `sides_unverifiable` to
+`labels_contradict_model`: it used to fail on the *absence* of a check and now
+fails on the check itself. `tests/test_netting.py::STRUCTURAL_GAP_KINDS` records
+the change.
+
+## Tropicana Field — scrambled by parity
+
+Flat plan, plate at the bottom, standard orientation.
+
+**Landmark that fixed it, named inside the image, in so many words.** The map
+prints **"200 LEVEL — APPROXIMATE 1ST BASE ▼"** along the right-hand arm and
+**"200 LEVEL — APPROXIMATE 3RD BASE ▼"** along the left-hand arm, each with an
+arrowhead into its own ring. This is the most explicit side statement on any of
+the twenty-nine maps: no landmark, no colour, no geometry — the map simply says
+which line is which. "LEFT FIELD TERRACE" at the head of the left arm and the
+RAYS SCOREBOARD beyond the right arm's far end agree. The RAYS DUGOUT sits on
+the first-base arm here, which happens to be the popular assumption and is still
+not what decided it.
+
+**Behind the plate.** **101 and 102**, a pair, with 101 fractionally left of the
+centre line and 102 fractionally right. Inboard of them the white DEX Imaging
+Home Plate Club sections and the orange Home Plate Box bands; outboard, the
+lettered AAA BBB CCC DDD EEE FFF GGG and then the Press Box. **There is no
+section 100.**
+
+**Which way each line runs — the finding.** Tropicana numbers **one foul line
+odd and the other even**, from the 101/102 pair behind the plate:
+
+- third base (left, toward the Left Field Terrace):
+  103 105 107 109 111 113 115 117 119 121 123 125 127 129 131, then the outfield
+  133 135 137 139 141 143 145 147 149
+- first base (right, past the Rays Dugout):
+  104 106 108 110 112 114 116 118 120 122 124 126 128 130 132, then the outfield
+  134 136 138 140 142 144 146 148 150
+
+The 200 ring does the same thing — 203 205 207 … on the third-base side against
+204 206 208 … on the first — and so does the outer suite ring (odd 1–45 left,
+even 2–44 right, with one wedge labelled "32/36"). The Baldwin Group Club ring
+on the first-base side repeats the even numbers of the sections it sits behind.
+
+**Deck levels as printed.** Field level 101–132 in the bowl plus 133–150 across
+the outfield, with a second concentric row on each arm repeating the same
+numbers, and the lettered AAA–GGG behind the plate. 200 level 203–224. Suites
+1–45 by parity. 300 level: **341 343 345 347 349 351 353 355 only**, the odd
+Party Deck strip in left field. There is no 300-level ring around this bowl at
+all.
+
+**Netting.** None drawn, and the legend has no netting entry. The orange bands
+around the home-plate club are the legend's "Home Plate Box" product.
+
+**Against the table.** Every field-level zone range spans both foul lines:
+
+| Zone | Table says | On the map |
+|---|---|---|
+| `3B-FB1` 100–103 | 3B infield | **100 does not exist**; 101 is behind the plate, 102 is on 1B, 103 is on 3B |
+| `HOME-F` 104–106 | behind plate | 104 and 106 on 1B, 105 on 3B; the plate is 101/102 |
+| `1B-FB1` 107–112 | 1B infield | 108, 110, 112 on 1B; 107, 109, 111 on 3B |
+| `1B-DUG` 113–118 | 1B baseline | evens on 1B, odds on 3B |
+| `3B-DUG` 125–130 | 3B baseline | odds on 3B, evens on 1B |
+| `HOME-B`/`1B-LB1`/`3B-LB1` 205–224 | three 200-ring blocks | the ring is parity-split the same way |
+| `HOME-U`/`1B-UB`/`3B-UB` 303–322 | three 300-ring blocks | **none of 303–322 exists**; the 300 level is 341–355 odd, in left field |
+
+An offset figure for the plate zone is not worth quoting. The ring is not the
+shape the table thinks it is.
+
+Unlike Petco Park, Tropicana has no overlapping club-page wording for
+`_overlapping_prefixes` to trip on, so the six single-number anchors recorded
+here do decide a verdict: `inconsistent`, 3 agreeing and 3 disagreeing. They are
+single numbers for the same reason Petco's are — a range spanning both parities
+would be a claim about sections on the other line.
+
+## What changed in code
+
+`seat_map.SIDE_ANCHORS` gains entries for five parks and grows at a sixth:
+
+| Park | Anchors added | Verdict before | Verdict after |
+|---|---|---|---|
+| `american_family` | 101–114 and 201–216 → 1B, 123–131 and 223–236 → 3B | `untestable` | **`ok`** |
+| `loan_depot` | 1–13 and 302–313 → 1B, 18–32 and 321–327 → 3B | `untestable` | **`ok`** |
+| `rogers_centre` | 109–121 → 1B, 127–140 → 3B (added to two `primary` anchors) | `ok` (2 sections) | `ok` (26 sections) |
+| `kauffman_stadium` | 101–122 → 3B, 133–148 → 1B | `untestable` | **`inconsistent`** |
+| `globe_life` | 2–11 and 105–113 → 3B, 17–26 and 117–128 → 1B | `untestable` | **`inconsistent`** |
+| `tropicana_field` | 111, 117, 127 → 3B; 112, 116, 128 → 1B (single numbers) | `untestable` | **`inconsistent`** |
+
+Every anchor range is restricted to numbers the map actually prints, and every
+one stops clear of its park's plate bend. That is why American Family's
+third-base anchor starts at 123 rather than 119, why loanDepot's starts at 18
+rather than 16, why Kauffman's third-base anchor stops at 122 and its first-base
+anchor at 148 rather than 152, and why Tropicana's are single numbers.
+
+Downstream:
+
+- `tests/test_site.py::test_only_thirteen_parks_may_name_a_foul_line` becomes
+  `..._fifteen_...`. American Family Field and loanDepot park join the list;
+  none left it. The index page's count moves from 13 to 15 of 31 on its own —
+  the number is computed, not written down.
+- `tests/test_netting.py::STRUCTURAL_GAP_KINDS` records `globe_life` at
+  `labels_contradict_model` instead of `sides_unverifiable`, with a comment
+  saying why.
+- No park changed `join_park` status. The netting-gap count stays at 24.
+- Across all 31 parks the side check now reads: 15 `ok`, 9 `inconsistent`, 4
+  `flipped`, 3 `untestable`. The untestable three are Citi Field, Las Vegas
+  Ballpark and Petco Park. Petco is untestable by the overlap guard, by design.
+  Las Vegas Ballpark has no map in `seating_maps/` at all. Citi Field does —
+  `citi_field.png` is the one file in that folder that no step has read yet, and
+  it is the obvious next one.
+- `site_data.MAP_READS` still carries the five Step 11 parks only. The
+  twenty-four parks read in Steps 12–15 are not yet written up for the site.
+
+## What I am least confident about, after Step 15
+
+1. **American Family Field and Kauffman Stadium rest on the plan convention
+   alone, and that is a real step down from the other four.** Neither map names
+   a field, a base or a side anywhere on the sheet — I looked, at magnification,
+   across the outfield band, both corners and the whole legend. What fixes them
+   is that a plan view drawn with home plate at the bottom and the outfield at
+   the top puts first base on the right, which is a fact about the projection
+   rather than about the image. I believe it: both maps draw the diamond, both
+   are the clubs' own sheets, and a mirrored publication would be an
+   extraordinary error. But the other four parks in this step are anchored on
+   something the image *says* — a legend that names a side, a printed "1ST
+   BASE", a club page — and these two are not. If either turns out to be
+   mirrored, both of that park's anchors flip together and Kauffman's
+   `inconsistent` becomes a different kind of wrong. This is the single largest
+   exposure in this step. The dugout labels do not help: this very step found
+   two parks whose home dugout is on the third-base side.
+2. **Globe Life Field's plate block as a number, and its 200-ring plate
+   especially.** That `HOME-F` (1–5) is out at the left-field pole is not in
+   doubt — 1 through 5 are drawn past the 3rd Base Box gold, at the far end of
+   the arm. But *where* the plate is I put at 13/14 by tracing the perpendicular
+   through a map drawn in perspective, with the drawn foul lines meeting at
+   117°, and that tracing had a section of slack in it: the strict ray lands on
+   13 and the backstop apex sits between HPFS 07 and 08. The legend's "Sections
+   2-25" gives a midpoint of 13.5 and is what I would actually stand on. The
+   200-ring plate at 217–219 is weaker again — I got it by following a radial
+   out through two rings that are not concentric with each other, and I would
+   not defend any single number in that range. The side verdict does not depend
+   on it.
+3. **"220 and 222 are not printed" at Kauffman.** I read the Plaza ring's
+   third-base arm as …217 218 219 221 223 224 225, with wedges where 220 and 222
+   would be but no labels on them. It is possible those wedges are double-width
+   sections whose second number the map omits, or that the labels are there and
+   I lost them to JPEG artefacts at 5x. The claim that 226–229 are absent I am
+   confident about — the UMB Diamond Club visibly occupies that arc and is drawn
+   as a single named block. The 220/222 claim is the weaker half of the same
+   sentence.
+4. **loanDepot's FL12 and FL13.** The legend names FL1–FL3 and FL9–FL11 by side,
+   and I resolved FL4–FL8 and FL14–FL16 on the sheet. FL12 and FL13 I could not
+   find at 8x anywhere around the plate or on either arm. They are probably
+   drawn and unlabelled, or under a graphic. Nothing depends on them; it is
+   recorded because "I could not find it" and "it is not there" are different
+   claims and this file keeps them apart.
+5. **Kauffman's drawn netting is a drawing.** I have read its ends off pixels at
+   12x and I am confident about the third-base end at the 107/108 boundary,
+   because the black line starts at a corner rather than fading. The first-base
+   end at the top of 148 I am slightly less sure of, because the line there runs
+   into the white gap before 150 at a shallower angle. Neither end is a published
+   extent, and no code change was made from either. What I would not want a later
+   reader to take from that section is that Kauffman's netting gap is closed. It
+   is not. What has changed is that the recorded reason for it — "the club
+   declines to publish section numbers" — now sits next to a club drawing that
+   has section numbers on both sides of the net.
+6. **The two-row rings.** Four of these six maps (American Family's Loge and
+   Club rings, loanDepot's bowl, Globe Life's lower bowl and Tropicana's field
+   level, plus Rogers' 300/400 bands) draw some rings as two concentric rows
+   carrying the same section number in different product colours. I have read
+   those as one numbering split by row, because the two rows sit on the same
+   radials and the numbers line up. If any of them is instead two genuinely
+   different series that happen to share numbers, the deck-level ranges I quote
+   for that park would be describing two things at once. The side readings do
+   not depend on it — both rows are on the same arm either way.

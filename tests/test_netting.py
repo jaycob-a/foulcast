@@ -64,10 +64,18 @@ JOIN_GAP_PARKS = {
 # and the map has 133 134 135 at the end of the right-field arm; PNC carries
 # 101-107 as "3B Infield" and the map has that arm running to the Right Field
 # Gate. See MAP_FINDINGS.md.
+#
+# Globe Life Field made the same move in Step 15, and for the same shape of
+# reason. It used to fail at 'sides_unverifiable' — the gap kind that means
+# "this table numbers outward from the plate and nothing here can check it".
+# The map read supplies the check: the legend's "3rd Base Box" gold fills
+# sections 8-12 and only those, all on one arm, and the table carries 6-11 as
+# "1B Infield" and 25-30 as "3B Infield" with 25 and 26 on the other arm. G5
+# now fires before the sides_unverifiable branch is reached.
 STRUCTURAL_GAP_KINDS = {
     'angel_stadium': 'labels_contradict_model',
     'pnc_park': 'labels_contradict_model',
-    'globe_life': 'sides_unverifiable',
+    'globe_life': 'labels_contradict_model',
     'camden_yards': 'sides_flipped',
     'coors_field': 'sides_flipped',
     'progressive_field': 'sides_flipped',

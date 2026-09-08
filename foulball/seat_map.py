@@ -498,6 +498,34 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                    'https://www.mlb.com/bluejays/ballpark/netting',
                    'primary', '2026-08-09',
                    basis='"respectively" binds 130C to the third baseline'),
+        # Step 15. The map agrees with the club page and covers the rest of
+        # the ring, which the two single sections above never could.
+        SideAnchor('', 109, 121, '1B',
+                   'right-hand arm descending from the plate block at '
+                   '123/124: 122 121 120 ... 113 ... 109, past the dugout on '
+                   'that side',
+                   'seating_maps/rogers_centre.jpg (Rogers Centre Ballpark '
+                   'Map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom, standard '
+                         'orientation - the map draws the diamond with the '
+                         'plate circle at the bottom apex and second base at '
+                         'the top, so first base is the right-hand arm. The '
+                         'club\'s own netting page, already an anchor above, '
+                         'says the same thing about 113, and 113 is on this '
+                         'arm; that page is what makes this park\'s reading '
+                         'independent of the plan convention'),
+        SideAnchor('', 127, 140, '3B',
+                   'left-hand arm ascending from the plate block at 123/124: '
+                   '125 126 127 ... 130 ... 140',
+                   'seating_maps/rogers_centre.jpg (Rogers Centre Ballpark '
+                   'Map)',
+                   'map_read', '2026-09-07',
+                   basis='same plan and the same club page, which puts 130 '
+                         'on the third baseline; 130 is on this arm. The '
+                         'range starts at 127 rather than 125 to stay clear '
+                         'of the plate bend and of 126, which this park\'s '
+                         'zone table claims on both sides at once'),
     ),
 
     'yankee_stadium': (
@@ -1166,6 +1194,271 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                          'is the anchor the zone table fails: it carries '
                          '133-141 as "3B Field", and 133 134 135 are the '
                          'last three sections of the right-field arm'),
+    ),
+
+    # --- Step 15 -----------------------------------------------------------
+    #
+    # Five more maps. Two of these five are anchored off a landmark the map's
+    # own legend names — loanDepot Park's "FIRST BASE DUGOUT CLUB | FL1-FL3"
+    # against "THIRD BASE DUGOUT CLUB | FL9-FL11", and Globe Life Field's "3rd
+    # Base Box" swatch, whose colour fills exactly five sections and all five
+    # are on one arm. Tropicana Field's map prints "APPROXIMATE 1ST BASE" and
+    # "APPROXIMATE 3RD BASE" against the two arms in so many words.
+    #
+    # The other two, American Family Field and Kauffman Stadium, carry no
+    # left/right-field or 1B/3B text anywhere on the sheet. Their orientation
+    # rests on the drawn plan alone — plate at the bottom, outfield at the
+    # top, so first base is the right-hand arm — with a HOME DUGOUT label on
+    # that arm agreeing. That is a weaker footing than the other three and
+    # `MAP_FINDINGS.md` says so; see "What I am least confident about, after
+    # Step 15".
+
+    'american_family': (
+        SideAnchor('', 101, 114, '1B',
+                   'right-hand arm descending from the plate block at '
+                   '117/118: 116 115 114 ... 107 106, then the Field '
+                   'Bleachers 104 103 102 101 at the end of it (105 is not '
+                   'printed)',
+                   'seating_maps/american_field.jpg (American Family Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom, outfield at the '
+                         'top, so first base is the right-hand arm. This map '
+                         'names no field and no base anywhere: the only '
+                         'side-bearing labels on it are HOME DUGOUT, drawn '
+                         'against 112-115 on this arm, and VISITORS DUGOUT '
+                         'against 120-123 on the other. The dugout labels '
+                         'agree with the plan but need one fact from outside '
+                         'the image to be read, so the plan is what decides '
+                         'this and the anchor is no stronger than that'),
+        SideAnchor('', 123, 131, '3B',
+                   'left-hand arm ascending from the plate block at 117/118: '
+                   '119 120 ... 125 ... 131, the last section before the '
+                   'Loge Bleachers wrap into left field',
+                   'seating_maps/american_field.jpg (American Family Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same plan as the 1B anchor above. The range starts '
+                         'at 123 rather than 119 to stay clear of the plate '
+                         'bend, though 119-122 are plainly on this side of '
+                         'it, past the VISITORS DUGOUT label, and the table '
+                         'calls them "1B Field" - see MAP_FINDINGS.md'),
+        SideAnchor('', 201, 216, '1B',
+                   'Loge ring, right-hand arm descending from the plate '
+                   'block at 218/219: 217 216 ... 206, then the Loge '
+                   'Bleachers 205 204 203 202 201',
+                   'seating_maps/american_field.jpg (American Family Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same plan as the 100-level anchors; the Loge ring '
+                         'sits on the same radials, 201-205 outboard of the '
+                         '101-104 bleachers and 236 outboard of 131'),
+        SideAnchor('', 223, 236, '3B',
+                   'Loge ring, left-hand arm ascending from the plate block '
+                   'at 218/219: 220 221 ... 232, then the Loge Bleachers '
+                   '233 234 235 236',
+                   'seating_maps/american_field.jpg (American Family Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same plan and the same radials as the 1B Loge '
+                         'anchor above; starts at 223 for the same reason '
+                         'the 100-level 3B anchor starts at 123'),
+    ),
+
+    'loan_depot': (
+        SideAnchor('', 1, 13, '1B',
+                   'bowl ring ascending from the right-field end toward the '
+                   'plate block at 14/15: 1 2 3 ... 10 ... 13, past the '
+                   'VISITORS DUGOUT',
+                   'seating_maps/loandepot_park.png (loanDepot park seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='rotated plan, plate at the lower right, outfield '
+                         'to the upper left. Orientation fixed by the map\'s '
+                         'own legend, which names two products by side and '
+                         'gives their section labels: "FIRST BASE DUGOUT '
+                         'CLUB | FL1-FL3" and "THIRD BASE DUGOUT CLUB | '
+                         'FL9-FL11". FL1-FL3 are drawn along this arm and '
+                         'FL9-FL11 along the other. The map also prints "1 '
+                         'FIRST BASE ENTRANCE" outside this arm and "3 THIRD '
+                         'BASE ENTRANCE" outside the other, and "H HOME '
+                         'PLATE ENTRANCE" against Vista 316/317. Note that '
+                         'the MARLINS DUGOUT label sits on the third-base '
+                         'arm here, which is why a dugout label is never '
+                         'used as the landmark in this file'),
+        SideAnchor('', 18, 32, '3B',
+                   'bowl ring continuing past the plate block toward the '
+                   'left-field end: 16 17 18 ... 26 ... 32, past the MARLINS '
+                   'DUGOUT and the MARLINS BULLPEN',
+                   'seating_maps/loandepot_park.png (loanDepot park seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='same legend landmarks as the 1B anchor above. '
+                         'Starts at 18 rather than 16 to stay clear of the '
+                         'plate bend. The ring closes through the outfield '
+                         '34-40, so 33 and above are not on either foul '
+                         'line'),
+        SideAnchor('', 302, 313, '1B',
+                   'Vista ring, first-base arm: 302 303 ... 313, running '
+                   'back from the right-field end toward the plate block the '
+                   'map names',
+                   'seating_maps/loandepot_park.png (loanDepot park seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='the map prints "H HOME PLATE ENTRANCE" directly '
+                         'outboard of Vista 316 and 317, which fixes the '
+                         'plate block on this ring by name rather than by '
+                         'geometry, and "1 FIRST BASE ENTRANCE" outboard of '
+                         '304-306 on this arm'),
+        SideAnchor('', 321, 327, '3B',
+                   'Vista ring, third-base arm: 318 319 ... 327, ending '
+                   'above the "3 THIRD BASE ENTRANCE" the map labels',
+                   'seating_maps/loandepot_park.png (loanDepot park seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='same two labels as the 1B Vista anchor above. '
+                         'Starts at 321 to stay clear of the 316/317 plate '
+                         'block the map names'),
+    ),
+
+    'kauffman_stadium': (
+        SideAnchor('', 101, 122, '3B',
+                   'left-hand arm descending from the plate block at '
+                   '126-129: 125 124 ... 121 ... 114 ... 107 106 105, then '
+                   '104 103 102 101 across the Sonic Slam Section in the '
+                   'corner, past the VISITOR DUGOUT and VISITOR BULLPEN',
+                   'seating_maps/kauffman_stadium.jpg (Kauffman Stadium '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom, outfield at the '
+                         'top, so third base is the left-hand arm. Like '
+                         'American Family Field, this map names no field and '
+                         'no base: HOME DUGOUT against 131-134 on the other '
+                         'arm and VISITOR DUGOUT against 119-122 on this one '
+                         'are its only side-bearing labels, and reading them '
+                         'needs a fact from outside the image. The plan is '
+                         'what decides this. The range stops at 122 to stay '
+                         'clear of the plate bend'),
+        SideAnchor('', 133, 148, '1B',
+                   'right-hand arm ascending from the plate block at '
+                   '126-129: 130 131 ... 140 ... 148, past the HOME DUGOUT '
+                   'and HOME BULLPEN (149 is not printed; the arm ends 150 '
+                   '151 152)',
+                   'seating_maps/kauffman_stadium.jpg (Kauffman Stadium '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same plan as the 3B anchor above. This is the '
+                         'anchor the zone table fails hardest: it carries '
+                         '133-143 as "3B Dugout", and 133 through 143 are '
+                         'the middle of the right-hand arm. The range stops '
+                         'at 148 because 149 is not printed'),
+    ),
+
+    'globe_life': (
+        SideAnchor('', 2, 11, '3B',
+                   'lower bowl descending from the plate block at 13/14 '
+                   'toward the left-field pole: 12 11 10 9 8 7 ... 2 1',
+                   'seating_maps/globe_life.jpg (Globe Life Field seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='rotated plan. Orientation fixed by the map\'s own '
+                         'legend swatch "3rd Base Box", whose gold fill '
+                         'appears on this arm and nowhere else - five '
+                         'blocks, sections 8 9 10 11 12. The legend\'s "Left '
+                         'Field Deck" blue fills exactly five blocks too, '
+                         '240-244 across the top of the sheet, at the head '
+                         'of this same arm. The legend also prints "NETTING '
+                         'Sections 2-25", whose midpoint is 13.5 and so '
+                         'corroborates the plate block'),
+        SideAnchor('', 17, 26, '1B',
+                   'lower bowl ascending from the plate block at 13/14 '
+                   'toward the right-field pole: 15 16 17 ... 25 26, after '
+                   'which the ring closes through the outfield 27-33',
+                   'seating_maps/globe_life.jpg (Globe Life Field seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='the arm opposite the "3rd Base Box" gold. Starts '
+                         'at 17 to stay clear of the plate bend'),
+        SideAnchor('', 105, 113, '3B',
+                   'mezzanine ring descending from the plate block at '
+                   '114/115 toward the left-field pole: 113 112 ... 105 ... '
+                   '101',
+                   'seating_maps/globe_life.jpg (Globe Life Field seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='same arm as the lower-bowl 3B anchor, on the same '
+                         'radials - mezzanine 107-113 sit directly outboard '
+                         'of the "3rd Base Box" gold at 8-12'),
+        SideAnchor('', 117, 128, '1B',
+                   'mezzanine ring ascending from the plate block at '
+                   '114/115 toward the right-field pole: 116 117 ... 128 ... '
+                   '133, after which the ring closes through the outfield '
+                   '134-142',
+                   'seating_maps/globe_life.jpg (Globe Life Field seating '
+                   'map)',
+                   'map_read', '2026-09-07',
+                   basis='same arm as the lower-bowl 1B anchor. Stops at 128 '
+                         'because that is where this park\'s zone table '
+                         'stops claiming numbers on the mezzanine ring'),
+    ),
+
+    # Tropicana Field numbers one foul line odd and the other even from a
+    # 101/102 pair behind the plate, exactly as Petco Park does. The anchors
+    # are single numbers for the same reason Petco's are: a range spanning
+    # both parities would be a claim about sections on the other line. Unlike
+    # Petco there is no overlapping club-page wording here, so these do decide
+    # a verdict.
+    'tropicana_field': (
+        SideAnchor('', 111, 111, '3B',
+                   'odd arm ascending from the 101/102 pair behind the '
+                   'plate: 103 105 107 109 111 113 115 ... 131, past the '
+                   "VISITORS' DUGOUT",
+                   'seating_maps/tropicana_field.png (Tropicana Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom. Orientation fixed '
+                         'by the map\'s own printed labels "200 LEVEL - '
+                         'APPROXIMATE 3RD BASE" along this arm and "200 '
+                         'LEVEL - APPROXIMATE 1ST BASE" along the other, '
+                         'each with an arrowhead into its ring. "LEFT FIELD '
+                         'TERRACE" is printed at the head of this arm. The '
+                         'even/odd split is the map\'s, not an inference'),
+        SideAnchor('', 117, 117, '3B',
+                   'odd arm, well up the third-base line',
+                   'seating_maps/tropicana_field.png (Tropicana Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same labels as the 111 anchor above'),
+        SideAnchor('', 127, 127, '3B',
+                   'odd arm, last full section before the outfield sections '
+                   '133-149 wrap into left field',
+                   'seating_maps/tropicana_field.png (Tropicana Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same labels as the 111 anchor above'),
+        SideAnchor('', 112, 112, '1B',
+                   'even arm ascending from the 101/102 pair behind the '
+                   'plate: 104 106 108 110 112 114 116 ... 132, past the '
+                   'RAYS DUGOUT',
+                   'seating_maps/tropicana_field.png (Tropicana Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='the arm the map labels "200 LEVEL - APPROXIMATE '
+                         '1ST BASE"; "THE BALDWIN GROUP CLUB" runs along it '
+                         'and the RAYS SCOREBOARD sits beyond its far end'),
+        SideAnchor('', 116, 116, '1B',
+                   'even arm, well down the first-base line',
+                   'seating_maps/tropicana_field.png (Tropicana Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same labels as the 112 anchor above'),
+        SideAnchor('', 128, 128, '1B',
+                   'even arm, last full section before the outfield sections '
+                   '134-150 wrap into right field',
+                   'seating_maps/tropicana_field.png (Tropicana Field '
+                   'seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same labels as the 112 anchor above'),
     ),
 
 }
