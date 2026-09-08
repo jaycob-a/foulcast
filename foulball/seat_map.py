@@ -62,9 +62,12 @@ do not. This module improves the bookkeeping, not the geometry.
 
 The same caveat binds the side anchors, and harder. An anchor that passes says
 the table is not mirrored. It does not say the zone boundaries are right, that
-the behind-plate block is in the right place, or that the sections exist. Every
-one of the eleven parks in `MAP_FINDINGS.md` disagrees with its zone table
-in some way; four of them disagree by a mirror.
+the behind-plate block is in the right place, or that the sections exist. Of
+the seventeen parks read in `MAP_FINDINGS.md`, fourteen disagree with their
+zone table in some way and four disagree by a mirror. The other three — Daikin
+Park, Yankee Stadium and Dodger Stadium — came out right on the sides *and* the
+plate block, which is a stronger result than any anchor here can report: they
+were read for both, and the anchor only records the first.
 """
 import hashlib
 import re
@@ -305,7 +308,7 @@ def zone_catalog(stadium) -> list[dict]:
 #      of statement.
 #   3. Seating maps read directly, where a landmark fixes the orientation and
 #      the numbers can then be read off each foul line. See `MAP_FINDINGS.md`
-#      for the eleven read so far, including which landmark fixed each one.
+#      for the seventeen read so far, including which landmark fixed each one.
 #
 # A published netting *extent* on its own is not such a fact, however
 # asymmetric it is. "Sections 6 → 70" tells you the run is longer on one side
@@ -403,6 +406,43 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                    'section 41 (3B)',
                    'https://www.mlb.com/dodgers/ballpark/netting',
                    'primary', '2026-08-09'),
+        # Read off the seating map (2026-09-07). Single sections rather than
+        # runs, because this park interleaves the sides by parity and a range
+        # spanning both would claim the other line's sections too. These four
+        # test the Loge ring, which the netting page never reaches.
+        SideAnchor('', 111, 111, '3B',
+                   'Loge 111, first odd section up the left-field line from '
+                   'the 101/102 pair behind the plate',
+                   'seating_maps/dodger_stadium.jpg (Dodgers seating map)',
+                   'map_read', '2026-09-07',
+                   basis='flat plan, plate at the bottom. Orientation fixed '
+                         'by the map\'s own SPECTRUM LEFT FIELD PAVILION '
+                         '(odd 301-315, upper left) and RIGHT FIELD PAVILION '
+                         '(even 302-316, upper right) headings. Every ring '
+                         'runs odd to the left and even to the right from a '
+                         'pair behind the plate - 1/2 at field level, '
+                         '101/102 on the Loge, 1/2 again on the Reserve and '
+                         'Top Deck - so the parity is the side. The DODGER '
+                         'DUGOUT label sits on the odd side and the VISITORS '
+                         'DUGOUT on the even side, which agrees'),
+        SideAnchor('', 112, 112, '1B',
+                   'Loge 112, first even section down the right-field line '
+                   'from the 101/102 pair behind the plate',
+                   'seating_maps/dodger_stadium.jpg (Dodgers seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 3B anchor above'),
+        SideAnchor('', 135, 135, '3B',
+                   'Loge 135, well up the left-field line; the ring runs on '
+                   'to 167 on this side',
+                   'seating_maps/dodger_stadium.jpg (Dodgers seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 3B anchor above'),
+        SideAnchor('', 136, 136, '1B',
+                   'Loge 136, well down the right-field line; the ring runs '
+                   'on to 168 on this side',
+                   'seating_maps/dodger_stadium.jpg (Dodgers seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 3B anchor above'),
     ),
 
     'comerica_park': (
@@ -438,6 +478,36 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
         SideAnchor('', 29, 29, '3B', 'Section 029 (3B/LF side)',
                    'https://www.mlb.com/yankees/ballpark/netting',
                    'primary', '2026-08-09'),
+        # Read off the seating map (2026-09-07). The two club anchors above
+        # are on the inner Legends ring, which no zone in this park's table
+        # claims, so they leave the park untestable. These two are on the
+        # Field MVP ring, which the table does number.
+        SideAnchor('', 105, 118, '1B',
+                   'Field MVP ring descending from the plate block 120A/120B '
+                   'toward the right-field corner: 119 118 117B 117A 116 115 '
+                   '114B 114A 113 112 111 110 109 108 107 106 105',
+                   'seating_maps/yankee_stadium.jpg (Yankees seating map)',
+                   'map_read', '2026-09-07',
+                   basis="flat plan, plate at the bottom with the Mastercard "
+                         "Batter's Eye Deck at top centre, so the foul lines "
+                         "run down-left and down-right. Which of those is "
+                         "first base is fixed by the map's own printed note, "
+                         "'protective netting of varying heights is used in "
+                         "the Stadium from Section 011 to behind home plate "
+                         "to Section 029', read with the netting band the "
+                         "map draws: the band ends at the top edge of 011 on "
+                         "the side labelled YANKEES dugout, and the club's "
+                         "netting page - the anchor above - calls 011 the "
+                         "1B/RF side"),
+        SideAnchor('', 122, 136, '3B',
+                   'Field MVP ring ascending from the plate block 120A/120B '
+                   'toward the left-field corner: 121A 121B 122 123 124 125 '
+                   '126 127A 127B 128 129 130 131 132 133 134 135 136',
+                   'seating_maps/yankee_stadium.jpg (Yankees seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 1B anchor above; the netting '
+                         'band ends at the top edge of 029 on this side, '
+                         'beside 128'),
     ),
 
     # --- Family 2: the club names a side-bearing product -------------------
@@ -455,6 +525,42 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                    basis='right field is the first-base side; the club names '
                          'the product, not the side, so this is one inference '
                          'step past the wording'),
+        # Read off the seating map (2026-09-07). The club anchors above cover
+        # eleven sections; the map covers the whole lower bowl and names the
+        # side outright at both ends.
+        SideAnchor('', 127, 148, '1B',
+                   'lower bowl descending from the Home Plate Box 149-151 '
+                   'toward the right-field corner: 148-145 (Cardinals Home '
+                   'Box) 144-141 (Cardinals Infield Box) 140-135 (1st Base '
+                   'Field Box / Cardinals Dugout Box) 134-130 (Right Field '
+                   'Box / Lower Right Field Box) 129-127 (Home Run Box), '
+                   'then the Lower Right Field Bleachers 101-111 odd',
+                   'seating_maps/busch_stadium.png (Cardinals seating map)',
+                   'map_read', '2026-09-07',
+                   basis="flat plan, plate at lower left. Orientation fixed "
+                         "by the map's own product names, which say the side "
+                         "outright at both ends of the bowl: LOWER RIGHT "
+                         "FIELD BLEACHERS / RIGHT FIELD BOX / 1st BASE FIELD "
+                         "BOX on this side, LEFT FIELD BOX / LEFT FIELD "
+                         "PAVILION / LOWER LEFT FIELD BLEACHERS / 3rd BASE "
+                         "FIELD BOX on the other. The club's netting page "
+                         "corroborates wedge by wedge: its '1B Field Box "
+                         "135-140', '3B Field Box 161-165' and 'Lower RF Box "
+                         "132-134' land on the map's wedges of those names, "
+                         "and its 'Home Field Box 145-155' straddles the "
+                         "map's HOME PLATE BOX 149-151"),
+        SideAnchor('', 152, 167, '3B',
+                   'lower bowl ascending from the Home Plate Box 149-151 '
+                   'toward the left-field corner: 152-155 (Visitors Home '
+                   'Box) 156-159 (Visitors Infield Box) 160-165 (3rd Base '
+                   'Field Box) 163-167 (Left Field Box)',
+                   'seating_maps/busch_stadium.png (Cardinals seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 1B anchor above. Several '
+                         'numbers in 160-167 are printed on more than one '
+                         'product here, but every product carrying them sits '
+                         'on this same side, so the label is on the '
+                         'third-base line whichever one it names'),
     ),
 
     # Petco's netting page names both sides, but the two runs it names overlap
@@ -753,6 +859,110 @@ SIDE_ANCHORS: dict[str, tuple[SideAnchor, ...]] = {
                    'seating_maps/rate_field.gif (White Sox seating map)',
                    'map_read', '2026-09-07',
                    basis='same basis as the 1B anchor above'),
+    ),
+
+    # --- Family 3, third read (2026-09-07): the six parks of Step 13. Three
+    # of them (Yankee Stadium, Dodger Stadium, Busch Stadium) already carried
+    # club-page anchors; the map read is appended to those entries above,
+    # because it reaches rings and sections the club page does not.
+    # See MAP_FINDINGS.md, Step 13.
+
+    'minute_maid': (
+        SideAnchor('', 105, 114, '3B',
+                   'field level ascending from the plate block 118-120 '
+                   'toward the left-field corner: 114 113 112 111 110 109 '
+                   '108 107 106 105, then 104 and the Crawford Boxes 100-103',
+                   'seating_maps/daikin_park.jpg (Astros seating map)',
+                   'map_read', '2026-09-07',
+                   basis="flat plan, plate at lower left. Orientation fixed "
+                         "by Landry's Crawford Boxes on 100-103 - the legend "
+                         "colour matches those four wedges to within a few "
+                         "RGB counts, and the Crawford Boxes are Daikin "
+                         "Park's left-field porch. Corroborated by the "
+                         "Batters Eye Box, which sits on the plate-to-centre "
+                         "axis with the Crawford Boxes about 40 degrees to "
+                         "its left, and by the Bullpen Boxes 150-156 at the "
+                         "other end. The behind-plate block reads 118-120, "
+                         "inside the club's published netted run 112-126"),
+        SideAnchor('', 124, 129, '1B',
+                   'field level descending from the plate block 118-120 '
+                   'toward the right-field corner: 122 122 124 125 126 127 '
+                   '128 129',
+                   'seating_maps/daikin_park.jpg (Astros seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 3B anchor above. The anchor '
+                         'starts at 124 because this map prints 122 on two '
+                         'adjacent wedges and never prints 123, the same '
+                         'defect it has at 116/117 and 120/121'),
+        SideAnchor('', 131, 134, '1B',
+                   'field level continuing toward the right-field corner: '
+                   '131 132 133 134 (Field Box IV is labelled Sec. 132-134 '
+                   'in the legend), then the Bullpen Boxes 150-156',
+                   'seating_maps/daikin_park.jpg (Astros seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks. Split from the anchor above '
+                         'because 130 is not printed: the wedge after 129 '
+                         'carries 131'),
+    ),
+
+    'wrigley_field': (
+        SideAnchor('', 101, 111, '3B',
+                   'lower bowl ascending from the plate toward the '
+                   'left-field corner: 111 110 109 (Field Box Infield) '
+                   '108 ... 101 (Field Box Outfield), ending at the Left '
+                   'Field Gate',
+                   'seating_maps/wrigley_field.jpg (Cubs seating map)',
+                   'map_read', '2026-09-07',
+                   basis="flat plan. Orientation fixed by the street names "
+                         "the map prints around the frame: W. Waveland Ave. "
+                         "runs behind left field and is along the top, N. "
+                         "Sheffield Ave. runs behind right field and is down "
+                         "the right side. The Left Field Gate (by 101/203) "
+                         "and the Wintrust Right Field Gate (by 134/232) "
+                         "agree, as do the HOME and VISITORS dugout labels. "
+                         "The anchors stop at 111 and start at 123 because "
+                         "the map's own Field Box Home Plate colour covers "
+                         "112-122 - sampled and matched against the legend "
+                         "swatch - so those eleven are the map's "
+                         "behind-plate group, and a shoulder of the "
+                         "behind-plate group is not a statement about a foul "
+                         "line"),
+        SideAnchor('', 123, 134, '1B',
+                   'lower bowl descending toward the right-field corner: '
+                   '123 124 125 126 (Field Box Infield) 127 ... 134 (Field '
+                   'Box Outfield), ending at the Wintrust Right Field Gate',
+                   'seating_maps/wrigley_field.jpg (Cubs seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 3B anchor above'),
+    ),
+
+    'nationals_park': (
+        SideAnchor('', 101, 118, '3B',
+                   'lower bowl ascending from the PNC Diamond Club block '
+                   '119-126 toward the left-field corner: 118 117 116 '
+                   '(Infield Box) 115-109 (Baseline / Corner) 108 (Corner '
+                   'Reserved) 107-101 (Outfield Reserved)',
+                   'seating_maps/nationals_park.jpg (Nationals seating map)',
+                   'map_read', '2026-09-07',
+                   basis="flat plan, plate at the bottom. Orientation fixed "
+                         "by the map's own legend: the Right Field Terrace "
+                         "colour sits on 222-230, sampled and matched to the "
+                         "swatch, and those are on the far side of the frame "
+                         "from this anchor. The NATIONALS and VISITORS "
+                         "dugout labels agree - the Nationals dugout is on "
+                         "the first-base side, and it is drawn opposite this "
+                         "anchor. The map also draws the netting as a dotted "
+                         "line running 109 to behind the plate to 135, which "
+                         "is the club's published extent to the section"),
+        SideAnchor('', 127, 143, '1B',
+                   'lower bowl descending from the PNC Diamond Club block '
+                   '119-126 toward the right-field corner: 127 128 129 130 '
+                   '131 (Infield Box) 132-135 (Baseline Reserved / Corner) '
+                   '136 137 (Corner Reserved) 138-143 (Outfield Reserved, '
+                   'past the Nationals bullpen)',
+                   'seating_maps/nationals_park.jpg (Nationals seating map)',
+                   'map_read', '2026-09-07',
+                   basis='same landmarks as the 3B anchor above'),
     ),
 
 }

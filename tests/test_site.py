@@ -276,8 +276,8 @@ def test_no_foul_line_is_named_where_it_is_not_established(built, key):
 
     Oriole Park was `mapped` with its two sides swapped and every check in the
     repo passed it, because the geometry is mirror-symmetric. So a page may
-    name a foul line only where a side-naming source backs it — nine parks —
-    and at the other twenty-two the matching pair is folded into one row.
+    name a foul line only where a side-naming source backs it — twelve parks —
+    and at the other nineteen the matching pair is folded into one row.
     """
     slug = PARK_SOURCES[key]['slug']
     p = built['parks'][slug]
@@ -293,13 +293,19 @@ def test_no_foul_line_is_named_where_it_is_not_established(built, key):
         f'{slug}: sides are unestablished but the pair was not folded'
 
 
-def test_only_nine_parks_may_name_a_foul_line(built):
+def test_only_twelve_parks_may_name_a_foul_line(built):
+    """Three parks joined the list in Step 13, off their seating maps:
+    Daikin Park, Wrigley Field and Yankee Stadium. Yankee Stadium is the
+    instructive one — it always had two club-page anchors, but they name
+    sections on a ring this park's zone table does not number, so the park
+    was untestable until the map supplied labels the table does carry."""
     named = sorted(p['key'] for p in built['parks'].values()
                    if p['sides']['named'])
     assert named == ['chase_field', 'citizens_bank', 'comerica_park',
                      'dodger_stadium', 'fenway_park', 'great_american',
-                     'guaranteed_rate', 'rogers_centre', 'truist_park']
-    assert '9 of the 31 parks have one' in flat(built['pages'][''])
+                     'guaranteed_rate', 'minute_maid', 'rogers_centre',
+                     'truist_park', 'wrigley_field', 'yankee_stadium']
+    assert '12 of the 31 parks have one' in flat(built['pages'][''])
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))

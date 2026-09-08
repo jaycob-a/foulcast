@@ -1213,3 +1213,707 @@ written up for the site.
    side calls; both affect how large the offset is.
 5. **Great American's 200 level.** Unreadable at 6px, so the model's
    `HOME-B` / `1B-LB1` / `3B-LB1` (205–228) are simply not checked.
+
+---
+
+# Step 13 — six more maps (2026-09-07)
+
+Six further maps read the same way as the eleven above: cropped and upsampled
+2x–12x around the plate, both foul lines and the deck edges, and read at that
+magnification. Where a colour carried the argument, the legend swatch and the
+section fill were sampled and compared as RGB rather than judged by eye; those
+comparisons are named in the text. Anything I could not resolve is marked as
+such rather than inferred.
+
+**Nothing in `stadium.py` was changed.** The only code changes are entries in
+`seat_map.SIDE_ANCHORS` and the count that `tests/test_site.py` asserts, which
+moved from nine parks to twelve because three of these six became testable.
+
+| Park | File | Pixels | Type | Legibility |
+|---|---|---|---|---|
+| Daikin Park | `daikin_park.jpg` | 1024x1322 | flat plan | excellent |
+| Wrigley Field | `wrigley_field.jpg` | 1536x864 | flat plan | excellent |
+| Yankee Stadium | `yankee_stadium.jpg` | 640x640 | flat plan | fair — dense, 6–9px labels |
+| Dodger Stadium | `dodger_stadium.jpg` | 1536x1920 | flat plan | excellent |
+| Busch Stadium | `busch_stadium.png` | 2208x2166 | flat plan | excellent |
+| Nationals Park | `nationals_park.jpg` | 2208x2760 | flat plan | excellent |
+
+Filenames differ from the park names in three cases: Minute Maid Park is
+`daikin_park.jpg` under its current name, and Busch and Nationals are `.png`
+and `.jpg` respectively. All six were present; none had to be re-encoded.
+
+## Summary of Step 13
+
+| Park | Sides | Plate zone | Severity |
+|---|---|---|---|
+| **Daikin Park** | **correct** | **correct** — map reads 118–120, model has 117–120 | none found |
+| **Yankee Stadium** | **correct** | **correct** on all four rings — 120A/120B, 220B, 320B, 420B | none found |
+| **Dodger Stadium** | **correct** | **correct** — the 1/2 and 101/102 pairs behind the plate | none found |
+| Wrigley Field | **correct** | off ≈5 toward 3B at field level; 200 level correct; 300/400 off ≈3–4 toward 3B | Moderate |
+| Busch Stadium | **scrambled** — 127–133 are right field, not 3B; 152–155 are 3B, not 1B | off ≈14 toward 1B at field level, ≈10 on the upper rings | Severe |
+| Nationals Park | **flipped** — 1B and 3B swapped on the field-level ring | off ≈17 toward 3B; the 200 level is wrong in a different way again | Severe |
+
+Three things are worth stating plainly, because the brief for this step was to
+assume nothing until the map said so.
+
+- **The streak breaks.** Every one of the eleven maps read before this step
+  disagreed with its table somewhere. Daikin Park, Yankee Stadium and Dodger
+  Stadium are the first three tables in this file that come out right on both
+  counts — sides and plate zone. That is a finding, not an absence of one: it
+  was checked the same way as the parks that failed.
+- **Yankee Stadium was untestable for a reason that had nothing to do with
+  evidence.** It has carried two `primary` anchors from the club's netting page
+  since Step 8 (`011` = 1B/RF, `029` = 3B/LF), and they were unusable because
+  they name sections on the inner Legends ring, which no zone in this park's
+  table claims. The map supplies the same fact on the Field MVP ring — the ring
+  the table does number — and the park becomes testable without any new source
+  being trusted.
+- **Nationals Park is the fifth mirrored table**, after Camden, Coors,
+  Progressive and Oracle.
+
+---
+
+## 12. Daikin Park — `daikin_park.jpg`
+
+Flat plan, plate at lower left, the field rotated so the plate-to-centre axis
+runs up and to the right. 1024px wide; lower-bowl labels are 11–13px and read
+cleanly at 3x.
+
+**Orientation.** Fixed by **Landry's Crawford Boxes**, which are Daikin Park's
+left-field porch. The legend swatch samples `(245,224,135)` and sections
+`100`–`103` sample `(239,217,142)` — the same fill to within a few counts, and
+no other product on the map carries it. So `100–103` are left field.
+Corroborated independently by the **Batters Eye Box**, which by definition is
+in dead centre: measured from the plate, the Crawford Boxes sit at −91°, the
+batter's eye at −52°, and the `150–156` Bullpen Boxes at −5°. A centre-field
+axis at −52° puts the foul lines at −97° and −7°, which is where those two
+ends fall. The two landmarks agree, and neither is a dugout label.
+
+### Behind home plate
+
+The innermost ring is the **Phillips 66 Diamond Club**, lettered `AA A B C D E
+F`, with `C`/`D` on the plate's axis. Behind it, on the numbered 100 ring,
+**`119` and `120` are dead centre** — measured as the bearing from the plate
+circle opposite the mound circle, which falls at 124.6° against 130.4° for
+`119` and 117.9° for `120`. Behind-plate block ≈ **118–120**. This sits inside
+the club's published netted run `112–126`, whose centre is 119.
+
+### Lower bowl outward from the plate
+
+- **3B line, ascending:** `118 118 116 116 114 113 112 111 110 109 108 107 106
+  105 104` → the Crawford Boxes `103 102 101 100` in left field.
+- **1B line, descending:** `122 122 124 125 126 127 128 129 131 132 133 134` →
+  the Bullpen Boxes `150 151 152 153 154 155 156` in right field.
+- **This map has a numbering defect.** `116`, `118`, `120` and `122` are each
+  printed on two adjacent wedges, and `115`, `117`, `121`, `123` and `130` are
+  never printed at all. Checked at 12x: both wedges really do read `116`, both
+  really do read `122`, and the wedge after `129` really does read `131`. The
+  anchors below are split to avoid claiming a number the map does not carry.
+- **200 level:** `205 … 219` 3B side, `220 … 236` then `250–255` 1B side.
+  Plate at ≈`219/220`.
+- **300 level (Terrace/View):** `305 … 319` 3B, `320 … 334` 1B. Plate ≈`319/320`.
+- **400 level (View Deck):** `405 … 419` 3B, `420 … 434` 1B. Plate ≈`419/420`.
+
+### Netting
+
+**None drawn.** The field-to-seat boundary is a plain grey band at every
+magnification, and the legend has no netting entry. The club publishes
+`112–126` plus the Diamond Club separately; the map neither shows nor
+contradicts it, and the plate block the map reads is centred inside it.
+
+### Deck levels
+
+100s `100–156` (nothing between 135 and 149); 200s `205–255`; 300s `305–334`;
+400s `405–434`; plus `397–399` (Coca-Cola Corner) in right field.
+
+### vs. `stadium.py` (`_make_daikin_park_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `3B-DUG` | Sec 105-110 | 3B, correct |
+| `3B-FB1` | Sec 111-116 | 3B, correct |
+| `HOME-F` | Sec 117-120 | **behind the plate, correct** (map reads 118–120; 117 is not printed) |
+| `1B-FB1` | Sec 121-127 | 1B, correct (121 and 123 are not printed) |
+| `1B-DUG` | Sec 128-134 | 1B, correct (130 is not printed) |
+| `3B-LB1` | Sec 206-215 | 3B, correct |
+| `HOME-B` | Sec 216-223 | centred on 219.5 against a plate at 219/220 — **correct** |
+| `1B-LB1` | Sec 224-232 | 1B, correct |
+| `3B-UB` | Sec 408-417 | 3B, correct |
+| `HOME-U` | Sec 418-426 | centred on 422 against a plate at 419/420 — ≈2–3 toward 1B |
+| `1B-UB` | Sec 427-434 | 1B, correct |
+
+**No mismatch of side or plate zone at field level or on the 200 ring.** The
+400-level plate block is 2–3 sections toward first base, which is inside the
+resolution of "which wedge is on the plate's axis" and is not called an error
+here. The model has no 300 level, so the map's `305–334` ring is unmodelled;
+the map has no sections `135–149`, which the model also does not claim.
+
+**Anchors added:** 3B `105–114`; 1B `124–129` and `131–134`. Check: **ok**, 20
+agree, 0 disagree, 0 unmatched.
+
+---
+
+## 13. Wrigley Field — `wrigley_field.jpg`
+
+Flat plan, plate at the lower left of the field, 1536px wide, with a legend of
+34 named products down the left third of the image.
+
+**Orientation.** This map prints the street grid, which settles it outright:
+**W. Waveland Ave.** runs along the top and **N. Sheffield Ave.** down the
+right side. Waveland is behind left field and Sheffield behind right field.
+The map's own gates agree — **Left Field Gate** beside `101`/`203` at the top,
+**Wintrust Right Field Gate** beside `134`/`232` at the right — and so do the
+`HOME` and `VISITORS` dugout labels, `VISITORS` running along `24–28` on the
+first-base side. Three independent statements, none of them the drawn diamond.
+
+### Behind home plate
+
+Two answers, and they agree.
+
+- **Geometrically:** the plate circle and the mound circle give a behind-plate
+  bearing of 126.2°. On the 100 ring `118` falls at 125.5° and `117` at
+  139.2°, so **`118` is dead centre**, block ≈ `117–119`. On the Club Box ring
+  `18` is dead centre.
+- **From the map's own product bands:** the legend's **Field Box Home Plate**
+  swatch is `(25,188,185)`, and sections `112` through `122` all sample
+  `(22–40, 186–191, 180–196)` — that colour and no other. `109–111` and
+  `123–125` sample `(0–32, 123–133, 177–200)`, the **Field Box Infield**
+  swatch. So the map itself groups **`112–122` as the behind-plate block**,
+  centred on 117.
+
+### Lower bowl outward from the plate
+
+- **3B line, ascending:** `111 110 109` (Field Box Infield) `108 … 101` (Field
+  Box Outfield) → Left Field Gate. Continuous, every number printed.
+- **1B line, descending:** `123 124 125 126` (Field Box Infield) `127 … 134`
+  (Field Box Outfield) → Wintrust Right Field Gate. Continuous.
+- **Club Box ring:** `3 … 16` 3B side, `18 … 32` 1B side. `17` is not printed —
+  `16` and `18` are adjacent wedges.
+- **200 level:** `202 … 218` 3B, `220 … 233` 1B, plate at ≈`217/218`. `219` and
+  `224` are not printed.
+- **300 level:** `303L … 316L` 3B, `317R … 331R` 1B. The map's own **L/R suffix
+  switches between `316L` and `317R`**, directly behind the plate, beside the
+  Press Box.
+- **400 level:** `403L … 415L` 3B, `419R … 431R` 1B.
+
+The L/R suffix is itself a side statement, and it puts the switch at x16/x17 on
+both upper decks — consistent with the plate at 117–118 on the 100 ring and
+217–218 on the 200 ring.
+
+### Netting
+
+**None drawn.** Checked at 6x along the field-to-seat boundary on both foul
+lines: a plain white band, no hatch, no dotted line, and no netting entry in a
+34-item legend. The thick orange ring is the **eero Suite Level**, not netting
+— the legend swatch matches. This leaves the repo's Wrigley netting gap
+(`club_publishes_no_sections`) exactly where it was; the map does not close it.
+
+### Deck levels
+
+Club Box `3–32`; 100s `101–134`; bleachers `501–508`, `511–518`, `536–538`;
+200s `202–233`; 300s `303L–331R`; 400s `403L–431R`.
+
+### vs. `stadium.py` (`_make_wrigley_field_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `3B-DUG` | Sec 101-104 | 3B, correct |
+| `3B-FB1` | Sec 105-111 | 3B, correct |
+| `HOME-F` | Sec 112-114 | **the 3B end of the map's 112–122 home-plate band** — ≈5 short of the plate at 117–118 |
+| `1B-FB1` | Sec 115-122 | **the rest of that band**: 115–116 are on the 3B side of the plate, 117–119 are the plate, only 120–122 are 1B |
+| `1B-DUG` | Sec 123-134 | 1B, correct |
+| `3B-LB1` | Sec 202-212 | 3B, correct |
+| `HOME-B` | Sec 213-224 | centred on 218.5 against a plate at 217/218 — **correct** |
+| `1B-LB1` | Sec 225-233 | 1B, correct |
+| `3B-UB` | Sec 303L-307L | 3B, correct |
+| `HOME-U` | Sec 308L-318R | centred on ≈313 against a switch at 316L/317R — ≈3–4 toward 3B |
+| `1B-UB` | Sec 319R-331R | 1B, correct |
+| `3B-UR` | Sec 403L-408L | 3B, correct |
+| `HOME-G` | Sec 409-419 | centred on 414 against a switch at ≈415L/419R — ≈3 toward 3B |
+| `1B-UR` | Sec 420R-431R | 1B, correct |
+
+**Mismatch: the field-level plate zone is about 5 sections toward third base,**
+and the two upper decks are 3–4 the same way. **The 200 level is right, and the
+section ordering is correct on both sides on all four decks.**
+
+**Anchors added:** 3B `101–111`, 1B `123–134`. Check: **ok**, 23 agree, 0
+disagree, 0 unmatched. The eleven sections `112–122` are deliberately left out,
+on the map's own authority rather than for convenience: they are one product
+band that the map names *Field Box Home Plate*, and a shoulder of the
+behind-plate group is not a statement about a foul line. Note what this costs.
+Had the anchors run to the plate — 3B `101–116`, 1B `120–134` — the check would
+say `inconsistent` on `115`/`116` alone, because the model puts them on first
+base. That would be a true statement rendered in the wrong vocabulary: the
+table is not scrambled, it is offset, and the anchors exist to catch mirrors.
+The offset is recorded here instead, which is the only place it can be.
+
+---
+
+## 14. Yankee Stadium — `yankee_stadium.jpg`
+
+Flat plan, plate at the bottom, 640x640 and by far the densest map of the six:
+five concentric numbered rings plus a bare-number ring, with labels down to
+6px. Read at 7–8x. The smallest source in this file that is nonetheless fully
+legible where it matters.
+
+**Orientation.** Three statements, converging.
+
+1. The plate circle is at the bottom with the mound directly above it and the
+   **Mastercard Batter's Eye Deck** at top centre, so the plate-to-centre axis
+   is vertical and the foul lines run down-left and down-right.
+2. The map prints its own netting note along the bottom edge: *"Please note
+   that protective netting of varying heights is used in the Stadium from
+   Section 011 to behind home plate to Section 029."* The drawn netting band
+   ends at the top edge of `011` on the right of the frame and at the top edge
+   of `029` on the left — read at 8x, both endpoints unambiguous.
+3. The club's netting page, already an anchor in this repo since Step 8, calls
+   `011` the **1B/RF side** and `029` the **3B/LF side**. The `011` end is also
+   the side the map labels **YANKEES** dugout, which is the first-base side at
+   this park.
+
+So the right of the frame is first base. This is the one park of the six where
+the side call leans on a source outside the image; the image supplies the
+geometry and the section positions, the club page supplies which end is which.
+
+### Behind home plate
+
+**`120A` and `120B`** are dead centre on the Field MVP (100) ring, with `119`
+and `121A/121B` flanking. On the ring outside it, **`220B`** is centre; on the
+Terrace ring, **`320B`**; on the Grandstand ring, **`420B`**. On the inner
+Legends ring, **`020`**. Every ring puts the plate at x20 — the cleanest
+internal consistency of any map in this file.
+
+### Lower bowl outward from the plate
+
+- **1B line, descending:** `119 118 117B 117A 116 115 114B 114A 113 112 111 110
+  109 108 107 106 105` → `104 103` at the right-field corner.
+- **3B line, ascending:** `121A 121B 122 123 124 125 126 127A 127B 128 129 130
+  131 132 133 134 135 136` → the left-field corner.
+- **Legends ring:** `019 018 017B 017A 016 015B 015A 014B 014A 013 012 011` 1B;
+  `021A 021B 022 023 024A 024B 025 026 027A 027B 028 029` 3B.
+- **200 level:** `219 … 202` 1B; `221 … 238` 3B.
+- **300 level:** `319 … 305` 1B; `321 … 334` 3B.
+- **400 level:** `419 … 405` 1B; `421 … 434B` 3B.
+
+Suffixed labels (`114A/114B`, `117A/117B`, `120A/120B`, `127A/127B`) split one
+printed wedge across an aisle; `_zone_numbers` already collapses them.
+
+### Netting
+
+**Drawn, and named.** A dark navy band along the field edge running from the
+top edge of section `011` on the first-base side, round behind the plate, to
+the top edge of `029` on the third-base side. Beyond either endpoint the wall
+is a plain brown line. The printed note says the same thing in words. This is
+an exact match to the published extent already recorded in `netting.py`, and it
+is the first time a map in this file has confirmed a club's netting endpoints
+*section by section* on both sides at once.
+
+### Deck levels
+
+Legends `011–029` (with A/B suffixes); 100s `103–136`; 200s `202–238`; 300s
+`305–334`; 400s `405–434B`; plus a bare Legends-numbering ring `1–67` that the
+model does not use.
+
+### vs. `stadium.py` (`_make_yankee_stadium_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `1B-DUG` | Sec 109-114 | 1B, correct |
+| `1B-FB1` | Sec 115-118 | 1B, correct |
+| `HOME-F` | Sec 119-121 | **behind the plate, correct** — 120A/120B are dead centre |
+| `3B-FB1` | Sec 122-125 | 3B, correct |
+| `3B-DUG` | Sec 126-131 | 3B, correct |
+| `1B-LR` / `1B-LB1` | Sec 205-217 | 1B, correct |
+| `HOME-B` | Sec 218-222 | centred on 220 against a plate at 220B — **correct** |
+| `3B-LB1` / `3B-LR` | Sec 223-234 | 3B, correct |
+| `1B-UB` | Sec 307-316 | 1B, correct |
+| `HOME-U` | Sec 317-323 | centred on 320 — **correct** |
+| `3B-UB` | Sec 324-331 | 3B, correct |
+| `1B-UR` | Sec 407-418 | 1B, correct |
+| `HOME-G` | Sec 419-421 | centred on 420 — **correct** |
+| `3B-UR` | Sec 422-429 | 3B, correct |
+
+**No mismatch of side or plate zone anywhere.** The table under-covers each
+ring at the outfield end — the map runs to `136`, `238`, `334` and `434B` where
+the model stops at `131`, `234`, `331` and `429` — but every zone it does name
+is on the right side and in the right place.
+
+The park's join still returns `join_gap / labels_contradict_model`, and
+correctly: the club's netting sections `011–029` are on a ring the table does
+not number, so no printed section in any zone falls inside the published
+extent. That gap is about the *numbering series*, not about the sides, and this
+map does not close it. What the map does close is the side question.
+
+**Anchors added:** 1B `105–118`, 3B `122–136`. Check: **ok**, 20 agree, 0
+disagree, 11 unmatched (`105–108` and `132–136`, which no zone claims). The
+park moves from `untestable` to `ok`.
+
+---
+
+## 15. Dodger Stadium — `dodger_stadium.jpg`
+
+Flat plan, plate at the bottom, 1536x1920. The clearest lower-bowl typography
+of the six.
+
+**Orientation.** The map prints **SPECTRUM LEFT FIELD PAVILION** over the odd
+sections `301–315` at the upper left and **RIGHT FIELD PAVILION** over the even
+sections `302–316` at the upper right. Nothing more is needed. The **DODGER
+DUGOUT** label sits on the odd side and **VISITORS DUGOUT** on the even side,
+which agrees.
+
+### Behind home plate
+
+Every ring at this park runs outward from a **pair**, and the pair is the plate
+block:
+
+- Field level: `1` and `2`, with the **Yaamava' Dugout Club** wrapping the
+  backstop in front of them.
+- Loge: `101` and `102`.
+- Reserve and Top Deck: `1` and `2` again.
+
+Odd numbers run left from the pair, even numbers run right. **Left is third
+base, right is first base**, per the pavilion headings.
+
+### Lower bowl outward from the plate
+
+- **3B line (odd), ascending:** field `1 3 5 … 53`; Loge `101 103 105 … 167`;
+  Reserve `1 3 … 61`; Top Deck `1 3 … 13`.
+- **1B line (even), descending:** field `2 4 6 … 52`; Loge `102 104 106 … 168`;
+  Reserve `2 4 … 60`; Top Deck `2 4 … 12`.
+
+The parity *is* the side here, on all four rings. That is what makes this park
+checkable at all — a bare number tells you the side without any position
+information — and it is why the model's overlapping integer ranges
+(`FD12-FD24` against `FD11-FD25`) are not a contradiction.
+
+### Netting
+
+**None drawn.** The field-to-seat boundary is plain at 3.5x behind the plate
+and down both lines, and the map has no legend. The club's published extent
+(behind the plate → `40` on 1B, `41` on 3B) is unaffected by this; the map
+corroborates its *parity claim* — even to first base, odd to third — which is
+the part of it the join actually relies on.
+
+### Deck levels
+
+Field `FD1–FD53`+ with the Dugout Club (`DG`) in front; Loge `101–168`; a Club
+/ Suite ring in the 200s (`201–261`+, read only in outline); Reserve `1–61`;
+Top Deck `1–13`.
+
+### vs. `stadium.py` (`_make_dodger_stadium_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `HOME-DC` | Sec DG1-DG15 | the Yaamava' Dugout Club, in front of the plate — correct |
+| `HOME-F` | Sec FD1-FD10 | behind the plate, symmetric about the 1/2 pair — **correct** |
+| `1B-FB1` | Sec FD12-FD24 | even, 1B — correct |
+| `3B-FB1` | Sec FD11-FD25 | odd, 3B — correct |
+| `1B-DUG` | Sec FD26-FD44 | even, 1B — correct |
+| `3B-DUG` | Sec FD27-FD45 | odd, 3B — correct |
+| `HOME-B` | Sec 101-110 | behind the plate on the Loge, about the 101/102 pair — **correct** |
+| `1B-LB1` | Sec 112-136 | even, 1B — correct |
+| `3B-LB1` | Sec 111-135 | odd, 3B — correct |
+| `HOME-U` | Sec RS1-RS10 | behind the plate on the Reserve — **correct** |
+| `1B-UB` | Sec RS12-RS36 | even, 1B — correct |
+| `3B-UB` | Sec RS11-RS35 | odd, 3B — correct |
+
+**No mismatch of side or plate zone on any ring.** The table stops short of the
+outfield end on each — the Loge runs to `167/168` on the map against `135/136`
+in the model — and the map's 200-level Club/Suite ring is unmodelled. Neither
+is a side or plate error.
+
+**Anchors added:** four single sections on the Loge ring — 3B `111` and `135`,
+1B `112` and `136` — rather than runs, because a range spanning both parities
+would claim the other line's sections and `_overlapping_prefixes` would make
+the park untestable. These test a ring the club's netting page never reaches.
+Check: **ok**, 6 agree (up from 2), 0 disagree.
+
+---
+
+## 16. Busch Stadium — `busch_stadium.png`
+
+Flat plan at 2208x2166, plate at the lower left, drawn as a "Seating Guide"
+with streets, gates and a compass rose. Every product is named on the map
+itself.
+
+**Orientation.** The map says the side outright at both ends of the bowl, in
+its own product names: **LOWER RIGHT FIELD BLEACHERS**, **RIGHT FIELD BOX**,
+**LOWER RIGHT FIELD BOX**, **1st BASE FIELD BOX** on one side; **LEFT FIELD
+BOX**, **LEFT FIELD PAVILION**, **LOWER LEFT FIELD BLEACHERS**, **3rd BASE
+FIELD BOX** on the other. No inference step at all.
+
+The club's netting page corroborates it wedge by wedge, which is worth
+recording because the two sources were gathered independently: the page's *"1B
+Field Box 135-140"*, *"3B Field Box 161-165"* and *"Lower RF Box 132-134"* land
+on exactly the map's wedges of those names.
+
+### Behind home plate
+
+The map labels it: **HOME PLATE BOX = `149`, `150`, `151`** (purple). Flanking
+it are **CARDINALS HOME BOX** `145–148` on the first-base side and **VISITORS
+HOME BOX** `152–155` on the third-base side. Innermost is the **Community
+America Cardinals Club**, bare `1–8`, with the plate on the `4`/`5` axis. The
+club's *"Home Field Box 145-155"* straddles all three products and is centred
+on 150.
+
+### Lower bowl outward from the plate
+
+- **1B line, descending:** `148 147 146 145` (Cardinals Home Box) `144–141`
+  (Cardinals Infield Box) `140–135` (1st Base Field Box / Cardinals Dugout Box)
+  `134–130` (Right Field Box / Lower Right Field Box) `129 128 127` (Home Run
+  Box) → the **Lower Right Field Bleachers `101 103 105 107 109 111`**, odd
+  only, in right field.
+- **3B line, ascending:** `152–155` (Visitors Home Box) `156–159` (Visitors
+  Infield Box) `160–165` (3rd Base Field Box) `163–167` (Left Field Box) →
+  `170 171 172` (Home Run Box) and the **Lower Left Field Bleachers `189 191
+  193 195 197`**, odd only, in left field.
+- Several numbers in `160–167` are printed on more than one product. Every
+  product carrying them is on the third-base side, so a bare label in that
+  range is on that line whichever product it names — the same situation as
+  Progressive's `153–162`.
+- **Loge (200s):** `205 … 248` 1B side, then **HOME REDBIRD CLUB `249 250
+  251`** — the map's own name for the behind-plate product, drawn radially
+  outside the Home Plate Box — then `252 … 272` 3B side.
+- **Pavilion (300s):** `302 … 348` 1B side, then **HOME PAVILION `349 350
+  351`**, then `352 … 372` 3B side.
+- **Terrace (400s):** `431 … 448` 1B side, plate at ≈`449–450`, `451 … 454`
+  3B side. A short ring; it does not reach either outfield.
+
+The 200 and 300 rings each name their behind-plate block on the map, and both
+sit at x49–x51, directly outside the Home Plate Box at `149–151`. Three rings
+agreeing on the plate's position is what makes the model's offset measurable
+rather than estimated.
+
+### Netting
+
+**None drawn.** The field-to-seat boundary is the tan warning track and a
+plain white band, at 2.4x behind the plate and down both lines. No legend
+entry. The club's published product list stands on its own.
+
+### Deck levels
+
+100s `101–197` (sparse: odd-only in both outfields, nothing between 111 and
+127, nothing between 172 and 189); 200s `205–272`; 300s `302–372`; 400s
+`431–454`. The model has no 400 level for this park.
+
+### vs. `stadium.py` (`_make_busch_stadium_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `3B-FB1` | Sec 127-133 | **right field** — Home Run Box and Right Field Box, on the 1B side |
+| `HOME-F` | Sec 134-137 | **1B line** — Right Field Box / 1st Base Field Box / Cardinals Dugout Box, ≈14 sections down from the plate at 149–151 |
+| `1B-FB1` | Sec 138-144 | 1B, correct side |
+| `1B-DUG` | Sec 145-155 | **straddles the plate**: 145–148 are 1B, 149–151 are the Home Plate Box, 152–155 are the Visitors Home Box on 3B |
+| `3B-DUG` | Sec 157-167 | 3B, correct |
+| `1B-LB1` | Sec 245-255 | straddles the Home Redbird Club at 249–251 the same way |
+| `HOME-B` | Sec 237-244 | **1B side**, ≈9 short of the Home Redbird Club |
+| `3B-LB1` | Sec 256-266 | 3B, correct |
+| `HOME-U` | Sec 336-344 | **1B side**, ≈10 short of the Home Pavilion at 349–351 |
+| `1B-UB` | Sec 345-358 | straddles the 300 plate |
+| `3B-UB` | Sec 359-370 | 3B, correct |
+
+**Mismatch: the table is not mirrored, it is broken in two ways at once.** The
+whole arc is shifted toward first base — about 14 sections at field level and
+about 10 on the two upper rings — so the model's plate sits where the map has
+the first-base dugout boxes. On top of
+that, `3B-FB1` is placed *below* `HOME-F` — the model runs 3B down from 127
+and 1B up to 155, then attaches `3B-DUG` at 157–167 on the far side. Third base
+therefore appears at both ends of the model's arc, which no shift alone would
+produce. A swap would not fix this park; the arc has to be re-laid.
+
+**Anchors added:** 1B `127–148`, 3B `152–167`, on top of the three club-page
+anchors already there. Check: **inconsistent** (unchanged in kind, much better
+evidenced): 30 agree, 13 disagree, 9 unmatched. The thirteen are `127–133`
+(source 1B, table 3B) and `152–155` (source 3B, table 1B) — precisely the two
+defects above.
+
+---
+
+## 17. Nationals Park — `nationals_park.jpg`
+
+Flat plan at 2208x2760, plate at the bottom, with a 21-item **SEATING AREA**
+legend and — uniquely among the seventeen maps read so far — an explicit
+**NETTING** key showing a dotted line.
+
+**Orientation.** Fixed by the legend. The **Right Field Terrace** swatch
+samples `(158,31,98)`; sections `222`, `224`, `226`, `228`, `230` sample
+`(165,29,101)` and are all on the right of the frame. So the right of the frame
+is right field, and `127–143` on the lower bowl are the first-base side. The
+map's **NATIONALS** and **VISITORS** dugout labels agree — the Nationals dugout
+is drawn on the right, and it is on the first-base side at this park. The
+**Scoreboard Pavilion** (`231–243`, sampled and matched) is on the same side,
+and the scoreboard at Nationals Park is in right-centre.
+
+### Behind home plate
+
+The **PNC Diamond Club**, lettered `A B C D E` on the innermost ring with `C`
+on the plate's axis, and **`119–126`** behind it — one grey product band,
+matched to the legend's *PNC Diamond Club* swatch, centred between `122` and
+`123`. `118` and `127` flank it.
+
+This is the same block the club's own netting page names (*"PNC Diamond Club
+119-126"*), and `netting.py` already records the contradiction: *"The club puts
+the PNC Diamond Club at 119-126; this park's zone table puts it at 104-107. One
+of the two is wrong about the same named product."* **The map decides it in the
+club's favour.**
+
+### Lower bowl outward from the plate
+
+- **3B line, ascending:** `118 117 116` (Infield Box) `115–109` (Baseline Box /
+  Baseline Reserved / Corner) `108` (Corner Reserved) `107 … 101` (Outfield
+  Reserved) → `100` at the left-field corner, past the **Visitors Bullpen**.
+  Continuous, every number printed.
+- **1B line, descending:** `127 128 129 130 131` (Infield Box) `132–135`
+  (Baseline Reserved / Corner) `136 137` (Corner Reserved) `138 … 143`
+  (Outfield Reserved) → the right-field corner, past the **Nationals Bullpen**.
+  Continuous.
+- **200 level:** `201 … 212` 3B, plate at `213/214`, `215 … 243` 1B (the run
+  past `221` is the Right Field Terrace and Scoreboard Pavilion).
+- **300 level:** `301 … 313` 3B, plate ≈`313/314`, `315 … 321` 1B. **The ring
+  stops at `321`.** There is no `322`–`337` on this map.
+- **400 level:** `401 … 409` 3B and `416 … 420` 1B. **The upper deck does not
+  wrap behind the plate** — `410`–`415` do not exist.
+
+### Netting
+
+**Drawn, as a black dotted line, with a legend key.** It runs along the field
+edge from the top corner of section **`109`** on the third-base side, round
+behind the plate, to the top corner of section **`135`** on the first-base
+side. Read at 2.4x at both ends; beyond either the wall is a plain brown line.
+
+This matches the club's published extent — *"PNC Diamond Club 119-126;
+Sections 109-118 and 127-135"* — **exactly, on both endpoints**, and it is the
+second independent confirmation in this step (after Yankee Stadium) that a
+club's netting numbers and its own seating map agree. Which makes the point
+sharper, not softer: the club is self-consistent, and it is the model that is
+out.
+
+### Deck levels
+
+100s `100–143` with the PNC Diamond Club `A–E` and Terra Club inside; 200s
+`201–243`; 300s `301–321`; 400s `401–409` and `416–420`.
+
+### vs. `stadium.py` (`_make_nationals_park_sections`)
+
+| Zone | Model label | What the map puts there |
+|---|---|---|
+| `HOME-F` | Sec 104-107, PNC Diamond Club | **3B line, ≈17 sections up toward the left-field corner** — and the PNC Diamond Club is `119–126`, not this |
+| `1B-FB1` | Sec 108-114 | **3B side** |
+| `1B-DUG` | Sec 115-124 | **3B side** for 115–118; 119–124 are the plate block |
+| `3B-FB1` | Sec 127-133 | **1B side** |
+| `3B-DUG` | Sec 134-143 | **1B side** |
+| `HOME-B` | Sec 207-214 | 207–212 are 3B, 213–214 are the 200 plate — ≈3 toward 3B |
+| `1B-LB1` | Sec 215-224 | 1B, **correct** |
+| `3B-LB1` | Sec 225-235 | **1B side** — the Right Field Terrace |
+| `HOME-U` | Sec 307-314 | 307–313 are 3B, 314 is the 300 plate — ≈3 toward 3B |
+| `1B-UB` | Sec 315-326 | 315–321 are 1B, **correct**; `322–326` **do not exist** |
+| `3B-UB` | Sec 327-337 | **do not exist** |
+
+**Mismatch: the field-level ring is mirrored — 1B and 3B are swapped — and the
+plate zone is about 17 sections up the third-base line on top of it.** The
+model's `HOME-F` names the PNC Diamond Club by name and puts it 17 sections
+from where both the club and its map put it.
+
+The 200 and 300 levels are wrong in a *third* way, which is worth separating
+out. There the model is not mirrored: it places the plate at the low end and
+then runs `1B` and `3B` both upward from it (`215–224` then `225–235`;
+`315–326` then `327–337`), so both foul lines end up on the first-base side and
+nothing is claimed below the plate. That is the Sutter Health shape, in a park
+whose field level is a clean mirror. The three rings disagree with each other
+as well as with the map.
+
+**Anchors added:** 3B `101–118`, 1B `127–143` — the field-level ring only, and
+deliberately so. The 200-level ring would add agreements (`215–224` really is
+1B) that would turn a clean `flipped` verdict into `inconsistent` and obscure
+the one thing a reader can act on: **at field level, swap the sides.** The
+200/300 defects are recorded here instead, where they can be described rather
+than compressed into a status word.
+
+Check: **flipped**, 0 agree, 28 disagree, 7 unmatched (`101–107`, which only
+`HOME-F` or no zone claims). Nationals Park is the fifth mirrored table.
+
+Its `join_park` verdict stays `join_gap / labels_contradict_model` rather than
+becoming `sides_flipped`, because guard G3 fires first — the published extent
+already leaves `HOME-F` un-netted, and G3's message names the offending label
+ranges directly. That ordering is deliberate and documented in `netting.py`;
+the flip is recorded in the side check either way.
+
+---
+
+## What the check says after Step 13
+
+This table supersedes "What the check now says, across all 31 parks" above,
+which is the Step 12 state.
+
+| Verdict | Parks |
+|---|---|
+| **flipped** | `camden_yards`, `coors_field`, `progressive_field`, **`nationals_park`** |
+| **inconsistent** | `busch_stadium`, `oakland_coliseum`, `oracle_park` |
+| ok | `chase_field`, `citizens_bank`, `comerica_park`, `dodger_stadium`, `fenway_park`, `great_american`, `guaranteed_rate`, `rogers_centre`, `truist_park`, **`minute_maid`**, **`wrigley_field`**, **`yankee_stadium`** |
+| untestable, anchors exist but unusable | `petco_park` |
+| untestable, no anchor | `american_family`, `angel_stadium`, `citi_field`, `globe_life`, `kauffman_stadium`, `las_vegas_ballpark`, `loan_depot`, `pnc_park`, `target_field`, `tmobile_park`, `tropicana_field` |
+
+Twenty parks now carry an anchor and nineteen are testable, against fifteen
+after Step 12. Parks that may name a foul line on the public site rise from
+nine to **twelve**; `tests/test_site.py::test_only_twelve_parks_may_name_a_foul_line`
+moves with them, and the count in the page text is computed, not written down.
+
+Mapped parks are unchanged at **seven** — `fenway_park`, `dodger_stadium`,
+`truist_park`, `citizens_bank`, `great_american`, `guaranteed_rate`,
+`minute_maid` — but Daikin Park's entry no longer carries the `sides untested`
+flag; it now reads *"sides confirmed against 20 anchored printed sections
+(map_read)"*. No park changed `join_park` status in this step.
+
+`site_data.MAP_READS`, the public positional statement of each map finding,
+still carries the five Step 11 parks only. The eleven parks read in Steps 12
+and 13 are not yet written up for the site.
+
+## What I am least confident about, after Step 13
+
+1. **Yankee Stadium's left/right, considered alone.** The map fixes the plate,
+   the axis and every section position, but nothing *inside the image* says
+   which foul line is which — no left- or right-field landmark, no distance
+   marker, no named outfield product. The side call comes from the club's
+   netting page naming `011` as 1B/RF and the map placing `011` on the right.
+   That is a real chain and I believe it, but it is one link longer than the
+   others in this step, and it is the same shape as the Rate Field weakness
+   flagged after Step 12. If the artist mirrored the plan *and* the club page
+   is right, both my anchors are wrong together and the check would say `ok`
+   about a mirrored table. The YANKEES dugout label sitting on the `011` side
+   is what makes me think that has not happened, since the Yankees dugout is on
+   first base — but that is a fact I brought to the map, not one I read off it.
+2. **Wrigley Field's field-level plate offset, as a number.** That the model is
+   short of the plate is solid: the map's own *Field Box Home Plate* colour
+   covers `112–122` and the model's `HOME-F` is `112–114`. But "about five
+   sections" depends on treating the centre of that colour band as the plate,
+   and the geometric measurement (`118` at 125.5° against a behind-plate
+   bearing of 126.2°) is pinned to where I placed the plate and mound circles
+   on a 1536px image. Four or six would not surprise me. The direction is not
+   in doubt.
+3. **Busch Stadium's shift, as a single number.** The field-level figure is
+   firm: the map names its Home Plate Box `149–151` and the model's `HOME-F` is
+   `134–137`, so about fourteen. But the 200 and 300 rings come out at about
+   ten, and the model's arc is self-contradictory on top of that — third base
+   appears at both ends of it. Any one figure makes this park sound more
+   orderly than it is; the per-ring rows in the table above are the honest
+   version, and re-laying the arc is not the same job as sliding it.
+4. **Daikin Park's absent section numbers.** `115`, `117`, `121`, `123` and
+   `130` are not printed anywhere I could find, and `116`, `118`, `120` and
+   `122` are each printed twice. I checked five of those at 12x and they are
+   what they look like. But "this number appears nowhere on the map" is a claim
+   about the whole image, and I read the whole image at 1x and the bowl at 3–6x,
+   not every wedge at 12x. If one of them is printed somewhere I did not
+   magnify, the anchor split (`124–129` and `131–134`) is over-cautious rather
+   than wrong, which is the direction I would rather err in.
+5. **Nationals Park's 300 and 400 levels ending where I say they do.** `321`
+   and `420` are the last labels I can find going clockwise, and the structure
+   visibly stops there behind the K Street Boxes. That makes the model's
+   `322–337` sections that do not exist. I am confident about the `400` gap
+   (`409` and `416` are adjacent across an obvious break) and slightly less so
+   about `321`, where the corner is busy with logos.
+6. **Which map "no netting drawn" is a fact about.** Four of these six maps
+   draw no netting: Daikin, Wrigley, Dodger, Busch. That is a statement about
+   the image only. Three of those four clubs publish an extent in numbers
+   anyway, and Wrigley's publishes one in words. A map that does not draw
+   netting is not evidence that a park has none, and nothing here should be
+   read that way.
