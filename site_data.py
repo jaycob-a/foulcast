@@ -893,13 +893,13 @@ MAP_READS: dict[str, dict] = {
              'calls the behind-plate seats is really the first stretch up the '
              'third-base line, and what it calls the first-base infield boxes '
              'are really the seats behind the plate. The behind-plate figure '
-             'in the model section below is therefore attached to the wrong '
+             'in the model section is therefore attached to the wrong '
              'seats, and it is the largest figure on this page.'),
             ('Several of the seat labels this model carries here do not exist',
              'At field level the map runs a block of consecutive sections with '
              'no room for an unlabelled one between them, and four of the '
              'numbers this model uses on the first-base side and five on the '
-             'third-base side are not among them. Three of the areas below '
+             'third-base side are not among them. Three of the areas '
              'are partly built out of labels with nothing behind them, one of '
              'them more than half.'),
             ('The club\'s map and the club\'s own written guide disagree about '
@@ -930,7 +930,7 @@ MAP_READS: dict[str, dict] = {
              'sits at the midpoint of a single arc of numbers, and this '
              'model\'s table was built as though the numbering started behind '
              'the plate and ran outward in both directions. The behind-plate '
-             'area below and both first-base areas are attached to seats '
+             'area and both first-base areas are attached to seats '
              'somewhere else in the building; only the third-base pair is '
              'roughly where its name says.'),
             ('The two field-level areas on the first-base side are in the '
@@ -963,7 +963,7 @@ MAP_READS: dict[str, dict] = {
              'names twenty-four field-level sections and fourteen of them are '
              'numbered past where the ring ends; of the twenty-one labels it '
              'carries above field level, thirteen do not exist either. The '
-             'consequence for this page is direct: every area below shown as a '
+             'consequence for this page is direct: every area shown as a '
              'pair of foul lines is really one block of seats that exists and '
              'one that does not, because the model\'s second line is numbered '
              'past the end of the bowl. In the upper-deck pair, one label of '
@@ -979,7 +979,7 @@ MAP_READS: dict[str, dict] = {
             ('The area this page calls the seats behind home plate is out on a '
              'foul line',
              'The map\'s behind-plate section falls inside a different area of '
-             'this model\'s table altogether. The behind-plate figure below — '
+             'this model\'s table altogether. The behind-plate figure — '
              'the largest on the page — belongs to seats some way down a line.'),
             ('The labels run outward from a plate at the end of the series, '
              'which a real bowl does not do',
@@ -1048,7 +1048,7 @@ MAP_READS: dict[str, dict] = {
              'plate a handful of sections further toward third base than this '
              'model does — enough that at the top level the area this model '
              'calls a third-base area is the one actually behind the plate. '
-             'The behind-plate figures below are attached to seats that sit '
+             'The behind-plate figures are attached to seats that sit '
              'somewhat toward the first-base side of the plate.'),
             ('Two areas stop short of where the map keeps going',
              'On the third-base side the map runs the second level and the top '
@@ -1076,7 +1076,7 @@ MAP_READS: dict[str, dict] = {
              'Thirty-five anchored labels land on the opposite line from the '
              'map and none land on the line the model names, which is a mirror '
              'rather than a drift. Because it is a clean reversal the '
-             'figures below are unaffected — every park here is built '
+             'figures are unaffected — every park here is built '
              'as an exact left-right mirror, so the two lines carry the same '
              'distribution whichever way round they are labelled. What is '
              'affected is the labelling, which is why no area on this page is '
@@ -1092,7 +1092,7 @@ MAP_READS: dict[str, dict] = {
              'behind the plate at all — a press box and two clubs occupy that '
              'arc — so six of the labels this model carries in its '
              'behind-plate club area are not printed anywhere on the drawing. '
-             'That area\'s figure below is attached to a block that is part '
+             'That area\'s figure is attached to a block that is part '
              'real seats on each side of the plate and part nothing.'),
         ],
     ),
@@ -1119,7 +1119,7 @@ MAP_READS: dict[str, dict] = {
              'labels as the behind-plate area. What this model calls its '
              'first-base infield boxes straddles the plate — part of it is on '
              'the first-base side, part is the plate block itself, and part is '
-             'the third-base shoulder. The behind-plate figure below is the '
+             'the third-base shoulder. The behind-plate figure is the '
              'largest on this page and it is attached to seats up a foul line.'),
             ('The two upper decks are off the same way, by three to five '
              'positions',
@@ -1191,7 +1191,7 @@ MAP_READS: dict[str, dict] = {
              'On all three decks the map runs the bowl the opposite way from '
              'this model. Twenty-two anchored labels land on the other line '
              'and none land on the line the model names, which is a mirror '
-             'rather than a drift. The figures below are unaffected, because '
+             'rather than a drift. The figures are unaffected, because '
              'every park here is an exact left-right mirror; the labelling is, '
              'which is why no area on this page is called first-base or '
              'third-base.'),
@@ -1212,7 +1212,7 @@ MAP_READS: dict[str, dict] = {
              'Along both foul lines the drawing prints numbers with gaps in '
              'them, and nine of the labels this model uses on one line and six '
              'on the other are not printed anywhere on the bowl. So several of '
-             'the areas below are partly built out of labels with nothing '
+             'the areas are partly built out of labels with nothing '
              'behind them.'),
         ],
     ),
@@ -1238,12 +1238,12 @@ MAP_READS: dict[str, dict] = {
             ('The area this page calls the seats behind home plate is out on '
              'the first-base line',
              'The map puts it about six positions down toward the cove, past '
-             'the near end of the club ring. The behind-plate figure below is '
+             'the near end of the club ring. The behind-plate figure is '
              'the largest on this page and it belongs to seats some way down a '
              'foul line.'),
             ('The zone table names a right-field landmark for a run of seats '
              'the map puts on the third-base side',
-             'This model\'s own comment for one of the areas below describes '
+             'This model\'s own comment for one of the areas describes '
              'it as running down the right-field line toward the cove. On the '
              'map that run is on the opposite foul line, and the cove is '
              'beyond the other end of the bowl entirely.'),
@@ -1280,7 +1280,7 @@ MAP_READS: dict[str, dict] = {
              'model has the plate near the bottom of the numbering with both '
              'foul lines running the same way from it; the map has one '
              'continuous run from pole to pole with the plate in the middle of '
-             'it. The behind-plate figure below — the largest on this page — '
+             'it. The behind-plate figure — the largest on this page — '
              'is attached to seats out toward a foul pole.'),
             ('The top deck is off the same way, by twelve to seventeen '
              'positions',
@@ -1289,7 +1289,7 @@ MAP_READS: dict[str, dict] = {
             ('This model\'s entire second deck at this ballpark names seats '
              'that are not in the building',
              'The map has no second deck at all — the drawing goes from field '
-             'level straight to the club ring. Three of the areas below, '
+             'level straight to the club ring. Three of the areas, '
              'including one behind-plate area, are built entirely out of '
              'labels with nothing behind them.'),
             ('The map draws its netting and labels it, and it matches the '
@@ -1337,7 +1337,7 @@ MAP_READS: dict[str, dict] = {
              'the repeats really are repeats. So a handful of the labels this '
              'model carries here have nothing on the drawing to match, though '
              'not because the model put them in the wrong place. The '
-             'boundaries between the areas below are softer than the drawing '
+             'boundaries between the areas are softer than the drawing '
              'makes them look.'),
             ('The map draws no netting, and does not contradict what the club '
              'publishes',
@@ -1426,7 +1426,7 @@ MAP_READS: dict[str, dict] = {
             ('What the map does not close is why the netting above is still a '
              'gap',
              'The run the club publishes names seats on an inner ring this '
-             'model does not number, so no label in any area below falls '
+             'model does not number, so no label in any area falls '
              'inside the published extent. That gap is about which series of '
              'seat labels this model chose to carry, not about the sides, and '
              'a map cannot fix it.'),
@@ -1434,7 +1434,7 @@ MAP_READS: dict[str, dict] = {
              'The map runs each ring further toward the foul poles than this '
              'model\'s labels do. Every area it does name is in the right '
              'place; there are simply seats past the end of each of them that '
-             'the figures below do not cover.'),
+             'the figures do not cover.'),
         ],
     ),
 
@@ -1472,7 +1472,7 @@ MAP_READS: dict[str, dict] = {
              'The middle ring runs about a third further toward the poles on '
              'the map than in this model, and the map\'s club and suite ring '
              'has no area on this page at all. Neither is a side or plate '
-             'error; both mean the figures below cover less of the ballpark '
+             'error; both mean the figures cover less of the ballpark '
              'than the drawing does.'),
         ],
     ),
@@ -1536,7 +1536,7 @@ MAP_READS: dict[str, dict] = {
              'field level',
              'Twenty-eight anchored labels land on the opposite line from the '
              'map and none land on the line this model names. Because that is '
-             'a clean reversal the figures below are unaffected — every park '
+             'a clean reversal the figures are unaffected — every park '
              'here is an exact left-right mirror — but no area on this page '
              'can be called first-base or third-base.'),
             ('On top of the reversal, the behind-plate area is about seventeen '
@@ -1667,14 +1667,14 @@ MAP_READS: dict[str, dict] = {
             ('The seat labels run the right way round on both lines',
              'Both foul-line blocks land on the lines this model names, which '
              'is why this page names them. That rules out a mirror and nothing '
-             'else — the plate error below is real and a side check cannot see '
+             'else — the plate error is real and a side check cannot see '
              'it.'),
             ('The area this page calls the seats behind home plate is at the '
              'right-field foul pole',
              'About twelve positions up the first-base line. The map runs one '
              'ring from pole to pole with the plate in the middle of it; this '
              'model has the plate at the low end with both lines running the '
-             'same way from it. The behind-plate figure below is the largest '
+             'same way from it. The behind-plate figure is the largest '
              'on this page and it is attached to seats at a corner of the '
              'ballpark.'),
             ('The second and third decks have their behind-plate areas on the '
@@ -1860,7 +1860,7 @@ MAP_READS: dict[str, dict] = {
              'not printed anywhere on the map. The map runs one ring from pole '
              'to pole with the plate in the middle; this model has the plate '
              'at the low end with both lines running the same way from it. The '
-             'behind-plate figure below is the largest on this page.'),
+             'behind-plate figure is the largest on this page.'),
             ('The two upper rings are nine to eleven positions the same way',
              'Both behind-plate areas sit on the first-base side of the block '
              'the map has behind the plate on their own ring, and the top '
@@ -1905,7 +1905,7 @@ MAP_READS: dict[str, dict] = {
              'About thirteen positions up the first-base line, at the far end '
              'of the bowl by the bullpen. The map runs one ring from pole to '
              'pole with the plate in the middle of it; this model has the '
-             'plate at the low end. The behind-plate figure below is the '
+             'plate at the low end. The behind-plate figure is the '
              'largest on this page.'),
             ('The middle ring has no behind-plate seating at all, and this '
              'model gives it an area anyway',
@@ -1958,7 +1958,7 @@ MAP_READS: dict[str, dict] = {
              'thirteen positions up the first-base line',
              'The map runs one closed ring with the plate in the middle of it; '
              'this model has the plate at the low end with both foul lines '
-             'running the same way from it. The behind-plate figure below is '
+             'running the same way from it. The behind-plate figure is '
              'the largest on this page and it is attached to seats on a foul '
              'line.'),
             ('The two upper rings are about seven positions the same way',
@@ -2168,7 +2168,7 @@ MAP_READS: dict[str, dict] = {
              'The map prints two hundred and twenty-five seat labels across '
              'five numbered rings and three premium rings behind the plate. '
              'This model names about a third of them and says nothing at all '
-             'about two whole rings. The figures below are a shape across the '
+             'about two whole rings. The figures are a shape across the '
              'part of the ballpark this model carries, not a census of it.'),
             ('A netting compilation this site holds for this park is symmetric '
              'about the same plate boundary the map draws',
