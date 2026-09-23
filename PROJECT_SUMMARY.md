@@ -23,13 +23,17 @@ part that is sourced.
 The site is built around its drawings, and the words on it are rationed.
 The home page is a gallery: one headline, one sentence, and a grid of all 31
 ballparks, each tile the park's own drawing, small, with its name and its
-team. A ballpark page is the drawing, large, under the park's name and team;
-then one plain sentence saying where the netting runs — "netting covers the
-seats at field level behind home plate and runs out along both foul lines past
-the dugouts"; then the table of figures; then one line, "Model estimate, not
-observed data", linking to the page that explains everything. That is the
-whole visible page, and a test holds it to sixty words (forty on the home
-page), not counting the table and the drawing's own labels.
+team. A ballpark page is the drawing, large, directly under the park's name
+and team; then one plain sentence saying where the netting runs — "netting
+covers the seats at field level behind home plate and runs out along both foul
+lines past the dugouts"; then the table of figures, each row of it three
+things and no more — which seating area, how many fouls a game, and what the
+club says about netting in front of it, carried by a small coloured dot and
+two or three lowercase words; then one line, "Model estimate, not observed
+data", linking to the page that explains everything; then a one-line footer
+back to the 31. That is the whole visible page, and a test holds it to sixty
+words (forty on the home page), not counting the table and the drawing's own
+labels.
 
 Everything else about a ballpark — where the netting statement came from,
 how the figures were produced, what the ballpark's own seating map says, the
@@ -48,8 +52,11 @@ A page loads in one request and works on a phone.
 The drawing is a schematic plan of the ballpark's foul ground: home plate at
 the bottom, the two foul lines running out, and the seating areas as segments
 of an arc behind them, shaded in five steps by how busy the model thinks each
-one is. Every park is drawn at the same scale, so on the home page a park with
-more foul ground really does draw larger. It is drawn as geometry inside the
+one is. Every park is drawn in the same feet, so on the home page — the one
+place all 31 are side by side — a park with more foul ground really does draw
+larger. A ballpark's own page compares it with nothing, so there the same
+drawing is cropped to that ballpark and fills its frame. It is drawn as
+geometry inside the
 page rather than as a picture file, so it costs no extra request, scales to
 any screen, and can be read aloud.
 
@@ -196,7 +203,7 @@ A fair summary for a visitor:
   most cases to seat groupings the ballpark's own map contradicts.
 
 The site is built to make all three of those legible at a glance, and there are
-2,013 automated tests whose main job is to stop a future change from quietly
+2,230 automated tests whose main job is to stop a future change from quietly
 making a claim the project cannot support.
 
 ---
@@ -233,9 +240,10 @@ The drawing added on 8 September 2026 is checked the same way, because a
 picture can make a claim quietly in a way a sentence cannot. Its shading has
 to come from exactly the figures printed in the table underneath it; it may
 not name a foul line at any of the fifteen ballparks whose sides are
-unestablished; it marks netting only where a club published an extent this
-project could attach to specific seats, and where it does not, it says so in
-words rather than leaving a blank arc to be read as an open one; and two
+unestablished; it marks netting in front of every area the table beneath it
+calls behind netting and in front of nothing else, and where it marks nothing
+it says so in words rather than leaving a blank arc to be read as an open one;
+nothing it draws may fall outside the frame it is cropped to; and two
 ballparks with different published foul territory may not produce the same
 drawing.
 
@@ -246,3 +254,15 @@ mirror, so the small difference between a ballpark's two foul-line rows is
 simulation noise; the table prints both because it prints what the run
 produced, but a *map* that shaded them differently would be asserting a
 lopsidedness the model does not contain.
+
+The netting mark is the one exception, and it was got wrong first. A netting
+extent is not model output — it is a sentence a club published, and a club may
+net further down one foul line than the other. Fenway does. The drawing
+originally folded a ballpark's two foul lines into one for the netting mark as
+well as for the shade, so Fenway's page listed its first-base dugout boxes as
+behind netting in the table and drew no net there, which is a sourced fact
+dropped to protect a rule that exists for an unsourced one. The mark now
+follows the table, area by area, on both sides of the plate, and a test holds
+the two lists equal at all 31 ballparks. At the fifteen ballparks whose sides
+are unestablished the two lines are still a single row carrying a single
+status, so both sides are marked or neither is and no side can leak.

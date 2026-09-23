@@ -30,11 +30,20 @@ design:
   by this park's published foul-territory area and pinned it to this park's
   published backstop. Those are measurements somebody published, not model
   output, and drawing them as distances is what a plan view is for.
-* **The scale is shared by all 31 parks.** `frame()` sizes one viewBox from the
-  whole fleet and every park is drawn inside it, so Wrigley's 16,500 sq ft
-  really does draw smaller than Rogers Centre's 30,500 rather than being
-  normalised back up to the same picture. Two parks with different foul
-  territory cannot produce the same drawing.
+* **The feet are shared by all 31 parks.** `frame()` sizes one coordinate
+  system from the whole fleet and every park is drawn inside it, in the same
+  feet, so Wrigley's 16,500 sq ft really does draw smaller than Rogers
+  Centre's 30,500 rather than being normalised back up to the same picture.
+  Two parks with different foul territory cannot produce the same drawing.
+
+  Where that shared size is *shown* is the home page, because that is the one
+  place the 31 parks are put next to each other: every tile carries the whole
+  fleet viewBox, so the grid is a comparison. A park page shows one park and
+  compares it with nothing, and there a fleet-sized frame bought nothing and
+  cost the drawing half its width in blank margin — the park's own page
+  therefore crops the identical paths to that park's own extent (`park_box`).
+  Same drawing, same coordinates, same feet; only the window onto them
+  changes, and the window is not a claim.
 
 WHAT IT IS NOT ALLOWED TO CLAIM
 -------------------------------
@@ -61,14 +70,26 @@ WHAT IT IS NOT ALLOWED TO CLAIM
    prints, and the third-base half of the drawing is the first-base half
    mirrored coordinate by coordinate — see `_mirror` for why it is not an
    SVG `<use>`.
-5. **Netting is marked only where it is sourced onto specific seats.** The
-   heavy dashed line on the front edge of a zone means the club's own page
-   places that seating fully behind netting. A zone that is partly netted,
-   unverified, or netted on one line and not the other gets no mark at all,
-   and the site's explanatory page says so. There is no mark that means
-   "no netting", because at 24 of the 31 parks the site does not know that
-   either — the absence of a mark is the absence of a source, and the
-   legend line under the drawing is what carries it.
+5. **Netting is marked wherever the table says "behind netting", and nowhere
+   else.** The heavy dashed line on the front edge of a zone means the club's
+   own page places that seating fully behind netting, and the rule tying it to
+   the table is exact: a row the table prints as netted is marked, and a row
+   it prints any other way is not. A zone that is partly netted or unverified
+   gets no mark. There is no mark that means "no netting", because at 24 of
+   the 31 parks the site does not know that either — the absence of a mark is
+   the absence of a source, and the legend line under the drawing is what
+   carries it.
+
+   The mark is the one thing on this drawing that may come out different on
+   the two sides of the plate, and the exception is deliberate. Shade is model
+   output and the model is an exact mirror, so a left-right difference in
+   shade would be noise drawn as ground (note 4). A netting extent is not
+   model output: it is a sentence the club published, and at a park whose
+   sides are named the club may genuinely net further down one line than the
+   other — Fenway does. Folding that into "no mark on either side" hid a
+   sourced fact to protect a rule about an unsourced one. At a park whose
+   sides are *not* named the pair is one folded row carrying one status, so
+   both sides are marked or neither is, and no side can leak.
 
 WHAT IT DELIBERATELY DOES NOT DRAW
 ----------------------------------
@@ -223,6 +244,135 @@ def frame() -> dict[str, float]:
 
 
 # ============================================================
+# The three words on the drawing, and where they sit
+# ============================================================
+#
+# Type sizes live here rather than in `CSS` and are substituted into it, so
+# that the geometry that keeps a label clear of a foul line and the type that
+# decides how wide the label is cannot drift apart. The first version of this
+# drawing set "HOME PLATE" seventeen feet above the plate and the two foul
+# lines ran straight through the word, which is the failure this arrangement
+# is here to make impossible rather than to notice again.
+_FS_SIDE = 10.0         # the two foul-line labels
+_SIDE_TRACK = 0.10      # letter-spacing, em
+_FS_PLATE = 9.0
+_PLATE_TRACK = 0.06
+_PLATE_LABEL = 'Home plate'
+_LINE_OVER = 1.07       # how far the drawn foul lines run past the last deck
+
+
+def _text_half(text: str, fs: float, tracking: float) -> float:
+    """Half the width of one label, in feet.
+
+    An estimate, and deliberately a generous one: every label on this drawing
+    is set in the page's own sans at an upper-case transform, where 0.68 em is
+    a fair average advance and no real string exceeds it by much. It is used
+    to hold the labels off the foul lines and to size the crop, so erring wide
+    costs a few feet of margin and erring narrow costs a collision.
+    """
+    return len(text) * (0.68 + tracking) * fs / 2.0
+
+
+def _plate_label() -> tuple[float, float]:
+    """Where "Home plate" goes: up the bisector, clear of both foul lines.
+
+    The only empty ground in the frame is fair territory — the 90-degree wedge
+    between the two lines, opening upward from the plate — and a label set in
+    it has to be far enough up the wedge that the wedge is wider than the
+    label. At a distance `d` above the plate the lines are `d` either side of
+    the bisector, so the clearance from the nearer bottom corner of the label
+    to the line it faces is `(d - half width) / sqrt(2)`. Solving that for a
+    comfortable ten feet is the whole of the arithmetic below, and
+    `tests/test_site.py` checks the result at all 31 parks rather than
+    trusting it.
+    """
+    f = frame()
+    return f['ox'], f['oy'] - (_text_half(_PLATE_LABEL, _FS_PLATE,
+                                          _PLATE_TRACK) + 14.0)
+
+
+def _side_label(outer: float) -> tuple[float, float]:
+    """Where "First base" goes: along its own line, on the fair side of it.
+
+    Beside the line rather than at the end of it, so that it is the line being
+    named and not a corner of the picture. The third-base label is this point
+    mirrored.
+    """
+    f = frame()
+    d = math.sqrt(0.5)
+    r = outer * 0.62
+    return f['ox'] + (r - 19) * d, f['oy'] - (r + 19) * d
+
+
+# ============================================================
+# The window one park's own page looks through
+# ============================================================
+#
+# The frame above is the whole fleet's, and the home page keeps it: 31 tiles
+# in one viewBox is what makes the grid a comparison. A park page compares
+# nothing, and there the fleet frame is a park drawn inside the largest park's
+# margins — at most parks a third of the width was blank on both sides and the
+# drawing sat a long way below its own title.
+#
+# So the park page crops. Not rescales: the coordinates, the radii and the
+# paths are the same objects the tile carries, and only the viewBox changes.
+# Everything the drawing ever claimed by size it still claims, in the one place
+# those claims can be read, which is the grid where the parks sit side by side.
+_CROP = 9.0             # feet of clear ground inside a park page's own frame
+_BOX: dict[str, dict[str, float]] = {}
+
+
+def park_box(stadium, named: bool) -> dict[str, float]:
+    """viewBox for one park on its own page, in the fleet's coordinates.
+
+    Everything the drawing puts on the page is measured here and nothing is
+    assumed: the outer arc of every wedge, the foul lines drawn past it, the
+    plate, and the labels — `named` is what decides whether the two foul-line
+    labels are on the page to be measured at all.
+
+    Kept symmetric about home plate. The drawing is a mirror and a crop that
+    was two feet wider on one side would tilt it, which is exactly the kind of
+    left-right difference the rest of this file exists to keep out.
+    """
+    key = f'{stadium.name}|{named}'
+    if key in _BOX:
+        return _BOX[key]
+    f = frame()
+    ox, oy = f['ox'], f['oy']
+    half, top, bottom, outer = 7.0, oy - 7.0, oy + 9.0, 0.0   # the plate glyph
+    for a0, a1, bands in wedges(stadium):
+        p0, p1 = _phi(a0), _phi(a1)
+        r = max(b1 for _, _, b1 in bands)
+        # As in `frame()`: the y extremes of an arc are its two ends, the x
+        # extreme is the radius itself where the arc crosses due sideways.
+        top = min(top, oy + r * math.cos(p0))
+        bottom = max(bottom, oy + r * math.cos(p1))
+        half = max(half, r if p1 <= math.pi / 2 <= p0
+                   else max(r * math.sin(p0), r * math.sin(p1)))
+        if a0 <= 0.0:
+            outer = max(outer, r)
+
+    tip = _pt(0.0, outer * _LINE_OVER)
+    half, top = max(half, tip[0] - ox), min(top, tip[1])
+
+    px, py = _plate_label()
+    half = max(half, _text_half(_PLATE_LABEL, _FS_PLATE, _PLATE_TRACK))
+    top = min(top, py - _FS_PLATE)
+
+    if named:
+        lx, ly = _side_label(outer)
+        reach = (_text_half('First base', _FS_SIDE, _SIDE_TRACK)
+                 + _FS_SIDE) * math.sqrt(0.5)
+        half, top = max(half, lx + reach - ox), min(top, ly - reach)
+
+    box = {'x': max(0.0, ox - half - _CROP), 'y': max(0.0, top - _CROP),
+           'w': 2 * (half + _CROP)}
+    box['h'] = bottom + _CROP - box['y']
+    _BOX[key] = box
+    return box
+
+
+# ============================================================
 # Emitting the SVG
 # ============================================================
 
@@ -293,15 +443,24 @@ def _sector(a0: float, a1: float, r0: float, r1: float) -> str:
             + one(_mirror(a), _mirror(b), _mirror(c), _mirror(d), 0, 1))
 
 
-def _arc(a0: float, a1: float, r: float) -> str:
-    """The front edge of a zone, both sides, for the netting mark."""
+def _arc(a0: float, a1: float, r: float, third: bool = False) -> str:
+    """The front edge of a zone on one side of the plate, for the netting mark.
+
+    One side at a time, unlike `_sector`, because a netting extent is sourced
+    and a club may publish one that reaches further down one foul line than
+    the other — note 5. A band that reaches straight back off the plate is one
+    block of seats spanning both sides and comes back as a single symmetric
+    arc, drawn once whichever side asked for it.
+    """
     a, b = _pt(a0, r), _pt(a1, r)
     if a1 >= 90.0:
         m = _mirror(a)
         return f'M{_n(a[0])} {_n(a[1])}A{_n(r)} {_n(r)} 0 0 1 {_n(m[0])} {_n(m[1])}'
-    ma, mb = _mirror(a), _mirror(b)
-    return (f'M{_n(a[0])} {_n(a[1])}A{_n(r)} {_n(r)} 0 0 1 {_n(b[0])} {_n(b[1])}'
-            f'M{_n(ma[0])} {_n(ma[1])}A{_n(r)} {_n(r)} 0 0 0 {_n(mb[0])} {_n(mb[1])}')
+    if third:
+        ma, mb = _mirror(a), _mirror(b)
+        return (f'M{_n(ma[0])} {_n(ma[1])}A{_n(r)} {_n(r)} 0 0 0 '
+                f'{_n(mb[0])} {_n(mb[1])}')
+    return f'M{_n(a[0])} {_n(a[1])}A{_n(r)} {_n(r)} 0 0 1 {_n(b[0])} {_n(b[1])}'
 
 
 # ============================================================
@@ -314,7 +473,7 @@ def _rows(p: dict) -> dict[str, dict]:
 
 
 def _row_for(sid: str, rows: dict[str, dict]) -> dict | None:
-    """The table row a drawn wedge takes its shade and its mark from.
+    """The table row a drawn wedge takes its **shade** from.
 
     A behind-plate zone is its own row. A foul-line zone is half of a matched
     pair, and the pair is always read as one thing:
@@ -322,11 +481,15 @@ def _row_for(sid: str, rows: dict[str, dict]) -> dict | None:
     * at a park whose sides are folded, the pair is already one row, carrying
       the mean of the two and a status that is `split` if the halves disagree;
     * at a park whose sides are named, the two rows are still drawn with one
-      shade, from the mean of the two figures, and marked as netted only if
-      both halves are.
+      shade, from the mean of the two figures.
 
     Note 4 in the module docstring is why. The returned dict is a row-shaped
     view, not necessarily a row object.
+
+    The netting mark does **not** come from here — `_net_ids` is where it
+    comes from, and the difference between the two is note 5. Shade is model
+    output and the model is a mirror; a netting extent is a club's published
+    sentence and may reach further down one line than the other.
 
     The foul-line case is tested *before* the direct lookup, and that ordering
     is the whole point of the function rather than a detail. At a park whose
@@ -348,6 +511,44 @@ def _row_for(sid: str, rows: dict[str, dict]) -> dict | None:
     return {'fouls': (a['fouls'] + b['fouls']) / 2.0,
             'heading': a['heading'],
             'status': both.pop() if len(both) == 1 else 'split'}
+
+
+def _net_ids(sid: str, rows: dict[str, dict]) -> tuple[str | None, str | None]:
+    """The two table rows a drawn wedge takes its netting mark from.
+
+    `(first-base side, third-base side)`, as ids into the table rather than as
+    rows, so that a test can hold the drawing's marks against the table's own
+    rows by name. The two are the same id wherever one row covers both sides
+    of the plate: a behind-plate area, and a foul-line pair folded into one
+    `LINES-` row at a park that may not say which line is which. They differ
+    only at a park whose sides are named, which is the only place a club's
+    published extent can be attached to one line and not the other.
+    """
+    if sid[:3] not in ('1B-', '3B-'):
+        return (sid if sid in rows else None,) * 2
+    suffix = sid[3:]
+    if 'LINES-' + suffix in rows:
+        return ('LINES-' + suffix,) * 2
+    return tuple(i if i in rows else None
+                 for i in ('1B-' + suffix, '3B-' + suffix))
+
+
+def marked_rows(p: dict) -> set[str]:
+    """Every table row the drawing puts a netting mark in front of.
+
+    The drawing's side of the agreement `tests/test_site.py` checks: the table
+    prints a netting status for each row and the drawing marks the netted ones,
+    and the two lists have to be the same list. Built from the same walk
+    `park_svg` marks from, so it cannot be a second opinion about what was
+    drawn.
+    """
+    rows = _rows(p)
+    out = set()
+    for _, _, bands in wedges(p['stadium']):
+        for sid, _, _ in bands:
+            out |= {i for i in _net_ids(sid, rows)
+                    if i and rows[i]['status'] == 'netted'}
+    return out
 
 
 # ============================================================
@@ -413,10 +614,15 @@ def park_svg(p: dict, mini: bool = False) -> str:
     drawing prints. That is the invariant worth keeping: a drawing that
     disagreed with the table beneath it would be worse than no drawing.
 
-    `mini` is the home-page tile: the same paths at the same scale, with no
-    text. At tile size the words would not be legible, and the tile's own
-    caption carries the park's name. It is hidden from assistive technology
-    for the same reason — the link it sits in already says which park it is.
+    `mini` is the home-page tile: the same paths in the same feet, with no
+    text, and in the whole fleet's viewBox so that the 31 of them together are
+    a comparison. At tile size the words would not be legible, and the tile's
+    own caption carries the park's name. It is hidden from assistive
+    technology for the same reason — the link it sits in already says which
+    park it is.
+
+    The park page emits those same paths cropped to this park (`park_box`).
+    Nothing in the drawing moves; the window does.
     """
     stadium = p['stadium']
     rows = _rows(p)
@@ -437,8 +643,22 @@ def park_svg(p: dict, mini: bool = False) -> str:
                 continue
             steps.setdefault(step_of(row['fouls']), []).append(
                 _sector(a0, a1, r0, r1))
-            if row['status'] == 'netted':
+            # One side at a time, and from the row the table prints for that
+            # side — note 5. A behind-plate band hands back the same row
+            # twice and `_arc` draws its symmetric arc once.
+            first, third = _net_ids(sid, rows)
+            net1 = bool(first) and rows[first]['status'] == 'netted'
+            net3 = bool(third) and rows[third]['status'] == 'netted'
+            if a1 >= 90.0:
+                # One block of seats spanning the middle. Both sides of it
+                # read the same row, so the two cannot disagree; if they ever
+                # did, the drawing would have to choose a side and there is
+                # no honest choice to make.
+                assert net1 == net3, 'symmetric band netted on one side only'
+            if net1:
                 marks.append(_arc(a0, a1, r0))
+            if net3 and a1 < 90.0:
+                marks.append(_arc(a0, a1, r0, third=True))
             if a0 <= 0.0:
                 outer = max(outer, r1)
 
@@ -451,7 +671,7 @@ def park_svg(p: dict, mini: bool = False) -> str:
     # where they are: the stands on a side begin at the line. Drawn a little
     # past the back of the last deck so each reads as a line running out of the
     # picture rather than as the edge of a shape.
-    tip = _pt(0.0, outer * 1.07)
+    tip = _pt(0.0, outer * _LINE_OVER)
     mtip = _mirror(tip)
     paths.append(f'<path class="fl" d="M{_n(ox)} {_n(oy)}'
                  f'L{_n(tip[0])} {_n(tip[1])}M{_n(ox)} {_n(oy)}'
@@ -467,9 +687,12 @@ def park_svg(p: dict, mini: bool = False) -> str:
         return (f'<svg class="mini" viewBox="0 0 {_n(f["w"])} {_n(f["h"])}" '
                 f'aria-hidden="true">{"".join(paths)}</svg>')
 
-    # The one label the drawing needs in order to be read at all.
-    labels = [f'<text class="pl" x="{_n(ox)}" y="{_n(oy - 17)}" '
-              f'text-anchor="middle">Home plate</text>']
+    # The one label the drawing needs in order to be read at all, set far
+    # enough up the fair-territory wedge that the wedge is wider than the word
+    # — see `_plate_label`, which is also what the crop and the test measure.
+    px, py = _plate_label()
+    labels = [f'<text class="pl" x="{_n(px)}" y="{_n(py)}" '
+              f'text-anchor="middle">{_PLATE_LABEL}</text>']
 
     # Constraint 5, in the one place a drawing could break it. Sixteen parks
     # have a source that names a side alongside specific seats; at the other
@@ -480,9 +703,7 @@ def park_svg(p: dict, mini: bool = False) -> str:
     # is behind a line by definition. Beside the line rather than at the end of
     # it, so that it is the line being named and not a corner of the picture.
     if p['sides']['named']:
-        d = math.sqrt(0.5)
-        r = outer * 0.62
-        lx, ly = ox + (r - 19) * d, oy - (r + 19) * d
+        lx, ly = _side_label(outer)
         labels.append(f'<text x="{_n(lx)}" y="{_n(ly)}" text-anchor="middle" '
                       f'transform="rotate(315 {_n(lx)} {_n(ly)})">'
                       f'First base</text>')
@@ -491,8 +712,9 @@ def park_svg(p: dict, mini: bool = False) -> str:
                       f'transform="rotate(45 {_n(rx)} {_n(ly)})">'
                       f'Third base</text>')
 
-    return (f'<svg viewBox="0 0 {_n(f["w"])} {_n(f["h"])}" role="img" '
-            f'aria-label="{_esc(_alt(p))}">'
+    box = park_box(stadium, p['sides']['named'])
+    return (f'<svg viewBox="{_n(box["x"])} {_n(box["y"])} {_n(box["w"])} '
+            f'{_n(box["h"])}" role="img" aria-label="{_esc(_alt(p))}">'
             f'{"".join(paths)}{"".join(labels)}</svg>')
 
 
@@ -532,23 +754,32 @@ def _esc(s: str) -> str:
 # one thing, a seating area the club's own statement places outside its
 # netting, and a shading ramp must not borrow it.
 #
-# The tile is the same drawing at a fifth of the width, so its strokes are
-# set heavier in viewBox units to come out at about the same weight on screen.
+# Everything here is in viewBox units, which are feet, and a park page now
+# crops to about two thirds of the fleet frame's width — so a line that was
+# set for the old frame comes out half as heavy again on the page. The weights
+# and the two type sizes below are set for the cropped frame; the tile, which
+# still carries the whole fleet frame at a fifth of the width, overrides them
+# and is set heavier to come out at about the same weight on screen.
+#
+# The type sizes are substituted from the constants the label geometry uses,
+# so that the size a label is set at and the room the drawing leaves for it
+# cannot be changed independently.
 CSS = r"""
 .dia{margin:0}
 .dia svg{display:block;width:100%;height:auto;margin:0 auto}
-.dia path{stroke:#fff;stroke-width:1.5;stroke-linejoin:round}
+.dia path{stroke:#fff;stroke-width:1.1;stroke-linejoin:round}
 .z0{fill:#e1ecee;background:#e1ecee}
 .z1{fill:#b6d6db;background:#b6d6db}
 .z2{fill:#7fbac2;background:#7fbac2}
 .z3{fill:#44909c;background:#44909c}
 .z4{fill:#0b6a74;background:#0b6a74}
-.dia path.nm{fill:none;stroke:#16181d;stroke-width:7;stroke-dasharray:10 7}
-.dia path.fl{fill:none;stroke:#8a919c;stroke-width:2;stroke-dasharray:6 6}
+.dia path.nm{fill:none;stroke:#16181d;stroke-width:5;stroke-dasharray:7 5}
+.dia path.fl{fill:none;stroke:#8a919c;stroke-width:1.5;stroke-dasharray:4 4}
 .dia path.hp{fill:#16181d;stroke:none}
-.dia text{fill:#5b6270;font-size:13px;font-weight:700;font-family:inherit;
- letter-spacing:.1em;text-transform:uppercase}
-.dia text.pl{font-size:11px;font-weight:600;letter-spacing:.06em;fill:#7b828e}
+.dia text{fill:#5b6270;font-size:__FS_SIDE__px;font-weight:700;
+ font-family:inherit;letter-spacing:__SIDE_TRACK__em;text-transform:uppercase}
+.dia text.pl{font-size:__FS_PLATE__px;font-weight:600;
+ letter-spacing:__PLATE_TRACK__em;fill:#7b828e}
 .dia svg.mini path{stroke-width:2.5}
 .dia svg.mini path.nm{stroke-width:11;stroke-dasharray:14 9}
 .dia svg.mini path.fl{stroke-width:3.5;stroke-dasharray:9 9}
@@ -587,3 +818,13 @@ CSS = r"""
  .leg i.nm.off{border-top-color:#3a414d}
 }
 """
+
+# The one place the drawing's type size is written down is the constants at
+# the top; this is how the stylesheet gets it. A number in both places would
+# have drifted the first time either moved, and the failure that follows is a
+# label overrunning the line it was measured to clear.
+for _token, _value in (('__FS_SIDE__', _FS_SIDE), ('__FS_PLATE__', _FS_PLATE),
+                       ('__SIDE_TRACK__', _SIDE_TRACK),
+                       ('__PLATE_TRACK__', _PLATE_TRACK)):
+    CSS = CSS.replace(_token, f'{_value:g}')
+assert '__' not in CSS, 'a token in the diagram stylesheet was never filled in'

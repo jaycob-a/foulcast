@@ -82,6 +82,15 @@ the same red on a missing source and on an unnetted seat learns nothing from
 either. One accent teal does the section headings, links and structural marks;
 everything else is ink on white.
 
+It is also rationed in *quantity*, which is a separate thing and was got wrong
+once. Most rows at most parks say "not behind netting", so a boxed red capital
+on each of them turned a twelve-row table into a column of red boxes — the
+page's loudest mark, repeated, on the one statement here that is an inference
+from the edge of a club's sentence rather than the sentence itself. The state
+is now a dot in its colour and two or three lowercase words beside it
+(`status_tag`). Red still means exactly one thing; it marks the row instead of
+filling it.
+
 **The site is built around the drawings, and the words are rationed.** Three
 passes trimmed and rearranged the prose and the site still read as a methods
 document, because a page organised around its own caveats is a document
@@ -93,15 +102,19 @@ word budget that `tests/test_site.py` enforces:
   and its team, the whole tile a link. At most 40 words of prose outside the
   tiles, and nothing else on the page.
 * **A park page is the drawing.** The park's name and team, then the schematic
-  large and alone, then one sentence saying where the netting runs, then the
-  distribution table, then one line — "Model estimate, not observed data" —
-  with the link to the explanatory page. At most 60 words visible without
-  opening anything, not counting the table and the drawing's own labels.
-  Everything that is about *this* park and not on that list — where the
-  netting statement came from and every area it touches, how the figures were
-  produced and what share was dropped, the two readings, the sourced figures,
-  the seating-map read — is behind one closed "Details" disclosure at the
-  foot of the page. Nothing honest is removed; it is one click down.
+  large, cropped to that park and directly under its name, then one sentence
+  saying where the netting runs, then the distribution table — a row of which
+  is three things and no more: which seating area, how many fouls a game, and
+  what the club says about netting in front of it — then one line, "Model
+  estimate, not observed data", with the link to the explanatory page, and the
+  home page's own footer under it so the page ends rather than stops. At most
+  60 words visible without opening anything, not counting the table and the
+  drawing's own labels. Everything that is about *this* park and not on that
+  list — where the netting statement came from and every area it touches, how
+  the figures were produced, what share was dropped and each area's deck,
+  share and speed off the bat, the two readings, the sourced figures, the
+  seating-map read — is behind one closed "Details" disclosure at the foot of
+  the page. Nothing honest is removed; it is one click down.
 * **`/about/` is where the site explains itself.** Every explanation that used
   to be on the home page or repeated on all 31 park pages — what is sourced
   and what is not, whose the netting gaps are and which parks are in each
@@ -624,6 +637,25 @@ def zone_label(z: dict) -> str:
     return z['heading']
 
 
+def status_tag(z: dict) -> str:
+    """What the club says about netting in front of one area, as a tag.
+
+    A dot in the colour of the state and the state in words beside it, set at
+    reading size in the same grey as the rest of the sub-line. It used to be a
+    boxed capital, and at most parks most rows say "NOT BEHIND NETTING", so
+    the page came out as a column of red boxes shouting the one thing this
+    site is least sure it is entitled to shout — the clubs publish where the
+    net *is*, and "not behind netting" is this project's inference from the
+    edge of that statement.
+
+    The red has not gone: it is the dot, and it still means exactly that one
+    thing. It is the box and the capitals that have gone, so that the colour
+    marks a row rather than filling it.
+    """
+    word, cls = STATUS_WORDS[z['status']]
+    return f'<span class="tag {cls}">{word}</span>'
+
+
 def e(s) -> str:
     return html.escape(str(s), quote=True)
 
@@ -666,7 +698,11 @@ h1{font-size:1.8rem;line-height:1.08;letter-spacing:-.025em;font-weight:800;
  letter-spacing:-.01em}
 .tt{display:block;color:#5b6270;font-size:.74rem;margin-top:.18rem}
 .park main{padding-top:.2rem}
-.park .dia{margin:1.1rem 0 1.6rem}
+/* The drawing is the answer, so it sits under the park's name with
+   nothing between them. It used to carry the whole fleet's frame and
+   therefore the widest park's blank margin at the top of it; cropped
+   to its own park, the top of the drawing is the top of the drawing. */
+.park .dia{margin:.45rem 0 1.5rem}
 .netline{font-size:1.1rem;line-height:1.38;font-weight:600;
  letter-spacing:-.012em;margin:0 0 1.15rem;max-width:58ch}
 table{width:100%;border-collapse:collapse;margin:0;font-size:.9rem}
@@ -724,14 +760,15 @@ ul.areas li:last-child{border-bottom:1px solid #b9bfc8}
 .warn p,.ok p,.gap p{margin:.3rem 0}
 .warn p:first-child,.ok p:first-child,.gap p:first-child{margin-top:0}
 .warn p:last-child,.ok p:last-child,.gap p:last-child{margin-bottom:0}
-.tag{display:inline-block;font-size:.63rem;font-weight:700;letter-spacing:.05em;
- text-transform:uppercase;line-height:1.55;padding:0 .28rem;white-space:nowrap;
- border:1px solid currentColor}
-.tag-net{color:#0b6a74}
-.tag-part{color:#4a505c}
-.tag-open{color:#a01523}
-.tag-unk{color:#767d89}
-.tag-flag{color:#16181d}
+.tag{display:inline-flex;align-items:baseline;gap:.34rem;white-space:nowrap;
+ color:#4a505c}
+.tag::before{content:"";flex:0 0 auto;width:.44rem;height:.44rem;
+ border-radius:50%;background:#767d89;transform:translateY(-.06rem)}
+.tag-net::before{background:#0b6a74}
+.tag-open::before{background:#a01523}
+.tag-part::before{background:#8a919c}
+.tag-unk::before{background:#c2c8d0;box-shadow:inset 0 0 0 1px #a8afba}
+.tag-flag::before{background:#16181d}
 ol.ranked{padding-left:1.15rem;margin:.5rem 0;font-size:.9rem}
 ol.ranked li{margin:.32rem 0;line-height:1.45}
 ul.parklist{list-style:none;padding:0;margin:.3rem 0 1.3rem}
@@ -772,7 +809,7 @@ footer a:hover{text-decoration:underline}
  .park header,.park main,.park footer,
  .about header,.about main,.about footer{max-width:50rem;padding:0 1.5rem}
  .park h1{font-size:2.15rem}
- .park .dia{margin:1.4rem 0 1.9rem}
+ .park .dia{margin:.6rem 0 1.8rem}
  .netline{font-size:1.18rem}
 }
 @media (prefers-color-scheme:dark){
@@ -798,11 +835,13 @@ footer a:hover{text-decoration:underline}
  .warn{border-left-color:#6d7482}
  .ok{border-left-color:#4fb6c0}
  .gap{border-left-color:#8891a0;background:#171a20}
- .tag-net{color:#4fb6c0}
- .tag-part{color:#a8b0be}
- .tag-open{color:#ef8189}
- .tag-unk{color:#8891a0}
- .tag-flag{color:#e4e7ee}
+ .tag{color:#98a0b0}
+ .tag::before{background:#8891a0}
+ .tag-net::before{background:#4fb6c0}
+ .tag-part::before{background:#8891a0}
+ .tag-open::before{background:#ef8189}
+ .tag-unk::before{background:#3a414d;box-shadow:inset 0 0 0 1px #6d7482}
+ .tag-flag::before{background:#e4e7ee}
  h3.hs{border-left-color:#6d7482}
  h3.hs-net{border-left-color:#4fb6c0}
  h3.hs-part,h3.hs-unk{border-left-color:#6d7482}
@@ -1201,6 +1240,16 @@ def answer_section(p: dict) -> str:
     qualifies the table is one line directly under it, carrying the link to
     the page where the caveat is stated in full.
 
+    A row is three things: which area, how many fouls a game, and what the
+    club says about netting in front of it. Nothing else. The row used to
+    carry the deck the area sits on, its share of the fouls that reach seats
+    and how fast the ball left the bat as well, which is four figures and a
+    tag in a line of small grey type under every heading — a reader scanning
+    for the largest number had to read past all of it at every row. Those
+    three are not gone: `model_section` prints them, one table, inside
+    Details, where a reader who wants the workings can read them as a set
+    instead of in eleven fragments.
+
     Label left, figure right, a hairline between. No bar and no filled share:
     the figures rest on estimated geometry, and a drawn length would put them
     on a scale and claim a precision none of it has.
@@ -1213,19 +1262,10 @@ def answer_section(p: dict) -> str:
     where that argument is written out, along with why the two foul lines are
     always shaded alike.
     """
-    table = rows([
-        (zone_label(z)
-         + f'<span class="sub2">{e(z["level"])} &middot; '
-         + f'{share_str(z["share"])} of the fouls that reach seats'
-         + (f' &middot; leaving the bat at about {z["ev"]:.0f} mph'
-            if z['fouls'] >= 0.05 else '')
-         + f' &middot; <span class="tag {STATUS_WORDS[z["status"]][1]}">'
-         + f'{STATUS_WORDS[z["status"]][0]}</span>'
-         + (f' &middot; {split_phrase(z)}' if z['split'] else '')
-         + '</span>',
-         fouls_str(z['fouls']))
-        for z in p['zones']], head=('Seating area', 'Fouls a game'),
-        caption='Foul balls a game, by seating area', anchor='zones')
+    table = rows([(zone_label(z) + f'<span class="sub2">{status_tag(z)}</span>',
+                   fouls_str(z['fouls']))
+                  for z in p['zones']], head=('Seating area', 'Fouls a game'),
+                 caption='Foul balls a game, by seating area', anchor='zones')
 
     # The standing caveat, in the fewest words that are still the caveat. It
     # is not softened: the full statement — no public record of where fouls
@@ -1238,6 +1278,36 @@ def answer_section(p: dict) -> str:
 <p class="netline" id="netting">{netting_line(p)}</p>
 {table}
 {caveat}'''
+
+
+def area_figures(p: dict) -> str:
+    """The three figures the table above the fold no longer carries.
+
+    Which deck an area sits on, its share of the fouls that reach seats, and
+    how fast the ball left the bat. They were a line of small grey type under
+    every row of the distribution table and they are one table here, which is
+    the form they were always in: they are the same three questions asked of
+    every area, and a table is how you compare eleven answers to one question.
+
+    The share is of the fouls that reach *seats*, not of the park's fouls —
+    the model drops a third of those before this table starts, and the line
+    above says so.
+    """
+    head = ('<thead><tr><th>Seating area</th><th class="n">Share</th>'
+            '<th class="n">Off the bat</th></tr></thead>')
+    def speed(z):
+        # An area the model barely reaches has an exit speed averaged over
+        # almost nothing, and printing it would dress a rounding error as a
+        # measurement. The same threshold the ranked lists use.
+        return f'{z["ev"]:.0f} mph' if z['fouls'] >= 0.05 else '&mdash;'
+
+    body = ''.join(
+        f'<tr><td class="k">{zone_label(z)}'
+        f'<span class="sub2">{e(z["level"])}</span></td>'
+        f'<td class="n">{share_str(z["share"])}</td>'
+        f'<td class="n">{speed(z)}</td></tr>' for z in p['zones'])
+    return (f'<table><caption>Each area in full</caption>{head}'
+            f'<tbody>{body}</tbody></table>')
 
 
 def model_section(p: dict) -> str:
@@ -1265,7 +1335,11 @@ simulation noise in any case.</p>''')
 so the park is the only thing that changes. {p['sims']} simulations per batter,
 fixed seed. The table above is foul balls per game reaching each area, largest
 first &mdash; a model estimate, not a count of anything observed.</p>
-{chr(10).join(notes)}'''
+{chr(10).join(notes)}
+{area_figures(p)}
+<p class="sub">Which deck each area sits on, what share of the fouls that reach
+seats the model puts in it, and how fast those balls left the bat. The order is
+the order of the table above.</p>'''
     return panel('model', 'How these figures were produced', inner)
 
 
@@ -1320,8 +1394,7 @@ def readings_section(p: dict) -> str:
                 'they can be caught.</p></div>')
 
     def mark(z):
-        tag, cls = STATUS_WORDS[z['status']]
-        chip = f'<span class="tag {cls}">{tag}</span>'
+        chip = status_tag(z)
         return f'{chip} &mdash; {split_phrase(z)}' if z['split'] else chip
 
     risk = ''.join(
@@ -1548,6 +1621,15 @@ def park_page(p: dict, base_url: str) -> str:
     # disclosure under it, in the order that keeps the sourced thing ahead of
     # the estimated one: the netting statement's provenance first, then the
     # model's. Everything general is on /about/, where the link goes.
+    #
+    # The footer is the home page's footer, and it is here because a page that
+    # stopped at the closed word "Details" stopped without ending. Its link is
+    # back to the 31 rather than on to /about/: the caveat four lines above it
+    # already goes to /about/, and a second copy of the same link is not an
+    # ending either. The disclosure is shut. It is shut on every page and on
+    # every visit — a reader who came for where the net is and how many balls
+    # arrive has both above the fold, and `<details open>` would put the whole
+    # of the provenance back in front of the answer it qualifies.
     body = f'''<body class="park">
 <header>
 <p class="wm"><a href="../">FoulCast</a></p>
@@ -1571,6 +1653,9 @@ dimensions from Andrew Clem's stadium statistics, cross-checked against the
 Seamheads ballpark database. Model figures rebuilt {e(BUILT)}.</p>
 </details>
 </main>
+<footer>
+<p><a href="../">All 31 ballparks</a></p>
+</footer>
 </body>'''
     return page(title, desc, body, f'/{p["slug"]}/', base_url)
 
@@ -1840,15 +1925,23 @@ number appears anywhere on this site.</p>
 areas the model tracks drawn as bands of an arc behind them, shaded in five
 steps by fouls a game. It is a schematic, not to scale and not a seating chart:
 one generic bowl, its depth set by each park's published foul territory and
-backstop, on a scale shared by all 31 parks, so a park with more published foul
-ground draws larger. Shade carries the figures and size does not, and both foul
-lines are always shaded alike &mdash; the model builds them as exact mirrors,
-so the gap between the two rows in the table is simulation noise.</p>
+backstop. Every park is drawn in the same feet, so a park with more published
+foul ground really is a larger drawing &mdash; the grid on the front page is
+where that shows, because it is the one place the 31 are side by side. A park's
+own page compares it with nothing and crops the same drawing to that park.
+Shade carries the figures and size does not, and both foul lines are always
+shaded alike &mdash; the model builds them as exact mirrors, so the gap between
+the two rows in the table is simulation noise.</p>
 <p>The heavy dashed mark along the front of an area means the club's own page
-places those seats fully behind netting. An area that is partly netted,
-unverified, or netted on one foul line and not the other carries no mark. No
-mark is not no net: it is no published extent this site could attach to those
-seats, and at {len(gaps)} of the 31 parks nothing is marked at all.</p>
+places those seats fully behind netting, and it is drawn in front of every area
+the table calls behind netting and no other. An area that is partly netted or
+unverified carries no mark. The mark is the one thing on the drawing that can
+come out different on the two sides of the plate, because a club may net
+further down one foul line than the other and several do &mdash; where nothing
+establishes which line is which, the two are one row carrying one status and
+both sides are marked or neither is. No mark is not no net: it is no published
+extent this site could attach to those seats, and at {len(gaps)} of the 31
+parks nothing is marked at all.</p>
 <p>No figure on this site is ever drawn as a length &mdash; no bars, no filled
 shares, no meters. The numbers come out of estimated geometry that has never
 been compared with a foul ball, and a drawn length would put them on a scale

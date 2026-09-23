@@ -42,6 +42,7 @@ followed by a digit.
 import ast
 import html
 import json
+import math
 import os
 import re
 import shutil
@@ -935,13 +936,50 @@ def test_the_schematic_marks_netting_only_where_it_is_sourced(built, key):
     p = built['parks'][slug]
     fig = diagram(built['pages'][slug])
     marked = 'class="nm" d=' in fig
-    netted = any(row['status'] == 'netted' for _, row in drawn_rows(p))
+    netted = any(z['status'] == 'netted' for z in p['zones'])
     assert marked == netted, f'{slug}: netting mark does not match the sources'
     if p['net']['state'] != 'mapped':
         assert not marked, f'{slug}: netting marked at a park with no join'
     if not marked:
         assert 'No netting is marked here' in flat(fig)
         assert 'a missing source, not a missing net' in flat(fig)
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_schematic_marks_every_area_the_table_calls_netted(built, key):
+    """The drawing and the table have to agree, area by area, on netting.
+
+    The test that was here before asked only whether a mark existed at a park
+    where something was netted, and Fenway passed it while telling a reader
+    two different things: the table listed the first-base dugout boxes and
+    both infield-box areas as behind netting, and the only mark on the drawing
+    ran behind the plate. The dugout boxes went unmarked because the drawing
+    read a foul-line pair as one thing and the club nets further down one line
+    than the other — so a sourced fact was dropped to keep a rule that exists
+    to protect an *unsourced* one, the left-right mirror the model is built
+    on.
+
+    What replaces it is an equality, both ways round, over the rows the table
+    actually prints. Every area the table calls behind netting carries a mark;
+    nothing else does. `marked_rows` walks the same wedges `park_svg` marks
+    from, so this compares the drawing with the table rather than one reading
+    of the table with another.
+    """
+    slug = PARK_SOURCES[key]['slug']
+    p = built['parks'][slug]
+    printed = {z['id'] for z in p['zones'] if z['status'] == 'netted'}
+    drawn = site_diagram.marked_rows(p)
+    assert drawn == printed, (
+        f'{slug}: the drawing marks {sorted(drawn)} and the table calls '
+        f'{sorted(printed)} behind netting')
+
+    # And the same count, in the finished markup: one subpath per marked
+    # wedge, so a mark that was computed and then not emitted cannot pass.
+    fig = diagram(built['pages'][slug])
+    subpaths = sum(d.count('M') for cls, d in DIA_PATH.findall(fig)
+                   if cls == 'nm')
+    assert bool(subpaths) == bool(printed), \
+        f'{slug}: {subpaths} marks drawn for {len(printed)} netted areas'
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
@@ -977,6 +1015,152 @@ def test_two_parks_with_different_foul_territory_draw_differently(built):
     shapes = [repr(w) for w in geom.values()]
     assert len(set(shapes)) == len(shapes), \
         'two parks produce identical drawings'
+
+
+# ------------------------------------------------------------
+# The window, the labels, and what the crop is not allowed to cut off
+# ------------------------------------------------------------
+#
+# A park page now crops its drawing to that park instead of carrying the whole
+# fleet's frame, which is the one change to this drawing that can go wrong
+# silently in the worst way: a crop that is a few feet tight does not look
+# like an error, it looks like a ballpark whose upper deck ends sooner than it
+# does. So the crop is not eyeballed. Every point the emitted path data can
+# reach is reconstructed here — endpoints, and the extremes of the arcs
+# between them — and every one of them has to be inside the window.
+
+VIEWBOX = re.compile(r'<svg[^>]*viewBox="([\d. ]+)"')
+PATH_STEP = re.compile(r'([MLAZ])([\d. ]*)')
+
+
+def view_box(svg: str) -> tuple[float, ...]:
+    return tuple(float(v) for v in VIEWBOX.search(svg).group(1).split())
+
+
+def arc_extremes(origin, a, b, r):
+    """Where a concentric arc from `a` to `b` reaches furthest out.
+
+    Every arc this drawing emits is centred on home plate, so the points that
+    can leave the window are its two endpoints and whichever of due up, down,
+    left and right the arc sweeps past on its way. Nothing here spans a half
+    turn, so the short way round is the way it was drawn.
+    """
+    ox, oy = origin
+    t0 = math.atan2(a[1] - oy, a[0] - ox)
+    span = (math.atan2(b[1] - oy, b[0] - ox) - t0 + math.pi) % (2 * math.pi) \
+        - math.pi
+    out = []
+    for k in range(-4, 5):
+        t = k * math.pi / 2
+        step = (t - t0 + math.pi) % (2 * math.pi) - math.pi
+        if min(0.0, span) <= step <= max(0.0, span):
+            out.append((ox + r * math.cos(t), oy + r * math.sin(t)))
+    return out
+
+
+def path_points(d: str, origin) -> list[tuple[float, float]]:
+    """Every point one `d` attribute puts ink on, arcs included."""
+    pts, here, start = [], None, None
+    for cmd, args in PATH_STEP.findall(d):
+        n = [float(v) for v in args.split()]
+        if cmd == 'Z':
+            here = start
+            continue
+        here_next = (n[-2], n[-1])
+        if cmd == 'A':
+            pts += arc_extremes(origin, here, here_next, n[0])
+        if cmd == 'M':
+            start = here_next
+        pts.append(here_next)
+        here = here_next
+    return pts
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_a_park_page_crops_its_drawing_to_its_own_park(built, key):
+    """The park page's window is that park's; the home page's is the fleet's.
+
+    Both are the same paths in the same feet — `test_the_home_page_is_a_gallery`
+    checks that path for path — so the only thing that separates them is the
+    viewBox, and it has to separate them the right way round. A park page that
+    kept the fleet frame is a drawing sitting in the largest park's margins;
+    a tile that lost it is 31 pictures normalised to one size, which is the
+    comparison the grid exists to make.
+    """
+    slug = PARK_SOURCES[key]['slug']
+    p = built['parks'][slug]
+    f = site_diagram.frame()
+    box = site_diagram.park_box(p['stadium'], p['sides']['named'])
+
+    page = view_box(diagram(built['pages'][slug]))
+    assert page == tuple(round(box[k]) for k in ('x', 'y', 'w', 'h'))
+    assert page[2] < f['w'] and page[3] < f['h'], \
+        f'{slug}: the park page is not cropped at all'
+
+    tile = re.search(r'<a href="%s/">.*?(<svg class="mini".*?</svg>)' % slug,
+                     built['pages'][''], re.S).group(1)
+    assert view_box(tile) == (0.0, 0.0, f['w'], f['h']), \
+        f'{slug}: the home-page tile does not carry the fleet frame'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_crop_cuts_nothing_off_the_drawing(built, key):
+    """Nothing the drawing emits may fall outside the window it is drawn in."""
+    slug = PARK_SOURCES[key]['slug']
+    fig = diagram(built['pages'][slug])
+    x, y, w, h = view_box(fig)
+    f = site_diagram.frame()
+    origin = (f['ox'], f['oy'])
+
+    pts = [p for _, d in DIA_PATH.findall(fig) for p in path_points(d, origin)]
+    assert pts
+    for tx, ty in re.findall(r'<text[^>]* x="([\d.]+)" y="([\d.]+)"', fig):
+        pts.append((float(tx), float(ty)))
+    for px, py in pts:
+        assert x <= px <= x + w and y <= py <= y + h, \
+            f'{slug}: the crop cuts off ({px:.0f}, {py:.0f})'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_home_plate_label_stands_clear_of_both_foul_lines(built, key):
+    """The label was set seventeen feet above the plate and the two foul lines
+    ran through the word. It is fair territory it has to stand in, and fair
+    territory is a wedge: how much room there is depends on how far up it the
+    label sits, so the position is computed from the width of the word and
+    checked here against the lines the drawing actually emitted.
+    """
+    slug = PARK_SOURCES[key]['slug']
+    fig = diagram(built['pages'][slug])
+    f = site_diagram.frame()
+    ox, oy = f['ox'], f['oy']
+
+    lx, ly = (float(v) for v in re.search(
+        r'<text class="pl" x="([\d.]+)" y="([\d.]+)"', fig).groups())
+    half = site_diagram._text_half(site_diagram._PLATE_LABEL,
+                                  site_diagram._FS_PLATE,
+                                  site_diagram._PLATE_TRACK)
+    # The four corners of the word, baseline at `ly` and the capitals above it.
+    corners = [(lx + sx * half, ly - sy * site_diagram._FS_PLATE)
+               for sx in (-1, 1) for sy in (0, 1)]
+
+    lines = [d for cls, d in DIA_PATH.findall(fig) if cls == 'fl']
+    assert len(lines) == 1
+    tips = [(float(a), float(b)) for a, b in
+            re.findall(r'L([\d.]+) ([\d.]+)', lines[0])]
+    assert len(tips) == 2, 'the drawing does not carry two foul lines'
+
+    for tip in tips:
+        ux, uy = tip[0] - ox, tip[1] - oy
+        length = math.hypot(ux, uy)
+        for cx, cy in corners:
+            px, py = cx - ox, cy - oy
+            along = (px * ux + py * uy) / length
+            off = abs(px * uy - py * ux) / length
+            # Beyond the plate end of the line the distance to the line is not
+            # what matters — the word is simply past it. Everywhere else it is.
+            assert along <= 0 or off >= 8.0, \
+                (f'{slug}: "{site_diagram._PLATE_LABEL}" passes within '
+                 f'{off:.1f} ft of a foul line')
 
 
 def test_the_step_legend_matches_the_step_boundaries(built):
@@ -1097,10 +1281,79 @@ def test_park_specific_detail_is_behind_the_details_disclosure(built, slug):
         f'{slug}: the build date is not on the page'
 
     outside = SCHEMATIC.sub(' ', DETAILS_BODY.sub(lambda m: m.group(1), text))
-    assert outside.count('<p') == 4, \
-        f'{slug}: wordmark, team, netting sentence, caveat — and nothing else'
+    assert outside.count('<p') == 5, \
+        (f'{slug}: wordmark, team, netting sentence, caveat, footer — and '
+         f'nothing else')
     for tag in ('<section', '<h2', '<h3', '<ol', '<ul', '<div'):
         assert tag not in outside, f'{slug}: {tag} outside Details'
+
+
+@pytest.mark.parametrize('slug', PARK_SLUGS)
+def test_a_row_of_the_distribution_table_is_three_things(built, slug):
+    """Which area, how many fouls a game, what the club says about netting.
+
+    The row used to carry the deck, the share of the fouls that reach seats
+    and the speed off the bat as well, in a line of small grey type that ran
+    under every heading and that a reader scanning the figures had to read
+    past eleven times. Those three are checked here to have left the row and
+    to be inside Details, because a budget met by deleting something true
+    would be worse than no budget.
+    """
+    text = built['pages'][slug]
+    table = TABLE.search(DETAILS_BODY.sub(lambda m: m.group(1), text)).group(0)
+    for gone in ('mph', '%', 'of the fouls that reach seats'):
+        assert gone not in table, f'{slug}: "{gone}" is still in the table'
+
+    zones = built['parks'][slug]['zones']
+    cells = re.findall(r'<tr><td class="k">(.*?)</td>'
+                       r'<td class="n">(.*?)</td></tr>', table, re.S)
+    assert len(cells) == len(zones)
+    for (label, figure), z in zip(cells, zones):
+        assert label.count('<span class="tag ') == 1, \
+            f'{slug}: a row carries {label.count("<span class=")} tags'
+        assert figure == site_build.fouls_str(z['fouls'])
+
+    inside = text[text.index('<details class="more">'):]
+    assert 'Each area in full' in inside, \
+        f'{slug}: the figures that left the row are not in Details'
+    assert 'mph' in inside and 'of the fouls that reach' in inside
+
+
+@pytest.mark.parametrize('slug', PARK_SLUGS)
+def test_the_details_disclosure_is_shut(built, slug):
+    """Closed on every page and on every visit.
+
+    The whole shape of a park page rests on it: the netting sentence, the
+    table and one line of caveat are the page, and everything that qualifies
+    them is one click down. An `open` attribute would put a screen and a half
+    of provenance back in front of the answer, and it is the kind of attribute
+    that gets added for one debugging session and committed.
+    """
+    text = built['pages'][slug]
+    assert '<details class="more"><summary>Details</summary>' in text
+    assert '<details' in text and ' open' not in text[text.index('<details'):
+                                                      text.index('<summary')], \
+        f'{slug}: the Details disclosure is open by default'
+
+
+@pytest.mark.parametrize('slug', PARK_SLUGS)
+def test_every_park_page_ends_with_the_same_footer_as_the_home_page(built,
+                                                                    slug):
+    """A page that stopped at a closed disclosure stopped without ending.
+
+    The same footer rule the home page keeps: one line, one link, above the
+    fold's own hairline. The link differs — back to the 31 rather than on to
+    /about/, which the caveat above it already carries — and that is the only
+    thing about it that does.
+    """
+    text = built['pages'][slug]
+    assert text.index('</details>') < text.index('<footer>'), \
+        f'{slug}: the footer is inside the disclosure'
+    foot = text[text.index('<footer>'):text.index('</footer>')]
+    assert foot.count('<p') == 1, f'{slug}: the footer is not one line'
+    assert '<a href="../">All 31 ballparks</a>' in foot
+    home = built['pages']['']
+    assert home[home.index('<footer>'):home.index('</footer>')].count('<p') == 1
 
 
 def test_the_about_page_holds_every_explanation(built):
