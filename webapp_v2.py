@@ -1083,8 +1083,10 @@ def site_home():
 @app.route('/parks/<slug>/')
 def site_park(slug):
     # Slugs are checked against the registry rather than sanitised, so no
-    # request-supplied string ever reaches a filesystem path.
-    if slug not in SITE_SLUGS:
+    # request-supplied string ever reaches a filesystem path. `about` is the
+    # one page under /parks/ that is not a ballpark: the site's explanatory
+    # page, which every park page's caveat line links to.
+    if slug != 'about' and slug not in SITE_SLUGS:
         return 'No such ballpark', 404
     html = _site_html(slug)
     if html is None:
@@ -1109,7 +1111,8 @@ def sitemap_xml():
     urls = ''.join(f'<url><loc>{root}/parks/{s}/</loc></url>' for s in slugs)
     body = ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            f'<url><loc>{root}/parks/</loc></url>{urls}</urlset>\n')
+            f'<url><loc>{root}/parks/</loc></url>'
+            f'<url><loc>{root}/parks/about/</loc></url>{urls}</urlset>\n')
     return Response(body, mimetype='application/xml')
 
 

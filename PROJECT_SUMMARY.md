@@ -1,13 +1,14 @@
 # FoulCast, in plain English
 
-*Written 2026-09-08, for a reader who does not work on this code.*
+*Written 2026-09-08, updated 2026-09-22, for a reader who does not work on this code.*
 
 ---
 
 ## What it is
 
-FoulCast is a website with 32 pages: one for each of 31 ballparks, plus a home
-page. Each ballpark page answers two questions about that ballpark:
+FoulCast is a website with 33 pages: one for each of 31 ballparks, a home
+page, and one page that explains how the rest work. Each ballpark page answers
+two questions about that ballpark:
 
 1. **What does the club say about the protective netting** in front of a given
    block of seats?
@@ -19,27 +20,38 @@ always tell which of the two they are looking at, and what the club says about
 the netting always comes ahead of what the model guesses, because it is the
 part that is sourced.
 
-A ballpark page answers before it explains. The top of the screen carries four
-things and nothing else: the ballpark's name and team, the drawing, one plain
-sentence saying where the netting runs — "netting covers the seats at field
-level behind home plate and runs out along both foul lines past the dugouts" —
-and the table of figures. Directly under the table, on one line, is the
-standing warning that none of this has ever been checked against a real foul
-ball. Everything else — where the netting statement came from, how the figures
-were produced, what the model cannot do, what the ballpark's own seating map
-says — is further down, most of it behind a heading you click to open. None of
-it has been removed; none of it stands in front of the answer any more.
+The site is built around its drawings, and the words on it are rationed.
+The home page is a gallery: one headline, one sentence, and a grid of all 31
+ballparks, each tile the park's own drawing, small, with its name and its
+team. A ballpark page is the drawing, large, under the park's name and team;
+then one plain sentence saying where the netting runs — "netting covers the
+seats at field level behind home plate and runs out along both foul lines past
+the dugouts"; then the table of figures; then one line, "Model estimate, not
+observed data", linking to the page that explains everything. That is the
+whole visible page, and a test holds it to sixty words (forty on the home
+page), not counting the table and the drawing's own labels.
 
-There is no login, no ticket search, no live game data. It is 32 pages of
+Everything else about a ballpark — where the netting statement came from,
+how the figures were produced, what the ballpark's own seating map says, the
+two readings, the sourced figures — is behind one closed "Details" heading at
+the foot of its page. Everything general — what is sourced and what is a
+guess, whose the netting gaps are, why most pages will not name a foul line,
+why no section number is printed, how to read the drawing, what the model
+cannot do, the never-validated caveat in full — is on the "How this works"
+page, once. None of it has been removed; none of it stands in front of the
+answer.
+
+There is no login, no ticket search, no live game data. It is 33 pages of
 plain text, one drawing apiece, and a little styling — no images, no scripts.
 A page loads in one request and works on a phone.
 
-The drawing is a schematic plan of the ballpark's foul ground, sitting
-directly above the table of figures: home plate at the bottom, the two foul
-lines running out, and the seating areas as segments of an arc behind them,
-shaded in five steps by how busy the model thinks each one is. It is drawn as
-geometry inside the page rather than as a picture file, so it costs no extra
-request, scales to any screen, and can be read aloud.
+The drawing is a schematic plan of the ballpark's foul ground: home plate at
+the bottom, the two foul lines running out, and the seating areas as segments
+of an arc behind them, shaded in five steps by how busy the model thinks each
+one is. Every park is drawn at the same scale, so on the home page a park with
+more foul ground really does draw larger. It is drawn as geometry inside the
+page rather than as a picture file, so it costs no extra request, scales to
+any screen, and can be read aloud.
 
 ---
 
@@ -159,8 +171,9 @@ those gaps into two honest groups:
 - **16 ballparks** where the club publishes perfectly good netting information
   and *this project's own seat labels cannot be reconciled with it.*
 
-The larger group is the project's own fault, and the home page says so in those
-words rather than leaving the reader to think 16 clubs were negligent.
+The larger group is the project's own fault, and the "How this works" page
+says so in those words rather than leaving the reader to think 16 clubs were
+negligent.
 
 Even at the 7 that do match, "behind netting" is not "protected". The clubs'
 own wording, quoted on the pages, is that fans behind netting "are still
@@ -183,7 +196,7 @@ A fair summary for a visitor:
   most cases to seat groupings the ballpark's own map contradicts.
 
 The site is built to make all three of those legible at a glance, and there are
-1,880 automated tests whose main job is to stop a future change from quietly
+2,013 automated tests whose main job is to stop a future change from quietly
 making a claim the project cannot support.
 
 ---

@@ -82,44 +82,43 @@ the same red on a missing source and on an unnetted seat learns nothing from
 either. One accent teal does the section headings, links and structural marks;
 everything else is ink on white.
 
-**The page answers first and shows its receipts underneath.** Above the fold
-there are four things and nothing else: the ballpark and its team, the
-schematic, one sentence saying where the netting runs, and the distribution
-table. None of them explains its own status before saying anything — the
-netting sentence states where the net is, not that a club published it, not
-how many of the 31 parks match, not what the club's coverage hedge says.
+**The site is built around the drawings, and the words are rationed.** Three
+passes trimmed and rearranged the prose and the site still read as a methods
+document, because a page organised around its own caveats is a document
+whatever its length. So the pages are now three kinds, and two of them carry a
+word budget that `tests/test_site.py` enforces:
 
-Under the table, and nowhere above it, the standing "never checked against a
-real foul ball" caveat, on one line, where it qualifies the figures it is
-about. Then the receipts, in the order that keeps the sourced thing ahead of
-the estimated one: where the netting statement came from and every area it
-touches, how the figures were produced, the two readings, the sourced park
-figures, the seating-map read, the limits. All of it is still on the page and
-none of it is in front of the answer.
+* **The home page is a gallery.** One headline, one sentence, and a grid of
+  all 31 ballparks — each tile the park's own schematic, small, with its name
+  and its team, the whole tile a link. At most 40 words of prose outside the
+  tiles, and nothing else on the page.
+* **A park page is the drawing.** The park's name and team, then the schematic
+  large and alone, then one sentence saying where the netting runs, then the
+  distribution table, then one line — "Model estimate, not observed data" —
+  with the link to the explanatory page. At most 60 words visible without
+  opening anything, not counting the table and the drawing's own labels.
+  Everything that is about *this* park and not on that list — where the
+  netting statement came from and every area it touches, how the figures were
+  produced and what share was dropped, the two readings, the sourced figures,
+  the seating-map read — is behind one closed "Details" disclosure at the
+  foot of the page. Nothing honest is removed; it is one click down.
+* **`/about/` is where the site explains itself.** Every explanation that used
+  to be on the home page or repeated on all 31 park pages — what is sourced
+  and what is not, whose the netting gaps are and which parks are in each
+  group, why most pages will not name a foul line, why no section number is
+  printed, how the drawing is to be read, the two readings, the methodology,
+  the model's limits, the never-validated caveat in full — is on that page
+  once, in full, and linked from the caveat line of every park page.
+
+**Whitespace goes to the drawing, and nowhere else.** The schematic gets the
+width of the column and air on all four sides; the table under it is tight,
+the caveat is one line, and the Details disclosure is a hairline and a word.
+One column at every width, because the page is a picture with a table under
+it and there is nothing to set beside either. The home grid reflows by tile.
 
 **Prose never runs past 72 characters a line, at any width.** The cap is in
-`ch` and not in `rem`, because these pages set text at four sizes and one rem
-cap gave the 16px prose eighty characters and the .8rem strip a hundred and
-twenty-eight. Everything wider than the cap is a table, a listing or a column,
-never a paragraph.
-
-Three widths, and the layout is checked at all three:
-
-* **Below 34rem** — one column, 15px, edge to edge.
-* **34rem to 64rem** — one column capped at 42rem. A 768px tablet reads a
-  672px column, which is the measure, not the viewport.
-* **64rem and up** — a two-column grid capped at 69rem (1104px). The answer
-  block runs across both columns and stays a stack, because its four parts
-  are an argument in order and setting them side by side would break it; the
-  schematic grows instead. Panels below it pair in DOM order, so the reading
-  sequence survives: the netting source across both columns, then the
-  methodology beside the two readings, then the sourced figures beside the
-  seating-map read, then the limits across both. The full-width panels fill
-  the width rather than sitting in it: the netting source takes one column
-  with the club's caveat beside it (`split_cols`), the seating listings run
-  two-up, and the limits flow into two columns a block at a time. Rows are
-  start-aligned, so a short panel leaves its column short rather than
-  stretching a hairline box around empty space.
+`ch` and not in `rem`, because these pages set text at several sizes and one
+rem cap gives the small type a hundred-character line.
 """
 import argparse
 import hashlib
@@ -139,11 +138,11 @@ from foulball.matchup_engine import predict_game_fouls
 from foulball.stadium import STADIUMS, PARK_PARAMS
 from foulball.netting import join_park, PDL_RULE
 from foulball.seat_map import check_side_anchors
-from site_diagram import park_diagram, CSS as DIAGRAM_CSS
+from site_diagram import park_diagram, park_tile, CSS as DIAGRAM_CSS
 from site_data import (
     PARK_SOURCES, ZONE_WORDS, PAIR_ZONE_WORDS, AREA_WORDS, GAP_WORDS,
     NET_HEIGHT_WORDS, COVER_WORDS, COVER_APPLIED, MODEL_LIMITS, RESEARCH_DATE,
-    SIDE_STATE_WORDS, MAP_READS, MAP_READ_DATE, NO_MAP_READ,
+    SIDE_STATE_WORDS, MAP_READS, MAP_READ_DATE, LATER_READ_DATE, NO_MAP_READ,
     FOUL_AREA_CAVEAT, BACKSTOP_CAVEAT, OVERHANG_CAVEAT,
     CLEM_TABLE, CLEM_BASE, CLEM_OVERHANG_SNAPSHOT, SEAMHEADS_BASE,
 )
@@ -356,15 +355,6 @@ SOURCE_KIND_WORDS = {
     'primary': "the club's own page",
     'secondary_unverified': 'a second-hand source, never verified',
     'none': 'what was checked',
-}
-
-# The one-line form of each side verdict, for the disclosure summary. The full
-# statement is `SIDE_STATE_WORDS`, inside the section.
-SIDE_SHORT = {
-    'confirmed': 'Which foul line is which is established here.',
-    'untested': 'Which foul line is which has never been tested here.',
-    'flipped': 'This model has the two foul lines reversed here.',
-    'inconsistent': "This model's foul-line labels contradict their source.",
 }
 
 _COUNTS: dict[str, int] = {}
@@ -601,11 +591,6 @@ WORD_COUNT = ['None', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven',
               'Eight', 'Nine', 'Ten']
 
 
-def count_word(n: int) -> str:
-    """A small count in words, lowercase, falling back to the digits."""
-    return WORD_COUNT[n].lower() if n < len(WORD_COUNT) else str(n)
-
-
 def comma_list(bits) -> str:
     """`a`, `a and b`, `a, b and c` — for the one-line disclosure summaries."""
     bits = [b for b in bits if b]
@@ -647,54 +632,80 @@ def e(s) -> str:
 # The page shell
 # ============================================================
 
-CSS = """
+CSS = r"""
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:#fff;color:#16181d;word-wrap:break-word;
  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,
  "Helvetica Neue",sans-serif}
-header,main,footer{max-width:42rem;margin:0 auto;padding:0 .85rem}
-a{color:#0b6a74;text-decoration:underline;text-underline-offset:.12em}
+header,main,footer{max-width:46rem;margin:0 auto;padding:0 1rem}
+a{color:#0b6a74;text-decoration:underline;text-underline-offset:.14em}
 a:hover{color:#084950}
 p{margin:.55rem 0}
-.crumb{font-size:.7rem;letter-spacing:.09em;text-transform:uppercase;
- margin:1rem 0 0;font-weight:700}
-.crumb a{text-decoration:none}
-h1{font-size:1.45rem;line-height:1.15;letter-spacing:-.02em;font-weight:700;
- margin:.3rem 0 .3rem}
-.club{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;
- color:#5b6270;margin:0;padding-bottom:.75rem;border-bottom:2px solid #16181d}
-.club b{color:#16181d;font-weight:700;border-left:3px solid #0b6a74;
- padding-left:.42rem;margin-right:.15rem}
-.strip{font-size:.8rem;line-height:1.45;color:#4a505c;padding:.6rem 0;
- border-bottom:1px solid #dcdfe4;margin:0;max-width:72ch}
-.strip b{color:#16181d}
-.answer{margin:.7rem 0 0}
-.answer .strip{border-bottom:0;padding:.5rem 0 0}
-.netline{font-size:1.18rem;line-height:1.3;font-weight:700;
- letter-spacing:-.015em;border-left:3px solid #0b6a74;padding-left:.65rem;
- margin:.85rem 0 1.1rem;max-width:58ch}
-.ah{font-size:.7rem;font-weight:700;letter-spacing:.09em;
- text-transform:uppercase;color:#0b6a74;margin:1.1rem 0 0}
-.panel{border:1px solid #d5d9df;margin:1.15rem 0}
-.panel>h2{margin:0;padding:.45rem .65rem;font-size:.74rem;font-weight:700;
+.wm{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+ font-weight:800;margin:1.1rem 0 0;color:#16181d}
+.wm a{text-decoration:none;color:inherit}
+.wm a:hover{color:#0b6a74}
+h1{font-size:1.8rem;line-height:1.08;letter-spacing:-.025em;font-weight:800;
+ margin:.55rem 0 .15rem}
+.club{font-size:.78rem;letter-spacing:.07em;text-transform:uppercase;
+ color:#5b6270;margin:0}
+.club b{color:#0b6a74;font-weight:700}
+.hero{text-align:center;padding-top:1.6rem}
+.hero h1{font-size:2rem;margin:.7rem auto .45rem;max-width:22ch}
+.hero .lede{color:#4a505c;font-size:1rem;line-height:1.5;max-width:46ch;
+ margin:0 auto 1.7rem}
+.grid{list-style:none;padding:0;margin:0 0 2rem;display:grid;gap:.7rem;
+ grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr))}
+.grid a{display:block;height:100%;text-decoration:none;color:inherit;
+ background:#f3f5f7;border:1px solid transparent;border-radius:12px;
+ padding:.8rem .8rem .75rem;transition:border-color .12s,transform .12s}
+.grid a:hover{border-color:#0b6a74;transform:translateY(-2px)}
+.grid .dia{margin:0 0 .55rem}
+.tn{display:block;font-weight:700;font-size:.95rem;line-height:1.2;
+ letter-spacing:-.01em}
+.tt{display:block;color:#5b6270;font-size:.74rem;margin-top:.18rem}
+.park main{padding-top:.2rem}
+.park .dia{margin:1.1rem 0 1.6rem}
+.netline{font-size:1.1rem;line-height:1.38;font-weight:600;
+ letter-spacing:-.012em;margin:0 0 1.15rem;max-width:58ch}
+table{width:100%;border-collapse:collapse;margin:0;font-size:.9rem}
+caption{text-align:left;font-size:.68rem;font-weight:700;letter-spacing:.1em;
+ text-transform:uppercase;color:#0b6a74;padding:0 0 .5rem}
+th,td{text-align:left;vertical-align:top;padding:.42rem .1rem;
+ border-bottom:1px solid #e4e7eb;line-height:1.4}
+thead th{font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;
+ color:#5b6270;font-weight:700;border-bottom:1px solid #b9bfc8;
+ padding-bottom:.25rem}
+tbody tr:last-child td{border-bottom:1px solid #b9bfc8}
+td.k{font-weight:600}
+.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
+ width:1%;padding-left:.7rem}
+.sub2{display:block;color:#5b6270;font-size:.77rem;line-height:1.35;
+ font-weight:400;margin-top:.12rem}
+.sub2+.sub2{margin-top:.35rem}
+.area{color:#5b6270;font-weight:400}
+.caveat{font-size:.84rem;line-height:1.45;color:#4a505c;margin:.9rem 0 2rem}
+.caveat b{color:#16181d}
+.caveat a{white-space:nowrap;font-weight:600}
+.more{border-top:1px solid #dcdfe4;margin:0 0 1rem}
+.more>summary{cursor:pointer;list-style:none;display:flex;
+ justify-content:space-between;align-items:center;padding:.85rem 0;
+ font-size:.72rem;font-weight:700;letter-spacing:.12em;
+ text-transform:uppercase;color:#5b6270}
+.more>summary::-webkit-details-marker{display:none}
+.more>summary::after{content:"+";font-size:1rem;line-height:1}
+.more[open]>summary::after{content:"\2212"}
+.more>summary:hover{color:#0b6a74}
+.panel{border:1px solid #d5d9df;margin:0 0 1rem}
+.panel>h2{margin:0;padding:.45rem .7rem;font-size:.72rem;font-weight:700;
  letter-spacing:.09em;text-transform:uppercase;color:#0b6a74;
  border-bottom:1px solid #d5d9df}
-summary{cursor:pointer;display:block;list-style:none}
-summary::-webkit-details-marker{display:none}
-.panel>details>summary{padding:.45rem .65rem .5rem}
-.panel>details[open]>summary{border-bottom:1px solid #d5d9df}
-.dh{display:flex;justify-content:space-between;gap:.6rem;font-size:.74rem;
- font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#0b6a74}
-.dh::after{content:"+";font-size:.9rem;line-height:1.1}
-details[open]>summary .dh::after{content:"\\2212"}
-summary:hover .dh{color:#084950}
-.ds{display:block;font-size:.83rem;line-height:1.45;color:#4a505c;
- margin-top:.22rem;max-width:72ch}
-.pb{padding:.7rem .65rem .85rem}
+.pb{padding:.7rem .7rem .85rem}
 .pb>:first-child{margin-top:0}
 .pb>:last-child{margin-bottom:0}
-.pb p,.warn,.ok,.gap{max-width:72ch}
+.pb p,.warn,.ok,.gap,.note,.about p,.about li{max-width:72ch}
+.lede{font-size:.98rem}
 h3{font-size:.94rem;font-weight:700;letter-spacing:-.01em;margin:1.2rem 0 .3rem}
 h3.hs{border-left:3px solid #7b828e;padding-left:.5rem}
 h3.hs-net{border-left-color:#0b6a74}
@@ -703,23 +714,8 @@ h3.hs-open{border-left-color:#a01523;color:#a01523}
 ul.areas{list-style:none;padding:0;margin:.5rem 0 .2rem}
 ul.areas li{padding:.4rem .1rem;border-bottom:1px solid #e4e7eb;font-weight:600}
 ul.areas li:last-child{border-bottom:1px solid #b9bfc8}
-table{width:100%;border-collapse:collapse;margin:.6rem 0;font-size:.9rem}
-th,td{text-align:left;vertical-align:top;padding:.4rem .1rem;
- border-bottom:1px solid #e4e7eb;line-height:1.4}
-thead th{font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;
- color:#5b6270;font-weight:700;border-bottom:1px solid #b9bfc8;
- padding-bottom:.2rem}
-tbody tr:last-child td{border-bottom:1px solid #b9bfc8}
-td.k{font-weight:600}
-.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
- width:1%;padding-left:.7rem}
-.sub2{display:block;color:#5b6270;font-size:.78rem;line-height:1.35;
- font-weight:400;margin-top:.12rem}
-.sub2+.sub2{margin-top:.35rem}
-.area{color:#5b6270;font-weight:400}
 .note{font-size:.83rem;line-height:1.45;color:#4a505c;
- border-left:2px solid #d5d9df;padding-left:.65rem;margin:.75rem 0;
- max-width:72ch}
+ border-left:2px solid #d5d9df;padding-left:.65rem;margin:.75rem 0}
 .warn,.ok,.gap{border:1px solid #d5d9df;padding:.55rem .65rem;margin:.8rem 0;
  font-size:.88rem;line-height:1.45}
 .warn{border-left:3px solid #7b828e}
@@ -751,54 +747,50 @@ ul.parklist a:hover{text-decoration:underline}
 .rn{flex:0 0 auto;text-align:right;font-variant-numeric:tabular-nums;
  font-weight:700}
 .sub{color:#5b6270;font-size:.8rem;line-height:1.4}
-.lede{font-size:.98rem}
 .big{font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums}
-footer{border-top:2px solid #16181d;margin-top:1.7rem;padding-top:.8rem;
- padding-bottom:2rem;color:#5b6270;font-size:.8rem;line-height:1.45}
-footer p{margin:.4rem 0}
-hr{border:0;border-top:1px solid #d5d9df;margin:1.5rem 0}
+.credit{font-size:.78rem;line-height:1.45;color:#5b6270;margin:.2rem 0 0;
+ max-width:72ch}
+footer{border-top:1px solid #dcdfe4;margin-top:.5rem;padding-top:.9rem;
+ padding-bottom:2.4rem;color:#5b6270;font-size:.8rem}
+footer a{font-weight:700;text-decoration:none}
+footer a:hover{text-decoration:underline}
+.about h1{margin-bottom:.5rem}
+.about h2{font-size:1.15rem;line-height:1.25;letter-spacing:-.015em;
+ margin:2.2rem 0 .45rem;padding-top:1.3rem;border-top:1px solid #dcdfe4}
+.about h2+p{margin-top:.3rem}
+.about .lede{font-size:1.05rem;color:#4a505c}
 @media (min-width:34rem){
  body{font-size:16px}
- header,main,footer{padding:0 1.1rem}
- .pb{padding:.85rem .85rem 1rem}
- .panel>h2{padding:.5rem .85rem}
+ header,main,footer{padding:0 1.25rem}
+ .grid{grid-template-columns:repeat(auto-fill,minmax(11rem,1fr));gap:.85rem}
 }
 @media (min-width:64rem){
- header,main,footer{max-width:69rem;padding:0 1.5rem}
- main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  column-gap:1.4rem;align-items:start}
- main>.strip,main>.wide,main>.answer{grid-column:1/-1}
- .netline{font-size:1.3rem}
- .panel{margin:1.4rem 0 0}
- .wide .pb>h3{max-width:72ch}
- .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  column-gap:1.6rem;align-items:start}
- .wide ul.areas{columns:2;column-gap:2.2rem;margin-top:.2rem}
- .wide ul.areas li{break-inside:avoid}
- .cols{columns:2;column-gap:2.2rem}
- .cols>div{break-inside:avoid;padding-bottom:.15rem}
- .cols>div>h3{margin-top:0}
- .cols>div+div>h3{margin-top:1.15rem}
- ul.parklist .rk{display:flex;flex-wrap:wrap;align-items:baseline;
-  gap:.1rem .6rem}
- ul.parklist .rk .sub2{display:inline;margin-top:0}
+ .home header,.home main,.home footer{max-width:74rem;padding:0 2rem}
+ .hero{padding-top:2.4rem}
+ .hero h1{font-size:2.4rem}
+ .grid{grid-template-columns:repeat(auto-fill,minmax(12.5rem,1fr));gap:1rem}
+ .park header,.park main,.park footer,
+ .about header,.about main,.about footer{max-width:50rem;padding:0 1.5rem}
+ .park h1{font-size:2.15rem}
+ .park .dia{margin:1.4rem 0 1.9rem}
+ .netline{font-size:1.18rem}
 }
 @media (prefers-color-scheme:dark){
  body{background:#101216;color:#e4e7ee}
  a{color:#4fb6c0}a:hover{color:#7fd0d8}
- .club,.strip,.sub,.sub2,.area,.note,footer,thead th,.lhead{color:#98a0b0}
- .club{border-bottom-color:#e4e7ee}
- .club b{color:#e4e7ee;border-left-color:#4fb6c0}
- .strip{border-bottom-color:#262b34}
- .strip b{color:#e4e7ee}
- .netline{border-left-color:#4fb6c0}
- .ah{color:#4fb6c0}
+ .wm,.club b{color:#e4e7ee}
+ .wm a:hover{color:#4fb6c0}
+ .club,.sub,.sub2,.area,.note,footer,thead th,.lhead,.tt,.caveat,.credit,
+ .hero .lede,.about .lede{color:#98a0b0}
+ .club b,.caveat b{color:#e4e7ee}
+ .grid a{background:#171a20}
+ .grid a:hover{border-color:#4fb6c0}
+ caption,.panel>h2{color:#4fb6c0}
+ .more{border-top-color:#2b313b}
+ .more>summary{color:#98a0b0}
+ .more>summary:hover{color:#4fb6c0}
  .panel,.warn,.ok,.gap{border-color:#2b313b}
- .panel>h2,.dh{color:#4fb6c0}
  .panel>h2{border-bottom-color:#2b313b}
- .panel>details[open]>summary{border-color:#2b313b}
- summary:hover .dh{color:#7fd0d8}
- .ds{color:#98a0b0}
  h3{color:#e4e7ee}
  th,td{border-bottom-color:#232830}
  thead th,tbody tr:last-child td{border-bottom-color:#3a414d}
@@ -819,8 +811,7 @@ hr{border:0;border-top:1px solid #d5d9df;margin:1.5rem 0}
  ul.areas li:last-child{border-bottom-color:#3a414d}
  ul.parklist li{border-bottom-color:#232830}
  .lhead{border-bottom-color:#3a414d}
- footer{border-top-color:#e4e7ee}
- hr{border-top-color:#2b313b}
+ footer,.about h2{border-top-color:#2b313b}
 }
 """
 
@@ -829,15 +820,15 @@ def _min(css: str) -> str:
     return re.sub(r'\s*\n\s*', '', css).strip()
 
 
-CSS_MIN = _min(CSS)
-# The schematic's styling is served only on the 31 pages that carry one. It is
-# 1.7 KB, which is nothing beside a park page's drawing and 6% of a home page
-# that has no drawing on it.
-DIAGRAM_CSS_MIN = _min(DIAGRAM_CSS)
+# One stylesheet for every page. The schematic's styling used to be served
+# only on the 31 pages that carried a drawing; the home page now carries all
+# 31 as tiles, and the 1.7 KB it costs the one page without a drawing is not
+# worth a second stylesheet.
+CSS_MIN = _min(CSS) + _min(DIAGRAM_CSS)
 
 
 def page(title: str, description: str, body: str, canonical: str | None,
-         base_url: str, extra_css: str = '') -> str:
+         base_url: str) -> str:
     head = [
         '<!doctype html>',
         '<html lang="en">',
@@ -848,70 +839,24 @@ def page(title: str, description: str, body: str, canonical: str | None,
     ]
     if base_url and canonical is not None:
         head.append(f'<link rel="canonical" href="{e(base_url + canonical)}">')
-    head.append(f'<style>{CSS_MIN}{extra_css}</style>')
+    head.append(f'<style>{CSS_MIN}</style>')
     return '\n'.join(head) + '\n' + body + '\n</html>\n'
 
 
-def panel(anchor: str, heading: str, body: str, wide: bool = False) -> str:
+def panel(anchor: str, heading: str, body: str) -> str:
     """A hairline box with its heading in the one accent colour this site has.
 
-    Every block below the answer is one of these, so the receipts read as a
-    stack of equal-weight panels and nothing inside them competes with the
-    answer above them. The anchor stays on the `h2`, because
-    `tests/test_site.py` reads the section order off those ids.
-
-    `wide` puts a panel across both columns of the desktop grid. It is for the
-    two that are about the whole page rather than one part of it — the netting
-    source at the head of the receipts and the limits at the foot — and it
-    does nothing at all below 64rem, where there is one column and every panel
-    is already the width of the page.
+    Every block inside a park page's Details disclosure is one of these, so
+    the receipts read as a stack of equal-weight panels. The anchor stays on
+    the `h2`, because `tests/test_site.py` reads the section order off those
+    ids.
     """
-    cls = 'panel wide' if wide else 'panel'
-    return (f'<section class="{cls}"><h2 id="{anchor}">{e(heading)}</h2>'
+    return (f'<section class="panel"><h2 id="{anchor}">{e(heading)}</h2>'
             f'<div class="pb">\n{body}\n</div></section>')
 
 
-def fold(anchor: str, heading: str, summary: str, body: str,
-         wide: bool = False) -> str:
-    """A panel whose body is closed until the reader asks for it.
-
-    The reason a park page has these at all: the answer a reader came for is
-    the drawing, the netting sentence and the distribution, and everything
-    else on the page is the working behind them. The working has to stay —
-    none of it is removed — but it was standing between the reader and the
-    answer, four screens of it.
-
-    `summary` is the one line that stays visible when the section is shut, and
-    it is not a label. It carries the finding, so that a reader who never
-    opens the section still gets what the section concluded: the figures, the
-    map's verdict, which side is which, how many areas the netting leaves
-    outside it. Opening it gets the evidence.
-
-    Native `<details>`, because this site is one request per page with no
-    scripts, and it has to keep being one.
-    """
-    cls = 'panel wide' if wide else 'panel'
-    return (f'<section class="{cls}"><details><summary id="{anchor}">'
-            f'<span class="dh">{e(heading)}</span>'
-            f'<span class="ds">{summary}</span></summary>'
-            f'<div class="pb">\n{body}\n</div></details></section>')
-
-
-def split_cols(lead: str, rest: str) -> str:
-    """Two columns of a panel body on a wide screen, a stack on a narrow one.
-
-    It exists for the netting-source panel, whose opening statement is a
-    single paragraph while the panel itself is full width because the seating
-    listings inside it are — so on a 1440 the top of it was a thousand pixels
-    of border around six hundred of text. The statement and its source take
-    one column; what qualifies them, the club's own coverage hedge or the kind
-    of gap this is, takes the other.
-    """
-    return (f'<div class="split"><div>\n{lead}\n</div>'
-            f'<div>\n{rest}\n</div></div>')
-
-
-def rows(pairs, head=None) -> str:
+def rows(pairs, head=None, caption: str | None = None,
+         anchor: str | None = None) -> str:
     """A label-left, figure-right table with a hairline between rows.
 
     The only presentation the figures on this site can carry. A bar, a filled
@@ -919,12 +864,19 @@ def rows(pairs, head=None) -> str:
     scale and imply they were measured to it; they come out of estimated
     geometry that has never been checked against a foul ball, and a plain
     right-aligned column claims nothing.
+
+    `caption` is the table's own heading, inside the table, so that it is a
+    label of the table rather than a line of prose above it.
     """
+    cap = ''
+    if caption:
+        cap = (f'<caption id="{anchor}">{caption}</caption>' if anchor
+               else f'<caption>{caption}</caption>')
     thead = (f'<thead><tr><th>{head[0]}</th><th class="n">{head[1]}</th></tr>'
              f'</thead>' if head else '')
     body = ''.join(f'<tr><td class="k">{k}</td><td class="n">{v}</td></tr>'
                    for k, v in pairs)
-    return f'<table>{thead}<tbody>{body}</tbody></table>'
+    return f'<table>{cap}{thead}<tbody>{body}</tbody></table>'
 
 
 # ============================================================
@@ -1087,9 +1039,8 @@ def netting_source_section(p: dict) -> str:
     published one and it does not fit, nobody published one at all — and then
     lists every area the join touched, including the ones it leaves outside.
 
-    Shut, with the tally of what came out where on the line that stays
-    visible, so a reader who never opens it still learns how many areas the
-    netting covers and how many it leaves.
+    First inside the Details disclosure, so that the sourced thing stays
+    ahead of the estimated one even among the receipts.
     """
     net, join, name = p['net'], p['join'], p['name']
     counts = netting_counts()
@@ -1186,18 +1137,10 @@ def netting_source_section(p: dict) -> str:
                            'page, so the same statement is given by position '
                            'instead.</p>')
 
-        tally = [(len(net['netted']), 'behind netting'),
-                 (len(net['partial']), 'partly behind it'),
-                 (len(net['split']), 'covered on one foul line only'),
-                 (len(net['open']), 'not behind netting'),
-                 (len(net['unknown']), 'not mentioned either way')]
-        summary = ('Areas on this page: '
-                   + comma_list([f'{count_word(n)} {w}' for n, w in tally if n])
-                   + '. And what the club itself says its netting is worth.')
-        body = (split_cols(lead + '\n' + src_line, club_caveat)
+        body = (lead + '\n' + src_line + '\n' + club_caveat + '\n'
                 + '\n'.join(x for x in out if x))
-        return fold('netting-source', 'Where that netting statement comes from',
-                    summary, body, wide=True)
+        return panel('netting-source', 'Where that netting statement comes from',
+                     body)
 
     # A gap park. There is no extent to source, so what this section carries
     # is whose gap it is: `join.status` already separates the two and the page
@@ -1242,22 +1185,21 @@ def netting_source_section(p: dict) -> str:
                        'the same statement is given by position instead.</p>')
     out.append(club_caveat)
 
-    body = split_cols(lead, beside) + '\n'.join(x for x in out if x)
-    return fold('netting-source', 'Whose gap this is, and what was checked',
-                f'{counts["gaps"]} of the 31 parks here are gaps, and at '
-                f'{counts["join_gap"]} of those the failure is this model\'s '
-                f'rather than the club\'s.', body, wide=True)
+    body = lead + '\n' + beside + '\n' + '\n'.join(x for x in out if x)
+    return panel('netting-source', 'Whose gap this is, and what was checked',
+                 body)
 
 
 def answer_section(p: dict) -> str:
-    """The whole of the top of the page: drawing, one sentence, table.
+    """The whole of the visible page: drawing, one sentence, table, one line.
 
     Nothing here explains itself first. The drawing is the answer to where
     foul balls land and so it is the first thing on screen; the sentence under
     it is the answer to where the net is, in the fewest plain words the join
     supports; the table is the same answer in figures. The provenance of all
-    three is below, and the one caveat that qualifies the table sits directly
-    under the table rather than in front of the page.
+    three is in the Details disclosure below, and the one caveat that
+    qualifies the table is one line directly under it, carrying the link to
+    the page where the caveat is stated in full.
 
     Label left, figure right, a hairline between. No bar and no filled share:
     the figures rest on estimated geometry, and a drawn length would put them
@@ -1282,32 +1224,28 @@ def answer_section(p: dict) -> str:
          + (f' &middot; {split_phrase(z)}' if z['split'] else '')
          + '</span>',
          fouls_str(z['fouls']))
-        for z in p['zones']], head=('Seating area', 'Fouls a game'))
+        for z in p['zones']], head=('Seating area', 'Fouls a game'),
+        caption='Foul balls a game, by seating area', anchor='zones')
 
-    # The standing caveat. It is not gone and it is not softened; it has moved
-    # to where it bites, under the figures it is about, instead of standing in
-    # front of the page ahead of anything it could qualify.
-    caveat = ('<p class="strip"><b>Never checked against a real foul '
-              'ball.</b> No public record of where fouls land exists '
-              'anywhere, so every figure here is a physics model that has '
-              'never been validated against an observed landing.</p>')
+    # The standing caveat, in the fewest words that are still the caveat. It
+    # is not softened: the full statement — no public record of where fouls
+    # land exists, so nothing here has ever been validated against one — is
+    # the first thing on the page this line links to.
+    caveat = ('<p class="caveat"><b>Model estimate, not observed data.</b> '
+              '<a href="../about/">How this works &rarr;</a></p>')
 
-    return f'''<section class="answer">
-{park_diagram(p)}
+    return f'''{park_diagram(p)}
 <p class="netline" id="netting">{netting_line(p)}</p>
-<h2 class="ah" id="zones">Foul balls a game, by seating area</h2>
 {table}
-{caveat}
-</section>'''
+{caveat}'''
 
 
 def model_section(p: dict) -> str:
     """How the figures above the fold were produced, and what they drop.
 
-    Methodology, which is not an answer to anything a reader arrived with, so
-    it is shut. The two things a reader would be misled without — the share of
-    fouls the model cannot place, and whether the two foul lines are one row
-    or two — are on the line that stays visible.
+    The two things a reader would be misled without — the share of fouls the
+    model cannot place, and whether the two foul lines are one row or two —
+    lead it. The general method is stated once, on the explanatory page.
     """
     notes = [f'''<div class="warn"><p><strong>About {p['unmatched_pct']:.0f}% of
 the fouls this model produces at {e(p['name'])} land where it has no seating
@@ -1315,8 +1253,6 @@ area to put them</strong> &mdash; deep down the lines near the poles, in the gap
 in front of the first row, or under a covered deck. They are counted in the
 park's total and then dropped, which is why the figures above are a shape rather
 than a census.</p></div>''']
-    summary = (f'About {p["unmatched_pct"]:.0f}% of the fouls this model '
-               f'produces here land where it has no seating area to put them.')
     if not p['sides']['named']:
         notes.append('''<p class="note">The two foul lines are one area each
 rather than a first-base area and a third-base one, because nothing says which
@@ -1324,14 +1260,13 @@ line is which here. A figure on one of those rows is what reaches <em>one</em> o
 the two lines, which keeps it comparable with the behind-plate rows beside it.
 The model builds both lines identically, so the pair would differ only by
 simulation noise in any case.</p>''')
-        summary += ' The two foul lines are one row here, not two.'
 
     inner = f'''<p>One full game, both lineups, the same 18 batters at every park on this site,
 so the park is the only thing that changes. {p['sims']} simulations per batter,
 fixed seed. The table above is foul balls per game reaching each area, largest
 first &mdash; a model estimate, not a count of anything observed.</p>
 {chr(10).join(notes)}'''
-    return fold('model', 'How these figures were produced', summary, inner)
+    return panel('model', 'How these figures were produced', inner)
 
 
 def readings_section(p: dict) -> str:
@@ -1433,9 +1368,8 @@ def figures_section(p: dict) -> str:
     rather than beside the number, so nothing implies the number is more
     settled than its own footnote.
 
-    Folded, because a reader who came for the netting and the distribution has
-    not come for the provenance of a foul-territory estimate. The three
-    numbers themselves are on the summary line, so folding costs them nothing.
+    Inside Details, because a reader who came for the netting and the
+    distribution has not come for the provenance of a foul-territory estimate.
     """
     src, params = p['src'], p['params']
     name = p['name']
@@ -1530,21 +1464,8 @@ def figures_section(p: dict) -> str:
     out.append(f'<p class="sub">{lead} {e(RESEARCH_DATE)}: '
                f'{" &middot; ".join(links)}.</p>')
 
-    # The summary line carries the three numbers, so a shut section still
-    # answers the question it exists to answer.
-    bits = [f'{src["foul_area"]:,} sq ft of foul territory' if src['foul_area']
-            else 'no published foul territory',
-            f'a {src["backstop"]} ft backstop' if src['backstop']
-            else 'no published backstop',
-            f'{params.upper_overhang:.0f}% of the upper deck under cover'
-            if params.upper_overhang is not None else 'no cover figure']
-    listed = comma_list(bits)
-    tail = ('The sources that were checked, and what they do not carry.'
-            if src['foul_area'] is None and src['backstop'] is None
-            and params.upper_overhang is None
-            else 'Where each came from, and what disagrees with it.')
-    return fold('figures', 'The sourced figures behind this park',
-                f'{listed[0].upper()}{listed[1:]}. {tail}', '\n'.join(out))
+    return panel('figures', 'The sourced figures behind this park',
+                 '\n'.join(out))
 
 
 def labels_section(p: dict) -> str:
@@ -1555,9 +1476,8 @@ def labels_section(p: dict) -> str:
     better than they are. `MAP_FINDINGS.md` made it necessary — thirty maps
     read, twenty-seven of them disagreeing with the table.
 
-    Folded, with the verdict on the summary line. The three agreements are
-    rendered differently and say so: an agreement that looks like a
-    disagreement is as misleading as the reverse.
+    The three agreements are rendered differently and say so: an agreement
+    that looks like a disagreement is as misleading as the reverse.
     """
     label, para = SIDE_STATE_WORDS[p['sides']['state']]
     out = ['<p>Every area on this page is a group of the ballpark\'s own '
@@ -1601,48 +1521,11 @@ def labels_section(p: dict) -> str:
             'foul line is which and where the plate sits, and says nothing at '
             'all about how many foul balls reach any of these seats, which '
             'nothing on this site has ever checked.</p>')
-        n = len(mr['findings'])
-        map_bit = ('Its own seating map agrees on both questions a map can '
-                   'settle.' if agrees else
-                   f'Its own seating map disagrees with the labels in '
-                   f'{count_word(n)} place{"" if n == 1 else "s"}.')
     else:
         out.append(f'<p>{NO_MAP_READ}</p>')
-        map_bit = 'Its seating map has never been read.'
 
-    return fold('labels', 'The seat labels these areas are built from',
-                f'{SIDE_SHORT[p["sides"]["state"]]} {map_bit}',
-                '\n'.join(out))
-
-
-def limits_section(p: dict) -> str:
-    # One of the limits quotes the fleet-wide count of parks whose two foul
-    # lines cannot be told apart. It moved five times as the seating maps were
-    # read, so it is substituted here rather than written out in the copy.
-    # Each limit is its own block, so that on a wide screen the set can flow
-    # into two columns without a heading parting company with its paragraph.
-    items = ''.join(
-        f'<div><h3>{e(t)}</h3>'
-        f'<p>{body.replace("{unnamed_sides}", str(side_counts()["unnamed"]))}'
-        f'</p></div>'
-        for t, body in MODEL_LIMITS)
-    inner = f'''<div class="cols">{items}
-<div><h3>Why there are no section numbers on this page</h3>
-<p>This model carries a printed seat label for every area it tracks. At nine of
-the 31 parks the club's own netting page contradicts them outright; at ten more,
-the labels cannot describe a continuous seating bowl. Thirty seating maps have
-since been read against them label by label, and <strong>twenty-seven of the
-thirty disagreed</strong> &mdash; four with their foul lines cleanly reversed,
-nine more crossed in a way no single swap would fix, twenty-four with the seats
-behind home plate attached to a block somewhere else, several naming decks that
-are not there. Three agreed. So areas here are described by where they are, and
-no seat number is printed anywhere on this site.</p></div></div>'''
-    return fold('limits', 'What this model does not know',
-                f'It has never been checked against a foul ball, the seating '
-                f'shape is not surveyed, and the two foul lines cannot be told '
-                f'apart. {count_word(len(MODEL_LIMITS)).capitalize()} limits, '
-                f'plus why no section number appears here.',
-                inner, wide=True)
+    return panel('labels', 'The seat labels these areas are built from',
+                 '\n'.join(out))
 
 
 def park_page(p: dict, base_url: str) -> str:
@@ -1659,21 +1542,21 @@ def park_page(p: dict, base_url: str) -> str:
     if len(desc) > 300:
         desc = desc[:297] + '...'
 
-    # Four things above the fold and nothing else: the ballpark, the drawing,
-    # where the net is, the distribution. The order under them is unchanged in
-    # the one way that matters — the netting statement's provenance still
-    # comes before the model's — but none of it is in front of the answer any
-    # more, and the standing caveat now sits under the figures it qualifies
-    # instead of ahead of everything it cannot.
-    body = f'''<body>
+    # The visible page is the drawing, one sentence, the table and one line,
+    # and that line carries the one link off the page. Everything that is
+    # about this park and not on that list is behind the one Details
+    # disclosure under it, in the order that keeps the sourced thing ahead of
+    # the estimated one: the netting statement's provenance first, then the
+    # model's. Everything general is on /about/, where the link goes.
+    body = f'''<body class="park">
 <header>
-<p class="crumb"><a href="../">FoulCast</a></p>
-<h1>Foul balls at {e(p['name'])}</h1>
-<p class="club"><b>{e(p['team'])}</b> &middot; {e(p['city'])}</p>
+<p class="wm"><a href="../">FoulCast</a></p>
+<h1>{e(p['name'])}</h1>
+<p class="club">{e(p['team'])}</p>
 </header>
 <main>
 {answer_section(p)}
-
+<details class="more"><summary>Details</summary>
 {netting_source_section(p)}
 
 {model_section(p)}
@@ -1683,30 +1566,69 @@ def park_page(p: dict, base_url: str) -> str:
 {figures_section(p)}
 
 {labels_section(p)}
-
-{limits_section(p)}
+<p class="credit">Netting read from club pages on {e(RESEARCH_DATE)}. Park
+dimensions from Andrew Clem's stadium statistics, cross-checked against the
+Seamheads ballpark database. Model figures rebuilt {e(BUILT)}.</p>
+</details>
 </main>
-<footer>
-<p><a href="../">All 31 ballparks</a></p>
-<p>Netting read from club pages on {e(RESEARCH_DATE)}. Park dimensions from
-Andrew Clem's stadium statistics, cross-checked against the Seamheads ballpark
-database. Model figures rebuilt {e(BUILT)}.</p>
-</footer>
 </body>'''
-    return page(title, desc, body, f'/{p["slug"]}/', base_url,
-                extra_css=DIAGRAM_CSS_MIN)
+    return page(title, desc, body, f'/{p["slug"]}/', base_url)
 
 
 # ============================================================
 # The home page
 # ============================================================
 
-# The three groups the home page splits the 31 parks into, and the whole point
-# of the split: `join.status` already distinguishes a park whose *source* is
-# missing from a park whose source is fine and whose **model** cannot use it.
-# The old page did not — it had one list of parks with netting and one list of
-# parks without, which reads as a ranking of ballparks when the larger group is
-# a list of this project's own defects.
+def home_page(parks: list[dict], base_url: str) -> str:
+    """A gallery of the 31 drawings, and nothing else.
+
+    Each tile is the park's own schematic at the shared scale, so the grid is
+    also a comparison: a park with more published foul ground draws larger,
+    and the seven parks with a sourced net carry the mark. Alphabetical,
+    because any other order would be a ranking, and the figures cannot
+    support one.
+
+    One headline and one sentence above the grid. `tests/test_site.py` holds
+    the prose outside the tiles to forty words.
+    """
+    parks = sorted(parks, key=lambda p: p['name'])
+    tiles = ''.join(
+        f'<li><a href="{e(p["slug"])}/">{park_tile(p)}'
+        f'<span class="tn">{e(p["name"])}</span>'
+        f'<span class="tt">{e(p["team"])}</span></a></li>'
+        for p in parks)
+
+    title = 'Foul balls by ballpark — where they land, and what the netting covers | FoulCast'
+    desc = ('Foul ball estimates for all 31 major and minor league ballparks: '
+            'where they land by seating area, what each club publishes about '
+            'its protective netting, and where that netting is unknown.')
+
+    body = f'''<body class="home">
+<header class="hero">
+<p class="wm">FoulCast</p>
+<h1>Where foul balls land, ballpark by ballpark</h1>
+<p class="lede">Each club's published netting, and a physics estimate of
+where foul balls come down that has never been checked against a real one.</p>
+</header>
+<main>
+<ul class="grid">{tiles}</ul>
+</main>
+<footer>
+<p><a href="about/">How this works</a></p>
+</footer>
+</body>'''
+    return page(title, desc, body, '/', base_url)
+
+
+# ============================================================
+# The explanatory page
+# ============================================================
+#
+# The three groups the netting gaps split into, and the whole point of the
+# split: `join.status` already distinguishes a park whose *source* is missing
+# from a park whose source is fine and whose **model** cannot use it. A single
+# list of parks with netting and parks without would read as a ranking of
+# ballparks when the larger group is a list of this project's own defects.
 GROUPS = [
     ('mapped',
      'Netting sourced, and this model\'s seating areas can carry it',
@@ -1750,18 +1672,35 @@ SIDE_TAGS = {
 }
 
 
-def home_page(parks: list[dict], base_url: str) -> str:
+def about_page(parks: list[dict], base_url: str) -> str:
+    """Every explanation the site has, once, in full.
+
+    This is where the prose that used to open the home page and repeat on all
+    31 park pages went when the pages were rebuilt around the drawings.
+    Nothing was cut in the move: what is sourced and what is not, whose the
+    netting gaps are and which parks are in each group, why most pages will
+    not name a foul line, why no section number is printed, how the drawing
+    is to be read, the two readings, the method, the model's limits, and the
+    never-validated caveat in full. The caveat line on every park page links
+    here.
+    """
     parks = sorted(parks, key=lambda p: p['name'])
     by_group = {k: [p for p in parks if p['join'].status == k]
                 for k, _, _ in GROUPS}
     mapped = by_group['mapped']
     gaps = by_group['join_gap'] + by_group['source_gap']
     confirmed = [p for p in parks if p['sides']['named']]
+    unnamed = side_counts()['unnamed']
+    # The run these pages were rendered from, not the default: the tests build
+    # at a low count and the page has to say what it was built at.
+    sims = {p['sims'] for p in parks}
+    assert len(sims) == 1, 'parks simulated at different counts'
+    sims = sims.pop()
 
     def row(p):
         tag, cls = SIDE_TAGS[p['sides']['state']]
         return (f'<li><div class="row"><div class="rk">'
-                f'<a href="{e(p["slug"])}/">{e(p["name"])}</a> '
+                f'<a href="../{e(p["slug"])}/">{e(p["name"])}</a> '
                 f'<span class="tag {cls}">{tag}</span>'
                 f'<span class="sub2">{e(p["city"])} &middot; '
                 f'{e(p["team"])}</span></div>'
@@ -1780,31 +1719,39 @@ def home_page(parks: list[dict], base_url: str) -> str:
 
     groups = '\n'.join(group(*g) for g in GROUPS)
 
-    title = 'Foul balls by ballpark — where they land, and what the netting covers | FoulCast'
-    desc = ('Foul ball estimates for all 31 major and minor league ballparks: '
-            'where they land by seating area, what each club publishes about '
-            'its protective netting, and where that netting is unknown.')
+    limits = ''.join(
+        f'<h3>{e(t)}</h3>'
+        f'<p>{body.replace("{unnamed_sides}", str(unnamed))}</p>'
+        for t, body in MODEL_LIMITS)
 
-    body = f'''<body>
+    title = 'How this works | FoulCast'
+    desc = ('How FoulCast is built: what is sourced and what is a model, whose '
+            'the netting gaps are, why no section number or foul line is named '
+            'where nothing establishes one, and why none of it has ever been '
+            'checked against a real foul ball.')
+
+    body = f'''<body class="about">
 <header>
-<p class="crumb">FoulCast</p>
-<h1>Where foul balls land, ballpark by ballpark</h1>
-<p class="club">31 ballparks &middot; netting first, model second</p>
+<p class="wm"><a href="../">FoulCast</a></p>
+<h1>How this works</h1>
 </header>
 <main>
-<p class="strip"><b>The model has never been checked against a real foul
-ball.</b> There is no public record of where foul balls actually land &mdash;
+<p class="lede">Every page here does two things: it says what the club
+publishes about the protective netting in front of a given set of seats, and
+it estimates how many foul balls a game reach those seats. The first is
+sourced. The second is a model.</p>
+
+<h2 id="validation">The model has never been checked against a real foul ball</h2>
+<p>There is no public record of where foul balls actually land &mdash;
 Statcast logs that a foul happened, not where it came down. So the
 distributions on these pages are estimates from physics and published park
 dimensions, and no page here puts a number on how often the model gets it
-right, because there is nothing to compute one from.</p>
+right, because there is nothing to compute one from. Every figure on every
+park page is a physics model that has never been validated against an
+observed landing, and the line under each table &mdash; model estimate, not
+observed data &mdash; is the short form of this paragraph.</p>
 
-<section class="panel"><h2 id="sourced">What is sourced and what is not</h2>
-<div class="pb">
-<p class="lede">Every page here does two things: it says what the club publishes
-about the protective netting in front of a given set of seats, and it estimates
-how many foul balls a game reach those seats. The first is sourced. The second
-is a model.</p>
+<h2 id="sourced">What is sourced and what is not</h2>
 <p><strong>Netting is sourced.</strong> Each club's own current netting or
 seating page was read in a browser on {e(RESEARCH_DATE)}. Where the club
 publishes an extent that can be matched to specific seating areas, those areas
@@ -1825,17 +1772,31 @@ stated on each page. They place each park's seating. They do not shape it: no
 public source gives the angle of a seating area off the foul line or the height
 of a deck in feet, for any ballpark, so every park here shares one bowl shape
 and every park is modelled as an exact left-right mirror.</p>
-<p>One consequence is visible from the list below and worth saying out loud: the
-seats at field level behind home plate come out busiest at all 31 parks. That is
-partly a real effect &mdash; balls deflected back over the catcher have to land
-somewhere, and it is why there is a screen there &mdash; and partly an artefact
-of every park sharing one bowl shape. It is not a finding about any individual
-ballpark.</p>
-</div></section>
+<p>One consequence is visible from the grid of drawings and worth saying out
+loud: the seats at field level behind home plate come out busiest at all 31
+parks. That is partly a real effect &mdash; balls deflected back over the
+catcher have to land somewhere, and it is why there is a screen there &mdash;
+and partly an artefact of every park sharing one bowl shape. It is not a
+finding about any individual ballpark.</p>
 
-<section class="panel"><h2 id="sides">Which foul line is which, and why most
-pages will not say</h2>
-<div class="pb">
+<h2 id="netting-words">What "behind netting" means</h2>
+<p>{NETTING_CLUB_CAVEAT}</p>
+<p>No seat on this site is described as protected outright, and none of them is
+called a good bet either. The clubs' own netting pages say fans sitting behind
+netting "are still exposed to objects leaving the field of play", and this model
+has never seen a real foul ball. Seats are described as behind netting or not
+behind netting; risk is described as higher or lower.</p>
+
+<h2 id="parks">The netting gaps, and whose they are</h2>
+<p>All 31 ballparks, grouped by what is actually known, not by how good the
+ballpark is. The tag against each park is whether anything establishes which
+of its two foul lines is which &mdash; a separate question from netting, and
+one where the answer is no at most of them. The figure on the right is this
+model's estimate of how many foul balls a game reach seats at all, and nothing
+has ever checked it against one.</p>
+{groups}
+
+<h2 id="sides">Which foul line is which, and why most pages will not say</h2>
 <p>Every ballpark on this site is modelled as an exact left-right mirror, which
 means a park with its two sides written down the wrong way round produces
 figures identical to one with them the right way round. This model cannot see
@@ -1844,16 +1805,13 @@ gives the two ends of the run, not which foul line each end is on. Only a
 source that names a side alongside specific seats can settle it, and
 <strong>{len(confirmed)} of the 31 parks have one</strong>.</p>
 <p>This is not a hypothetical. At one ballpark the two sides <em>were</em>
-written down backwards, and it sat in the sourced-netting group below, cited and
+written down backwards, and it sat in the sourced-netting group above, cited and
 apparently matched, until its own seating map was read. So at the parks with
 nothing to check against, the two foul lines are shown as a single seating area
 each and no area is called first-base or third-base. Every park page states its
-own position on this, in the same place, whichever of the four it is in.</p>
-</div></section>
+own position on this, under Details, whichever of the four it is in.</p>
 
-<section class="panel"><h2 id="numbers">Why there are no section numbers
-here</h2>
-<div class="pb">
+<h2 id="numbers">Why there are no section numbers here</h2>
 <p>This model carries printed seat labels for every area it tracks. The first
 check on them was against the clubs' netting pages alone: nine parks' labels are
 contradicted outright there, and ten more cannot describe a continuous seating
@@ -1876,44 +1834,72 @@ as an absence of evidence. The thirty-first park has no map to read at all, and
 its page says so. So seating is described by position &mdash; the lower bowl
 behind the plate, the dugout boxes down the foul lines &mdash; and no seat
 number appears anywhere on this site.</p>
-</div></section>
 
-<section class="panel"><h2 id="readings">The same figures read two ways</h2>
-<div class="pb">
+<h2 id="diagram">Reading the drawing</h2>
+<p>Home plate at the bottom, the two foul lines running out, and the seating
+areas the model tracks drawn as bands of an arc behind them, shaded in five
+steps by fouls a game. It is a schematic, not to scale and not a seating chart:
+one generic bowl, its depth set by each park's published foul territory and
+backstop, on a scale shared by all 31 parks, so a park with more published foul
+ground draws larger. Shade carries the figures and size does not, and both foul
+lines are always shaded alike &mdash; the model builds them as exact mirrors,
+so the gap between the two rows in the table is simulation noise.</p>
+<p>The heavy dashed mark along the front of an area means the club's own page
+places those seats fully behind netting. An area that is partly netted,
+unverified, or netted on one foul line and not the other carries no mark. No
+mark is not no net: it is no published extent this site could attach to those
+seats, and at {len(gaps)} of the 31 parks nothing is marked at all.</p>
+<p>No figure on this site is ever drawn as a length &mdash; no bars, no filled
+shares, no meters. The numbers come out of estimated geometry that has never
+been compared with a foul ball, and a drawn length would put them on a scale
+and say they were measured to it. The drawing's own lengths are the two
+sourced measurements; the model's figures are carried by shade, in bands with
+printed boundaries, because the run cannot resolve the difference between 2.1
+and 2.3 fouls a game and a smooth ramp would say it could.</p>
+
+<h2 id="readings">The same figures read two ways</h2>
 <p>A net in front of a seat means opposite things depending on why you are
 asking. If you want to take a ball home, a netted area is worth nothing and
 comes off the list. If you want to know what is coming at you, the same area is
 the one with something standing in front of it. Every park page gives both
-readings off the same field, and neither is derived from the other.</p>
-<p>No seat on this site is described as protected outright, and none of them is
-called a good bet either. The clubs' own netting pages say fans sitting behind
-netting "are still exposed to objects leaving the field of play", and this model
-has never seen a real foul ball. Seats are described as behind netting or not
-behind netting; risk is described as higher or lower.</p>
-</div></section>
+readings off the same field, under Details, and neither is derived from the
+other.</p>
 
-<section class="panel wide"><h2 id="parks">All 31 ballparks</h2>
-<div class="pb">
-<p>Grouped by what is actually known, not by how good the ballpark is. The tag
-against each park is whether anything establishes which of its two foul lines is
-which &mdash; a separate question from netting, and one where the answer is no
-at most of them. The figure on the right is this model's estimate of how many
-foul balls a game reach seats at all, and nothing has ever checked it against
-one.</p>
+<h2 id="method">How the figures were produced</h2>
+<p>One full game, both lineups, the same 18 batters at every park on this site,
+so the park is the only thing that changes. {sims} simulations per batter,
+fixed seed. The table on each park page is foul balls per game reaching each
+area, largest first &mdash; a model estimate, not a count of anything
+observed.</p>
+<p>A share of the fouls the model produces land where it has no seating area
+to put them &mdash; deep down the lines near the poles, in the gap in front of
+the first row, or under a covered deck. They are counted in the park's total
+and then dropped, and each park page states its own share, which is why the
+figures are a shape rather than a census.</p>
+<p>At a park where nothing says which foul line is which, the two foul lines
+are one area each rather than a first-base area and a third-base one. A figure
+on one of those rows is what reaches <em>one</em> of the two lines, which keeps
+it comparable with the behind-plate rows beside it. The model builds both lines
+identically, so the pair would differ only by simulation noise in any case.</p>
 
-{groups}
-</div></section>
-</main>
-<footer>
-<p>Netting read from club pages on {e(RESEARCH_DATE)}. Park dimensions from
-Andrew Clem's stadium statistics and the Seamheads ballpark database. Model
-figures rebuilt {e(BUILT)}.</p>
+<h2 id="limits">What this model does not know</h2>
+{limits}
+
+<h2 id="sources">Sources and dates</h2>
+<p>Netting read from club pages on {e(RESEARCH_DATE)}; each park page links to
+the exact page it was read from, under Details. Park dimensions from Andrew
+Clem's stadium statistics, cross-checked against the Seamheads ballpark
+database. Seating maps read on {e(MAP_READ_DATE)} and {e(LATER_READ_DATE)}.
+Model figures rebuilt {e(BUILT)}.</p>
 <p>FoulCast is a model of foul ball flight. It is not affiliated with Major
 League Baseball or with any club, and nothing on it will keep a ball from
 reaching you.</p>
+</main>
+<footer>
+<p><a href="../">All 31 ballparks</a></p>
 </footer>
 </body>'''
-    return page(title, desc, body, '/', base_url)
+    return page(title, desc, body, '/about/', base_url)
 
 
 # ============================================================
@@ -1961,6 +1947,8 @@ def build(out_dir: str, base_url: str, sims: int, refresh: bool = False,
                        park_page(p, base_url))
     total += write(os.path.join(out_dir, 'index.html'),
                    home_page(parks, base_url))
+    total += write(os.path.join(out_dir, 'about', 'index.html'),
+                   about_page(parks, base_url))
 
     if base_url:
         urls = ''.join(
@@ -1969,10 +1957,12 @@ def build(out_dir: str, base_url: str, sims: int, refresh: bool = False,
         total += write(os.path.join(out_dir, 'sitemap.xml'),
                        '<?xml version="1.0" encoding="UTF-8"?>\n'
                        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-                       f'<url><loc>{e(base_url)}/</loc></url>{urls}</urlset>\n')
+                       f'<url><loc>{e(base_url)}/</loc></url>'
+                       f'<url><loc>{e(base_url)}/about/</loc></url>'
+                       f'{urls}</urlset>\n')
 
-    print(f'\n{len(parks) + 1} pages, {total / 1024:.0f} KB total, '
-          f'{total / (len(parks) + 1) / 1024:.1f} KB average.')
+    print(f'\n{len(parks) + 2} pages, {total / 1024:.0f} KB total, '
+          f'{total / (len(parks) + 2) / 1024:.1f} KB average.')
     if not base_url:
         print('No --base-url given: canonical tags and sitemap.xml were '
               'skipped. webapp_v2 serves a sitemap off the live host instead.')

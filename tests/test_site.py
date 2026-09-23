@@ -22,6 +22,15 @@ is worth nothing if the pages being served came out of an older one: the
 committed pages have to match a fresh render, and the cached model run they
 were rendered from has to carry the current model's fingerprint.
 
+Step 23 rebuilt the pages around the drawings and added a fifth kind of
+check, the one that now matters most: a **word budget**. The home page is a
+gallery of the 31 schematics and may carry at most 40 words of prose outside
+the tiles; a park page is its drawing, one sentence, the table and one line,
+and may carry at most 60 words visible without opening a disclosure, not
+counting the table and the drawing's own labels. Every explanation the site
+has moved to `/about/`, and the tests that used to read those explanations
+off the home page or off every park page now read them there.
+
 Known limit of the section-number test, stated rather than hidden: the
 substring check only runs on printed labels of three characters or more.
 Labels like "9" or "26" — real at Fenway, Globe Life and Truist — cannot be
@@ -31,6 +40,7 @@ could actually leak: a raw section name, a printed range, or the word "section"
 followed by a digit.
 """
 import ast
+import html
 import json
 import os
 import re
@@ -48,6 +58,7 @@ import site_build
 import site_diagram
 from site_data import (
     PARK_SOURCES, ZONE_WORDS, MAP_READS, NO_MAP_READ, SIDE_STATE_WORDS,
+    MODEL_LIMITS,
 )
 
 # Low enough to keep the suite quick; the constraints under test are properties
@@ -72,17 +83,23 @@ def built(tmp_path_factory):
             pages[p['slug']] = fh.read()
     with open(out / 'index.html', encoding='utf-8') as fh:
         pages[''] = fh.read()
+    with open(out / 'about' / 'index.html', encoding='utf-8') as fh:
+        pages['about'] = fh.read()
     return {'dir': str(out), 'parks': {p['slug']: p for p in parks},
             'pages': pages}
+
+
+PARK_SLUGS = sorted(s['slug'] for s in PARK_SOURCES.values())
+ALL_PAGES = PARK_SLUGS + ['', 'about']
 
 
 # ============================================================
 # Shape
 # ============================================================
 
-def test_thirty_one_park_pages_plus_a_home_page(built):
+def test_thirty_one_park_pages_plus_home_and_about(built):
     assert len(built['parks']) == 31
-    assert len(built['pages']) == 32
+    assert len(built['pages']) == 33
     assert set(built['parks']) == {s['slug'] for s in PARK_SOURCES.values()}
 
 
@@ -96,6 +113,7 @@ def test_committed_build_covers_every_park():
     if not os.path.isdir(COMMITTED_SITE):
         pytest.skip('site/ not built in this checkout')
     assert os.path.exists(os.path.join(COMMITTED_SITE, 'index.html'))
+    assert os.path.exists(os.path.join(COMMITTED_SITE, 'about', 'index.html'))
     for src in PARK_SOURCES.values():
         page = os.path.join(COMMITTED_SITE, src['slug'], 'index.html')
         assert os.path.exists(page), f'missing built page for {src["slug"]}'
@@ -295,9 +313,10 @@ PRINTED_RANGE = re.compile(r'\b\d{2,3}\s*[-–—]\s*\d{2,3}\b')
 # Prefixed labels: FB17, LB101, RS12, FD1, DG1, G5, and the same with a space.
 PREFIXED_LABEL = re.compile(r'\b(?:FB|LB|RS|FD|DG|GS|HPPC|EMCC|PB|RFB|COR|HRP)'
                             r'\s?\d+\b')
-# The schematic above each distribution table, and the attributes inside it
-# that carry drawing coordinates rather than words. See `_strip_numeric_prose`.
-SCHEMATIC = re.compile(r'<figure class="dia">.*?</figure>', re.S)
+# The schematic above each distribution table — and, since Step 23, the 31
+# small copies of it on the home page — and the attributes inside it that
+# carry drawing coordinates rather than words. See `_strip_numeric_prose`.
+SCHEMATIC = re.compile(r'<figure class="dia[^"]*">.*?</figure>', re.S)
 SVG_GEOMETRY = re.compile(r'\s(?:d|x|y|transform|viewBox)="[^"]*"')
 
 
@@ -340,8 +359,9 @@ def test_no_section_numbers_on_any_park_page(built, slug):
         f'{slug}: page prints a prefixed section label'
 
 
-def test_no_section_numbers_on_the_home_page(built):
-    text = built['pages']['']
+@pytest.mark.parametrize('slug', ['', 'about'])
+def test_no_section_numbers_on_the_home_or_about_page(built, slug):
+    text = built['pages'][slug]
     assert not SECTION_NUMBER.search(text)
     assert not PRINTED_RANGE.search(_strip_numeric_prose(text))
     assert not PREFIXED_LABEL.search(text)
@@ -395,15 +415,18 @@ def netting_sentence(text: str) -> str:
 
 @pytest.mark.parametrize('slug', sorted(s['slug'] for s in PARK_SOURCES.values()))
 def test_the_answer_stands_above_everything_that_qualifies_it(built, slug):
-    """Step 22. Four things above the fold, in this order, and nothing else.
+    """Step 22, tightened by Step 23. Five things on the visible page, in
+    this order, and nothing else.
 
-    Two passes before this one shortened the copy at the top of a park page
+    Two passes before Step 22 shortened the copy at the top of a park page
     and it still opened with three paragraphs of caveats, because the problem
     was never length: the page was organised around this project's
     epistemology instead of around the reader's question. So the order is
     enforced here rather than trusted, including the two things that would
     slide back up first — a panel of working above the table, and the standing
-    caveat above the drawing it does not qualify.
+    caveat above the drawing it does not qualify. Step 23 put every panel of
+    working behind one closed Details disclosure under the caveat, and that
+    is enforced here too.
     """
     text = built['pages'][slug]
     order = [('the ballpark', text.index('<h1')),
@@ -411,13 +434,22 @@ def test_the_answer_stands_above_everything_that_qualifies_it(built, slug):
              ('where the netting runs', text.index('id="netting"')),
              ('the distribution table', text.index('<table>')),
              ('the standing caveat',
-              text.index('checked against a real foul ball'))]
+              text.index('Model estimate, not observed data')),
+             ('the Details disclosure',
+              text.index('<details class="more"><summary>Details</summary>'))]
     for (before, a), (after, b) in zip(order, order[1:]):
         assert a < b, f'{slug}: {after} is above {before}'
     assert text.index('<section class="panel') > order[-1][1], \
-        f'{slug}: a panel of working stands above the answer'
+        f'{slug}: a panel of working stands outside the Details disclosure'
+    assert text.count('<details') == 1, \
+        f'{slug}: more than one disclosure on the page'
     assert text.index('id="netting"') < text.index('id="netting-source"'), \
         f'{slug}: the netting sourcing is above the netting statement'
+    # The caveat line is also the one link off the page, to where the caveat
+    # is stated in full.
+    assert re.search(r'Model estimate, not observed data\.</b> '
+                     r'<a href="\.\./about/">How this works', text), \
+        f'{slug}: the caveat line does not link to the explanatory page'
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
@@ -487,10 +519,10 @@ def test_twenty_four_parks_are_netting_gaps(built):
     """
     gaps = [p for p in built['parks'].values() if p['net']['state'] != 'mapped']
     assert len(gaps) == 24
-    assert 'At the other 24 it is a gap' in flat(built['pages'][''])
+    assert 'At the other 24 it is a gap' in flat(built['pages']['about'])
 
 
-def test_the_home_page_splits_gaps_by_whose_they_are(built):
+def test_the_about_page_splits_gaps_by_whose_they_are(built):
     """The larger group of gaps is this project's own defects, and the page has
     to be built so that a reader sees that without reading the copy.
 
@@ -498,8 +530,11 @@ def test_the_home_page_splits_gaps_by_whose_they_are(built):
     published something usable and whose *model* could not use it — and this
     test holds the page to it, including the claim that it is the larger of
     the two, which is the whole reason the split is worth making.
+
+    The grouped listing was the home page's until Step 23 made the home page
+    a gallery; it is on the explanatory page now, unchanged.
     """
-    home = flat(built['pages'][''])
+    home = flat(built['pages']['about'])
     groups = {}
     for p in built['parks'].values():
         groups.setdefault(p['join'].status, []).append(p)
@@ -513,7 +548,7 @@ def test_the_home_page_splits_gaps_by_whose_they_are(built):
         assert marked in home, f'home page is missing the {key} group'
         # Each group's own parks link from it, and only those — a park quietly
         # dropped from all three, or listed twice, would otherwise pass.
-        listed = set(re.findall(r'href="([^"]+)/"',
+        listed = set(re.findall(r'href="\.\./([^"]+)/"',
                                 home.split(marked)[1].split('</ul>')[0]))
         assert listed == {p['slug'] for p in groups[key]}, \
             f'{key} group does not list exactly its own parks'
@@ -591,7 +626,7 @@ def test_only_sixteen_parks_may_name_a_foul_line(built):
                      'minute_maid', 'rogers_centre', 'target_field',
                      'tmobile_park', 'truist_park', 'wrigley_field',
                      'yankee_stadium']
-    assert '16 of the 31 parks have one' in flat(built['pages'][''])
+    assert '16 of the 31 parks have one' in flat(built['pages']['about'])
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
@@ -633,7 +668,7 @@ def test_thirty_seating_maps_have_been_read(built):
     """
     assert len(MAP_READS) == 30
     assert set(STADIUMS) - set(MAP_READS) == {'las_vegas_ballpark'}
-    assert 'twenty-seven of them disagreed' in flat(built['pages'][''])
+    assert 'twenty-seven of them disagreed' in flat(built['pages']['about'])
 
 
 def test_the_three_agreeing_maps_are_not_dressed_as_failures(built):
@@ -660,14 +695,16 @@ def test_the_three_agreeing_maps_are_not_dressed_as_failures(built):
 def test_the_fleet_wide_side_count_is_computed_not_written_out(built):
     """The count of parks that cannot name a foul line moved five times
     between Step 11 and Step 16. Every place the site states it reads from
-    `side_counts()`, so it cannot go stale in one place and not another."""
+    `side_counts()`, so it cannot go stale in one place and not another.
+
+    The limits used to be on every park page; since Step 23 they are stated
+    once, on the explanatory page."""
     unnamed = site_build.side_counts()['unnamed']
     assert unnamed == sum(1 for p in built['parks'].values()
                           if not p['sides']['named'])
-    for slug, p in built['parks'].items():
-        text = flat(built['pages'][slug])
-        assert f'at {unnamed} of the 31 parks nothing available establishes' \
-            in text, f'{slug}: stale or missing side count in the limits'
+    text = flat(built['pages']['about'])
+    assert f'at {unnamed} of the 31 parks nothing available establishes' \
+        in text, 'stale or missing side count in the limits'
 
 
 # ============================================================
@@ -680,7 +717,7 @@ def test_the_fleet_wide_side_count_is_computed_not_written_out(built):
 SAFE_WORD = re.compile(r'(?i)\bsafe(?:r|st|ty|ly|guard(?:ed|s)?)?\b')
 
 
-@pytest.mark.parametrize('slug', sorted(list({s['slug'] for s in PARK_SOURCES.values()}) + ['']))
+@pytest.mark.parametrize('slug', ALL_PAGES)
 def test_the_word_safe_never_appears(built, slug):
     hit = SAFE_WORD.search(built['pages'][slug])
     assert hit is None, f'{slug or "home"}: "{hit.group(0)}" at {hit.start()}'
@@ -705,7 +742,7 @@ ACCURACY_CLAIM = re.compile(
     r'correlation|r\s*=\s*0\.\d)\b')
 
 
-@pytest.mark.parametrize('slug', sorted(list({s['slug'] for s in PARK_SOURCES.values()}) + ['']))
+@pytest.mark.parametrize('slug', ALL_PAGES)
 def test_no_accuracy_claim_anywhere(built, slug):
     hit = ACCURACY_CLAIM.search(built['pages'][slug])
     assert hit is None, f'{slug or "home"}: accuracy language "{hit.group(0)}"'
@@ -718,10 +755,22 @@ def flat(text: str) -> str:
 
 @pytest.mark.parametrize('slug', sorted(s['slug'] for s in PARK_SOURCES.values()))
 def test_every_park_page_says_it_was_never_validated(built, slug):
+    """One short line on every park page, and the full statement one link
+    away. The line is the shortest form that is still the caveat, and it is
+    visible without opening anything — `test_park_page_word_budget` counts
+    it in the sixty."""
     text = flat(built['pages'][slug])
-    assert 'checked against a real foul ball' in text     # top of the page
-    assert 'never been validated' in text                 # top of the page
-    assert 'never been compared' in text                  # limits section
+    assert 'Model estimate, not observed data' in text     # visible
+    assert 'a model estimate, not a count of anything observed' in text
+
+
+def test_the_never_validated_caveat_is_stated_in_full_on_the_about_page(built):
+    text = flat(built['pages']['about'])
+    assert 'never been checked against a real foul ball' in text
+    assert 'never been validated' in text
+    assert 'never been compared' in text                  # the limits
+    assert 'no page here puts a number on how often the model gets it right' \
+        in text
 
 
 @pytest.mark.parametrize('slug', sorted(s['slug'] for s in PARK_SOURCES.values()))
@@ -892,7 +941,7 @@ def test_the_schematic_marks_netting_only_where_it_is_sourced(built, key):
         assert not marked, f'{slug}: netting marked at a park with no join'
     if not marked:
         assert 'No netting is marked here' in flat(fig)
-        assert 'missing source, not as a missing net' in flat(fig)
+        assert 'a missing source, not a missing net' in flat(fig)
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
@@ -952,6 +1001,137 @@ def test_the_shading_uses_every_step_somewhere_and_none_at_only_one_park(built):
     assert min(used.values()) > 1, f'a step reached by one park only: {used}'
 
 # ============================================================
+# The word budgets, and the shape of the three kinds of page — Step 23
+# ============================================================
+#
+# Three passes trimmed and rearranged the prose and the site still read as a
+# methods document. The fix was not a fourth edit to the copy but a budget on
+# it, enforced here: the pages are built around the drawings, and the words
+# that stay visible on them are counted. Everything that came off the pages
+# went to /about/ or behind the one Details disclosure, and that is checked
+# too — a budget met by deleting something honest would be worse than no
+# budget.
+
+HOME_BUDGET = 40      # words of prose outside the tiles
+PARK_BUDGET = 60      # words visible without opening anything, less the
+                      # table and the drawing's own labels
+
+# A word is a run of characters that starts with a letter or a digit. The
+# middle dots and the arrow in the caveat line are not words; "31" is.
+WORD = re.compile(r"[A-Za-z0-9][A-Za-z0-9'’.\-]*")
+HEAD = re.compile(r'<style>.*?</style>|<title>.*?</title>|<meta[^>]*>', re.S)
+TABLE = re.compile(r'<table>.*?</table>', re.S)
+TILES = re.compile(r'<ul class="grid">.*?</ul>', re.S)
+# The body of the disclosure goes; its one-word summary stays, because it is
+# visible.
+DETAILS_BODY = re.compile(
+    r'(<details class="more"><summary>.*?</summary>).*?</details>', re.S)
+
+
+def visible_words(text: str, *drop: re.Pattern) -> list[str]:
+    """The words a reader sees on the page with nothing opened, less the
+    parts of the page the patterns in `drop` describe."""
+    text = HEAD.sub(' ', text)
+    for pat in drop:
+        text = pat.sub(lambda m: m.group(1) if m.groups() else ' ', text)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    return WORD.findall(html.unescape(text))
+
+
+def test_home_page_word_budget(built):
+    words = visible_words(built['pages'][''], TILES)
+    assert len(words) <= HOME_BUDGET, \
+        f'{len(words)} words outside the tiles: {" ".join(words)}'
+
+
+@pytest.mark.parametrize('slug', PARK_SLUGS)
+def test_park_page_word_budget(built, slug):
+    words = visible_words(built['pages'][slug], DETAILS_BODY, SCHEMATIC, TABLE)
+    assert len(words) <= PARK_BUDGET, \
+        f'{slug}: {len(words)} words visible: {" ".join(words)}'
+
+
+def test_the_home_page_is_a_gallery_and_nothing_else(built):
+    """A grid of 31 tiles, each the park's own drawing with its name and its
+    team, the whole tile a link; above it one headline and one sentence."""
+    home = built['pages']['']
+    parks = built['parks']
+    grid = TILES.search(home).group(0)
+    tiles = re.findall(
+        r'<li><a href="([^"]+)/"><figure class="dia mini">'
+        r'(<svg class="mini" .*?</svg>)</figure>'
+        r'<span class="tn">(.*?)</span><span class="tt">(.*?)</span></a></li>',
+        grid, re.S)
+    assert len(tiles) == 31
+    assert [slug for slug, _, _, _ in tiles] \
+        == sorted(parks, key=lambda s: parks[s]['name']), \
+        'the tiles are not in alphabetical order'
+    for slug, svg, name, team in tiles:
+        assert html.unescape(name) == parks[slug]['name']
+        assert html.unescape(team) == parks[slug]['team']
+        # The tile is the park page's drawing, path for path, at the shared
+        # scale — so the grid is a comparison and not a set of icons.
+        assert DIA_PATH.findall(svg) \
+            == DIA_PATH.findall(diagram(built['pages'][slug])), \
+            f'{slug}: the tile is not the same drawing as the park page'
+        assert '<text' not in svg and 'aria-hidden="true"' in svg
+
+    rest = TILES.sub(' ', home)
+    assert rest.count('<h1') == 1
+    assert rest.count('<p') == 3, 'wordmark, one sentence, one link'
+    for tag in ('<h2', '<h3', '<table', '<section', '<details', '<ol', '<ul',
+                '<figure'):
+        assert tag not in rest, f'{tag} on the home page outside the tiles'
+
+
+@pytest.mark.parametrize('slug', PARK_SLUGS)
+def test_park_specific_detail_is_behind_the_details_disclosure(built, slug):
+    """Everything about this park that is not the drawing, the sentence, the
+    table or the caveat is one click down, and all of it is still there."""
+    text = built['pages'][slug]
+    inside = text[text.index('<details class="more">'):text.index('</details>')]
+    for anchor in ('netting-source', 'model', 'readings', 'figures', 'labels'):
+        assert f'id="{anchor}"' in inside, \
+            f'{slug}: the {anchor} section is not inside Details'
+    assert re.search(r'rebuilt \d{4}-\d{2}-\d{2}', inside), \
+        f'{slug}: the build date is not on the page'
+
+    outside = SCHEMATIC.sub(' ', DETAILS_BODY.sub(lambda m: m.group(1), text))
+    assert outside.count('<p') == 4, \
+        f'{slug}: wordmark, team, netting sentence, caveat — and nothing else'
+    for tag in ('<section', '<h2', '<h3', '<ol', '<ul', '<div'):
+        assert tag not in outside, f'{slug}: {tag} outside Details'
+
+
+def test_the_about_page_holds_every_explanation(built):
+    """Nothing honest was deleted; it moved here. Each explanation the site
+    used to carry on the home page or on every park page is on this page,
+    under its own anchor."""
+    about = flat(built['pages']['about'])
+    for anchor in ('validation', 'sourced', 'netting-words', 'parks', 'sides',
+                   'numbers', 'diagram', 'readings', 'method', 'limits',
+                   'sources'):
+        assert f'id="{anchor}"' in about, f'about page has no {anchor} section'
+    for heading, _ in MODEL_LIMITS:
+        assert flat(html.escape(heading, quote=True)) in about, \
+            f'about page is missing the limit "{heading}"'
+    assert flat(site_build.NETTING_CLUB_CAVEAT) in about
+    assert 'not to scale and not a seating chart' in about
+    assert 'No mark is not no net' in about
+    assert 'No figure on this site is ever drawn as a length' in about
+    assert 'simulations per batter, fixed seed' in about
+    assert 'is not affiliated with Major League Baseball' in about
+    assert 'nothing on it will keep a ball from reaching you' in about
+
+
+@pytest.mark.parametrize('slug', PARK_SLUGS + [''])
+def test_every_page_links_to_the_about_page(built, slug):
+    href = '../about/' if slug else 'about/'
+    assert f'<a href="{href}">How this works' in built['pages'][slug], \
+        f'{slug or "home"}: no link to the explanatory page'
+
+
+# ============================================================
 # Search and delivery
 # ============================================================
 
@@ -973,11 +1153,11 @@ def test_titles_and_descriptions_are_unique(built):
         titles.add(re.search(r'<title>(.*?)</title>', text).group(1))
         descs.add(re.search(r'<meta name="description" content="(.*?)">',
                             text).group(1))
-    assert len(titles) == 32
-    assert len(descs) == 32
+    assert len(titles) == 33
+    assert len(descs) == 33
 
 
-@pytest.mark.parametrize('slug', sorted(list({s['slug'] for s in PARK_SOURCES.values()}) + ['']))
+@pytest.mark.parametrize('slug', ALL_PAGES)
 def test_pages_are_mobile_first_and_self_contained(built, slug):
     text = built['pages'][slug]
     assert 'name="viewport"' in text and 'width=device-width' in text
@@ -992,7 +1172,12 @@ def test_pages_are_mobile_first_and_self_contained(built, slug):
     # plus the headroom the old one carried, and not by a byte more, so it
     # still catches drift. Raising it again should mean the same kind of
     # deliberate addition, not room for prose.
-    assert len(text.encode('utf-8')) < 46_000, 'page is getting heavy'
+    #
+    # Step 23 made the home page a gallery of all 31 drawings, which is 31
+    # times the path data on one page; it gets its own ceiling, set the same
+    # way — what the tiles cost (about 45 KB) plus the old headroom.
+    ceiling = 90_000 if slug == '' else 46_000
+    assert len(text.encode('utf-8')) < ceiling, 'page is getting heavy'
 
 
 def test_canonical_tags_only_when_a_base_url_is_given(built, tmp_path):
@@ -1005,6 +1190,10 @@ def test_canonical_tags_only_when_a_base_url_is_given(built, tmp_path):
         text = fh.read()
     assert 'rel="canonical" href="https://example.test/fenway-park/"' in text
     assert os.path.exists(out / 'sitemap.xml')
+    with open(out / 'sitemap.xml', encoding='utf-8') as fh:
+        sitemap = fh.read()
+    assert sitemap.count('<loc>') == 33
+    assert '<loc>https://example.test/about/</loc>' in sitemap
 
 
 # ============================================================
@@ -1053,7 +1242,11 @@ def test_site_routes_serve_the_built_pages(client):
 
     park = client.get('/parks/fenway-park/')
     assert park.status_code == 200
-    assert b'Foul balls at Fenway Park' in park.data
+    assert b'<h1>Fenway Park</h1>' in park.data
+
+    about = client.get('/parks/about/')
+    assert about.status_code == 200
+    assert b'<h1>How this works</h1>' in about.data
 
 
 def test_unknown_slugs_and_traversal_are_refused(client):
@@ -1070,5 +1263,6 @@ def test_robots_and_sitemap_are_generated_off_the_live_host(client):
     sitemap = client.get('/sitemap.xml')
     assert sitemap.status_code == 200
     body = sitemap.data.decode()
-    assert body.count('<loc>') == 32
+    assert body.count('<loc>') == 33
     assert 'http://localhost/parks/fenway-park/' in body
+    assert 'http://localhost/parks/about/' in body

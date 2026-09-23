@@ -65,10 +65,10 @@ WHAT IT IS NOT ALLOWED TO CLAIM
    heavy dashed line on the front edge of a zone means the club's own page
    places that seating fully behind netting. A zone that is partly netted,
    unverified, or netted on one line and not the other gets no mark at all,
-   and the legend says which of those applies here. There is no mark that
-   means "no netting", because at 24 of the 31 parks the site does not know
-   that either — the absence of a mark is the absence of a source, and the
-   legend line is what carries it.
+   and the site's explanatory page says so. There is no mark that means
+   "no netting", because at 24 of the 31 parks the site does not know that
+   either — the absence of a mark is the absence of a source, and the
+   legend line under the drawing is what carries it.
 
 WHAT IT DELIBERATELY DOES NOT DRAW
 ----------------------------------
@@ -377,55 +377,46 @@ def _alt(p: dict) -> str:
             f'game. {heaviest} {sides}')
 
 
-def _legend(p: dict, marked: bool) -> tuple[str, str]:
-    """(what a reader needs to read the drawing, what qualifies it).
+def _legend(p: dict, marked: bool) -> str:
+    """The key to the drawing, and nothing else.
 
-    The split is the point. The shading steps and the netting mark are the
-    key to the picture — without them the drawing means nothing, so they stay
-    visible above the fold. Everything else the drawing has to admit to is
-    prose about the drawing rather than the drawing itself, and it goes into
-    the disclosure with the caption.
+    The shading steps and the netting mark are what a reader needs in order
+    to read the picture at all, so they sit directly under it. Everything the
+    drawing has to admit to beyond that — that it is one generic bowl, why the
+    two foul lines are shaded alike, what a partly netted area looks like —
+    is prose about the drawing rather than the drawing itself, and it lives on
+    the site's one explanatory page (`site_build.about_page`) instead of
+    under every one of the 31 drawings.
 
     The netting line is not decoration. At 24 of the 31 parks there is no mark
-    anywhere on the drawing, and a reader has to be told that this means the
-    site could not attach a published net to these seats — not that there is
-    no net.
+    anywhere on the drawing, and a reader has to be told, in the key, that
+    this means the site could not attach a published net to these seats — not
+    that there is no net.
     """
     swatches = ''.join(f'<span><i class="z{i}"></i>{w}</span>'
                        for i, w in enumerate(STEP_WORDS))
-    key = [f'<p class="leg"><b>Fouls a game</b>{swatches}</p>']
-
     if marked:
-        note = ('the club\'s own page puts these seats behind netting')
-        others = [w for w, present in (
-            ('partly netted', any(z['status'] == 'partially_netted'
-                                  for z in p['zones'])),
-            ('unverified', any(z['status'] == 'unknown' for z in p['zones'])),
-            ('netted on one foul line and not the other',
-             any(z['status'] == 'split' for z in p['zones'])),
-        ) if present]
-        tail = (f' Areas that are {" or ".join(others)} carry no mark.'
-                if others else '')
-        key.append(f'<p class="leg"><span><i class="nm"></i>{note}</span></p>')
-        qualifier = (f'<p>The mark runs along the front of an area the club '
-                     f'places fully behind netting.{tail} No mark is not no '
-                     f'net: it is no published extent this site could attach '
-                     f'to those seats.</p>')
+        net = ('<span><i class="nm"></i>the club\'s own page puts these '
+               'seats behind netting</span>')
     else:
-        qualifier = ('<p><strong>No netting is marked here</strong>, because '
-                     'nothing published could be attached to these seating '
-                     'areas. Read the absence as a missing source, not as a '
-                     'missing net.</p>')
-    return ''.join(key), qualifier
+        net = ('<span class="off"><i class="nm off"></i>No netting is marked '
+               'here: a missing source, not a missing net</span>')
+    return (f'<p class="leg"><b>Fouls a game</b>{swatches}</p>'
+            f'<p class="leg">{net}</p>')
 
 
-def park_diagram(p: dict) -> str:
-    """The whole figure: drawing, legend, caption.
+def park_svg(p: dict, mini: bool = False) -> str:
+    """The drawing itself, as one inline `<svg>`.
 
     `p` is what `site_build.build_park` produced, and the shading comes off
     `p['zones']` — the same figures, row for row, that the table under the
     drawing prints. That is the invariant worth keeping: a drawing that
     disagreed with the table beneath it would be worse than no drawing.
+
+    `mini` is the home-page tile: the same paths at the same scale, with no
+    text. At tile size the words would not be legible, and the tile's own
+    caption carries the park's name. It is hidden from assistive technology
+    for the same reason — the link it sits in already says which park it is.
     """
     stadium = p['stadium']
     rows = _rows(p)
@@ -466,12 +457,17 @@ def park_diagram(p: dict) -> str:
                  f'L{_n(tip[0])} {_n(tip[1])}M{_n(ox)} {_n(oy)}'
                  f'L{_n(mtip[0])} {_n(mtip[1])}"/>')
 
-    # Home plate, and the one label the drawing needs in order to be read at
-    # all. It sits in the open wedge of fair territory, which is the only
-    # empty ground in the frame.
+    # Home plate. It sits in the open wedge of fair territory, which is the
+    # only empty ground in the frame.
     paths.append(f'<path class="hp" d="M{_n(ox - 7)} {_n(oy - 7)}'
                  f'L{_n(ox + 7)} {_n(oy - 7)}L{_n(ox + 7)} {_n(oy + 2)}'
                  f'L{_n(ox)} {_n(oy + 9)}L{_n(ox - 7)} {_n(oy + 2)}Z"/>')
+
+    if mini:
+        return (f'<svg class="mini" viewBox="0 0 {_n(f["w"])} {_n(f["h"])}" '
+                f'aria-hidden="true">{"".join(paths)}</svg>')
+
+    # The one label the drawing needs in order to be read at all.
     labels = [f'<text class="pl" x="{_n(ox)}" y="{_n(oy - 17)}" '
               f'text-anchor="middle">Home plate</text>']
 
@@ -495,26 +491,29 @@ def park_diagram(p: dict) -> str:
                       f'transform="rotate(45 {_n(rx)} {_n(ly)})">'
                       f'Third base</text>')
 
-    svg = (f'<svg viewBox="0 0 {_n(f["w"])} {_n(f["h"])}" role="img" '
-           f'aria-label="{_esc(_alt(p))}">'
-           f'{"".join(paths)}{"".join(labels)}</svg>')
+    return (f'<svg viewBox="0 0 {_n(f["w"])} {_n(f["h"])}" role="img" '
+            f'aria-label="{_esc(_alt(p))}">'
+            f'{"".join(paths)}{"".join(labels)}</svg>')
 
-    # The key stays on screen; what the drawing has to admit to is one click
-    # under it. The summary line is not a label — it carries the admission
-    # that matters, so a reader who never opens it has still been told the
-    # drawing is not a seating chart.
-    key, qualifier = _legend(p, bool(marks))
-    return (f'<figure class="dia">{svg}{key}'
-            f'<figcaption class="dcap"><details class="dfold"><summary>'
-            f'Schematic, not to scale and not a seating chart</summary>'
-            f'<div>{qualifier}'
-            f"<p>One generic bowl, its depth set by this park's published "
-            f'foul territory and backstop, on a scale shared by all 31 '
-            f'parks. Shade carries the figures and size does not, and both '
-            f'foul lines are always shaded alike &mdash; the model builds '
-            f'them as exact mirrors, so the gap between the two rows in the '
-            f'table is simulation noise.</p></div></details></figcaption>'
-            f'</figure>')
+
+def park_diagram(p: dict) -> str:
+    """The centrepiece of a park page: drawing, key, one-line caption.
+
+    The caption is the drawing's own label and says the one thing a reader
+    could otherwise get wrong at a glance — that this is a schematic and not
+    a seating chart. Everything else the drawing has to explain is on the
+    site's explanatory page, one link away, rather than under all 31 of them.
+    """
+    svg = park_svg(p)
+    marked = 'class="nm" d=' in svg
+    return (f'<figure class="dia">{svg}{_legend(p, marked)}'
+            f'<figcaption class="dcap">Schematic, not to scale and not a '
+            f'seating chart</figcaption></figure>')
+
+
+def park_tile(p: dict) -> str:
+    """The home-page tile's drawing: the same picture, small, no text."""
+    return f'<figure class="dia mini">{park_svg(p, mini=True)}</figure>'
 
 
 def _esc(s: str) -> str:
@@ -525,48 +524,52 @@ def _esc(s: str) -> str:
 # The styling
 # ============================================================
 #
-# Served on the 31 park pages, alongside `site_build.CSS`. The ramp is the site's one accent teal at the
+# Served on every page: the 31 park pages carry one drawing each and the home
+# page carries all 31 as tiles. The ramp is the site's one accent teal at the
 # top step and four steps down to near-paper, because the accent is already
 # what this site uses for "the thing you are being pointed at" and a second
 # hue would read as a second meaning. Red is not in it: red on this site means
 # one thing, a seating area the club's own statement places outside its
 # netting, and a shading ramp must not borrow it.
-CSS = """
-.dia{margin:.7rem 0 .2rem}
-.dia svg{display:block;width:100%;max-width:31rem;height:auto;margin:0 auto}
+#
+# The tile is the same drawing at a fifth of the width, so its strokes are
+# set heavier in viewBox units to come out at about the same weight on screen.
+CSS = r"""
+.dia{margin:0}
+.dia svg{display:block;width:100%;height:auto;margin:0 auto}
 .dia path{stroke:#fff;stroke-width:1.5;stroke-linejoin:round}
-.z0{fill:#dfebed;background:#dfebed}
-.z1{fill:#b4d5da;background:#b4d5da}
+.z0{fill:#e1ecee;background:#e1ecee}
+.z1{fill:#b6d6db;background:#b6d6db}
 .z2{fill:#7fbac2;background:#7fbac2}
 .z3{fill:#44909c;background:#44909c}
 .z4{fill:#0b6a74;background:#0b6a74}
 .dia path.nm{fill:none;stroke:#16181d;stroke-width:7;stroke-dasharray:10 7}
-.dia path.fl{fill:none;stroke:#7b828e;stroke-width:2;stroke-dasharray:6 6}
+.dia path.fl{fill:none;stroke:#8a919c;stroke-width:2;stroke-dasharray:6 6}
 .dia path.hp{fill:#16181d;stroke:none}
-.dia text{fill:#5b6270;font-size:20px;font-weight:700;font-family:inherit;
- letter-spacing:.05em}
-.dia text.pl{font-size:15px;font-weight:400;letter-spacing:.02em;fill:#7b828e}
-.leg{display:flex;flex-wrap:wrap;align-items:center;gap:.15rem .75rem;
- font-size:.76rem;line-height:1.5;color:#4a505c;margin:.4rem 0}
-.leg b{font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;
- color:#5b6270}
-.leg span{display:flex;align-items:center;gap:.32rem}
-.leg i{display:block;width:1.2rem;height:.6rem;border:1px solid #c8ced6}
-.leg i.nm{background:none;border:0;border-top:.28rem dashed #16181d;
- height:.28rem;width:1.4rem}
-.dcap{font-size:.76rem;line-height:1.45;color:#5b6270;margin:.35rem 0 0;
- max-width:72ch}
-.dcap strong{color:#16181d}
-.dfold>summary{color:#0b6a74;font-weight:700}
-.dfold>summary:hover{color:#084950}
-.dfold>summary::after{content:" +"}
-.dfold[open]>summary::after{content:" \\2212"}
-.dfold p{margin:.4rem 0 0}
-@media (min-width:64rem){
- .dia svg{max-width:40rem}
-}
+.dia text{fill:#5b6270;font-size:13px;font-weight:700;font-family:inherit;
+ letter-spacing:.1em;text-transform:uppercase}
+.dia text.pl{font-size:11px;font-weight:600;letter-spacing:.06em;fill:#7b828e}
+.dia svg.mini path{stroke-width:2.5}
+.dia svg.mini path.nm{stroke-width:11;stroke-dasharray:14 9}
+.dia svg.mini path.fl{stroke-width:3.5;stroke-dasharray:9 9}
+.leg{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
+ gap:.25rem .85rem;font-size:.76rem;line-height:1.5;color:#4a505c;
+ margin:.55rem 0 0}
+.leg+.leg{margin-top:.2rem}
+.leg b{font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;
+ color:#5b6270;margin-right:.15rem}
+.leg span{display:flex;align-items:center;gap:.38rem}
+.leg i{display:block;width:1.3rem;height:.72rem;border-radius:2px;
+ border:1px solid rgba(22,24,29,.14)}
+.leg i.nm{background:none;border:0;border-radius:0;height:0;width:1.5rem;
+ border-top:.28rem dashed #16181d}
+.leg .off{color:#6b7280}
+.leg i.nm.off{border-top-color:#b9bfc8}
+.dcap{text-align:center;font-size:.7rem;letter-spacing:.03em;color:#8a919c;
+ margin:.5rem 0 0}
 @media (prefers-color-scheme:dark){
  .dia path{stroke:#101216}
+ .grid .dia path{stroke:#171a20}
  .z0{fill:#1f434e;background:#1f434e}
  .z1{fill:#245762;background:#245762}
  .z2{fill:#2f7783;background:#2f7783}
@@ -578,10 +581,9 @@ CSS = """
  .dia text{fill:#98a0b0}
  .dia text.pl{fill:#6d7482}
  .leg,.leg b,.dcap{color:#98a0b0}
- .leg i{border-color:#3a414d}
+ .leg .off{color:#8891a0}
+ .leg i{border-color:rgba(228,231,238,.14)}
  .leg i.nm{border-top-color:#e4e7ee}
- .dcap strong{color:#e4e7ee}
- .dfold>summary{color:#4fb6c0}
- .dfold>summary:hover{color:#7fd0d8}
+ .leg i.nm.off{border-top-color:#3a414d}
 }
 """
