@@ -29,8 +29,8 @@ Three rules this file holds to, and the reasons they exist:
 2. **The word "safe" does not appear on the site**, not even inside a
    quotation. Netting is not safety. `SOURCED_DATA.md` records that almost
    every club's own wording is that fans in netted sections "are still exposed
-   to objects leaving the field of play", and this model has never seen a real
-   foul ball land. The site quotes what each club says about where its netting
+   to objects leaving the field of play", and this model has been tested
+   against real foul balls only in four broad bands. The site quotes what each club says about where its netting
    runs and never says, of any seat, that it is protected.
    `tests/test_site.py` enforces it.
 
@@ -2678,6 +2678,24 @@ NO_MAP_READ = (
 
 
 # ============================================================
+# The one test the model has had
+# ============================================================
+#
+# Pooled shares over the eight parks FiveThirtyEight's count could be compared
+# with, by band (`site_diagram.BANDS` keys): observed (710 fouls), the model
+# with the back-foul rate fitted on the other seven parks and each park
+# predicted in turn, and the model before the fit (rate 0.28). Copied from
+# `CALIBRATION.md`, "Pooled over the eight parks", which records the run; the
+# site build does not repeat the fit, so it cannot recompute them.
+VALIDATION_SHARES = [
+    ('Z1', (31.0, 30.9, 39.9)),
+    ('Z23', (18.6, 24.2, 21.0)),
+    ('Z45', (49.2, 43.8, 37.9)),
+    ('Z67', (1.3, 1.1, 1.2)),
+]
+
+
+# ============================================================
 # The standing statement of what the model does not know
 # ============================================================
 #
@@ -2686,14 +2704,15 @@ NO_MAP_READ = (
 
 MODEL_LIMITS = [
     (
-        'No foul ball has ever been checked against it',
-        "This model has never been compared with a record of where real foul "
-        "balls landed, at this park or any other, and no such record exists "
-        "publicly &mdash; Statcast logs that a foul happened, not where it "
-        "came down. The largest hand-collected set anyone has published is "
+        'It has been tested once, and only coarsely',
+        "The one public record of where real foul balls landed is "
         "FiveThirtyEight's <a href=\"https://github.com/fivethirtyeight/data/"
-        "tree/master/foul-balls\" rel=\"nofollow\">906 fouls</a>, one game at "
-        "each of ten parks, placed by eye off camera footage into broad zones. "
+        "tree/master/foul-balls\" rel=\"nofollow\">906 fouls</a>, one day at "
+        "each of ten parks in 2019, placed by eye off camera footage into "
+        "broad zones. Against it, folded into four bands, the model gets the "
+        "general shape roughly right, puts slightly too few fouls far down "
+        "the lines, and does not reliably tell parks apart. Nothing finer than "
+        "those four bands has been tested, at this park or any other. "
         "Everything here is an estimate from physics and published dimensions."
     ),
     (
@@ -2715,12 +2734,16 @@ MODEL_LIMITS = [
         "enough that these figures are a shape, not a census."
     ),
     (
-        'The rate of balls hit straight back is a guess',
-        "Roughly a quarter to a third of the fouls here are deflections "
-        "carrying back over the catcher, which is what fills the seats behind "
-        "the plate. The rate driving that was chosen because it produces a "
-        "plausible game, not because anything measured it. It is the single "
-        "largest unvalidated number in the model, and it lands exactly there."
+        'The rate of balls hit straight back is fitted to one sample',
+        "About one foul in six leaves the bat travelling backward, over the "
+        "catcher, which is most of what fills the seats behind the plate. That "
+        "rate is calibrated: it was fitted to FiveThirtyEight's fouls at the "
+        "eight parks this model could be compared with, and it moved from "
+        "0.28 to 0.17. So the share behind the plate agrees with those fouls "
+        "partly because it was made to. Fitted on seven parks and tested on "
+        "the eighth, it still came out nearer the real fouls than before at "
+        "seven of the eight, but it was fitted to one day at each of eight "
+        "parks in 2019, and there is no other public count to check it on."
     ),
     (
         'The ball flies with less lift than a real one',

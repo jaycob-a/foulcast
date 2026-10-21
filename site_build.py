@@ -45,8 +45,11 @@ Four constraints come out of `AUDIT.md` and `NOTES.md` and are enforced by
 3. **The word "safe" never appears**, even inside a quotation. Netting is not
    safety — the clubs' own pages say fans in netted sections remain exposed to
    balls leaving the field. No seat on the site is described as protected.
-4. **No accuracy claims.** The model has never been compared with observed foul
-   landings, and every page has to be readable by someone who knows that.
+4. **No accuracy claims.** The model has been compared with observed foul
+   landings once, coarsely, in four bands (`VALIDATION.md`, `CALIBRATION.md`):
+   it gets the general shape roughly right, puts slightly too few fouls far
+   down the lines, and does not reliably tell parks apart. Every park page
+   says exactly that in one line, and nothing on the site says more.
 5. **No foul line is named at a park whose sides are not established.** Sixteen
    of the 31 parks have a deciding source that names a side alongside a section
    number (`seat_map.SIDE_ANCHORS`); at the other fifteen, a reversal of the two
@@ -64,25 +67,27 @@ decorating them, so it is written down here and not left to whoever edits the
 CSS next.
 
 **No figure is ever drawn as a length.** No bars, no filled shares, no meters.
-Every number on these pages comes out of estimated geometry that has never been
-compared with a foul ball, and a drawn length puts it on a scale and says it
-was measured to that scale. Label left, figure right-aligned, hairline between,
+Every number on these pages comes out of estimated geometry, tested once and
+coarsely, and a drawn length puts it on a scale and says it was measured to
+that scale. Label left, figure right-aligned, hairline between,
 and nothing else. `rows()` is the only thing that lays a figure out.
 
-**The one drawing on the page carries its figures in four bands of fill, and
-never in a length — and since Step 26 the table carries the same four bands
-instead of the figures.** `site_diagram.py` puts a plan-view schematic above
-the distribution table. The lengths in it — how deep the bowl sits, how far
-the stands stand off the plate — are the two *sourced* measurements this site
-already prints, so drawing them as distances claims nothing the page does not
-already claim in words. The model's own figures are carried by shade, in four
-bands — most, more, fewer, fewest — against the busiest area at the same park,
-because the run cannot resolve the difference between 2.1 and 2.3 fouls a game
-and neither a smooth ramp nor a figure to a tenth of a ball should say it
-could. The table above the fold prints the band word beside a swatch of the
-band's shade; the figures behind the bands are under Details, and only there.
-That file's docstring is where the rest of the argument lives, including why
-the bands are relative to the park and why the two foul lines are shaded alike.
+**The page is built around what has been tested, and since Step 30 that is
+four bands, not seating areas.** FiveThirtyEight's count of real fouls places
+each ball in one of four bands by distance along the foul line — behind the
+plate, near the dugout, dugout to foul pole, past the pole — and that is the
+only resolution at which this model has been compared with anything. So the
+drawing is cut into those bands and the table above the fold gives the
+model's share in each beside the observed share, to the whole per cent the
+test read them at. The seating areas and decks the page used to lead with are
+under Details, in a panel whose heading says no real data has tested them.
+`site_diagram.py` puts the plan-view schematic above the table. The lengths in
+it — how deep the bowl sits, how far the stands stand off the plate — are the
+two *sourced* measurements this site already prints, so drawing them as
+distances claims nothing the page does not already claim in words. The
+model's shares are carried by shade, in four steps against the busiest band at
+the same park, and never by a length. That file's docstring is where the rest
+of the argument lives.
 
 **There is no red.** Red used to belong to one state: a seating area this site
 said was "not behind netting". That state was this project's inference from
@@ -97,34 +102,34 @@ document, because a page organised around its own caveats is a document
 whatever its length. So the pages are now three kinds, and two of them carry a
 word budget that `tests/test_site.py` enforces:
 
-* **The home page is a gallery.** One headline, one sentence, and a grid of
+* **The home page is a gallery.** One headline, two sentences, and a grid of
   all 31 ballparks — each tile the park's own schematic, small, with its name
   and its team, the whole tile a link. At most 40 words of prose outside the
   tiles, and nothing else on the page.
 * **A park page is the drawing.** The park's name and team, then the schematic
   large, cropped to that park and directly under its name, then one sentence
   quoting the club on where its netting runs, with a link to the club's page,
-  then the distribution table — a row of which is two things and no more:
-  which seating area, and which of the four bands it is in — then, at the 27
-  parks whose own seating map puts this model's areas somewhere else, one
-  line saying so, then one line, "Model estimate, not observed data", with
-  the link to the explanatory page, and the home page's own footer under it so
-  the page ends rather than stops. At most 60 words visible without opening
-  anything, not counting the table, the drawing's own labels and the club's
-  own words — the budget is on this site's prose, and a quotation is the
-  source, not the prose. Everything that is about *this* park and not on that
-  list — the club's statement at length and where it was read, how the
-  figures were produced and the figures themselves, what share was dropped and
-  each area's deck, share and speed off the bat, the sourced figures, the
-  seating-map read — is behind one closed "Details" disclosure at the foot of
-  the page. Nothing honest is removed; it is one click down.
+  then the distribution table — four bands, the model's share in each, and
+  FiveThirtyEight's observed share beside it, with one footer line saying what
+  that sample is — then one line saying what the test found, with the link to
+  the full results on the explanatory page, and the home page's own footer
+  under it so the page ends rather than stops. At most 60 words visible
+  without opening anything, not counting the table, the drawing's own labels
+  and the club's own words — the budget is on this site's prose, and a
+  quotation is the source, not the prose. Everything that is about *this* park
+  and not on that list — the club's statement at length and where it was read,
+  how the figures were produced, what share was dropped, the seating areas
+  and decks with each one's figure, share and speed off the bat, the line
+  saying the park's own map puts those areas elsewhere, the sourced figures,
+  the seating-map read — is behind one closed "Details" disclosure at the foot
+  of the page. Nothing honest is removed; it is one click down.
 * **`/about/` is where the site explains itself.** Every explanation that used
   to be on the home page or repeated on all 31 park pages — what is sourced
   and what is not, what each club says and which parks are in each group, why
   most pages will not name a foul line, why no section number is printed
   outside a quotation, how the drawing is to be read, the methodology, the
-  model's limits, the never-validated caveat in full — is on that page once,
-  in full, and linked from the caveat line of every park page.
+  model's limits, the one test the model has had and what it found — is on
+  that page once, in full, and linked from the test line of every park page.
 
 **Whitespace goes to the drawing, and nowhere else.** The schematic gets the
 width of the column and air on all four sides; the table under it is tight,
@@ -155,8 +160,8 @@ from foulball.stadium import STADIUMS, PARK_PARAMS
 from foulball.netting import PARK_NETTING, PDL_RULE
 from foulball.seat_map import check_side_anchors
 from site_diagram import (
-    park_diagram, park_tile, band_of, shade_figure, BAND_WORDS, NONE_WORD,
-    CSS as DIAGRAM_CSS,
+    park_diagram, park_tile, shade_of, band_edges, drawn_bands, BANDS,
+    SHADE_WORDS, CSS as DIAGRAM_CSS,
 )
 from site_data import (
     PARK_SOURCES, ZONE_WORDS, PAIR_ZONE_WORDS, AREA_WORDS, CLUB_NETTING,
@@ -164,6 +169,7 @@ from site_data import (
     SIDE_STATE_WORDS, MAP_READS, MAP_READ_DATE, LATER_READ_DATE, NO_MAP_READ,
     FOUL_AREA_CAVEAT, BACKSTOP_CAVEAT, OVERHANG_CAVEAT,
     CLEM_TABLE, CLEM_BASE, CLEM_OVERHANG_SNAPSHOT, SEAMHEADS_BASE,
+    VALIDATION_SHARES,
 )
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -253,12 +259,27 @@ def run_park(park_key: str, sims: int, fingerprint: str | None = None) -> dict:
 
     A single `predict_game_fouls` call covers one team's plate appearances and
     is half a game — the units error `NOTES.md` records at the top.
+
+    Every foul is also put in one of the four bands FiveThirtyEight's count is
+    folded into, by where it came down along the foul line, with the test's
+    own functions and dugout ends (`validate_538`), so a page's band shares
+    are the figures the test scored and not a second reading of them. They
+    count every foul, seated or not, because the observed zones do.
     """
+    # Imported here, not at the top: `validate_538` imports this module for
+    # the lineup and seed, and it is the record of the test, so it is reused
+    # rather than copied.
+    from validate_538 import (along_line_at_contact, zone_of, ZONE_TO_GROUP,
+                              GROUPS, DUGOUT_SETTINGS)
+    near, far = DUGOUT_SETTINGS[0]
+
     np.random.seed(SEED)
     stadium = STADIUMS[park_key]()
+    pole = {'1B': float(stadium.rf_distance), '3B': float(stadium.lf_distance)}
 
     fouls: dict[str, float] = {}
     ev_weight: dict[str, float] = {}
+    bands = {g: 0.0 for g in GROUPS}
     total = 0.0
     matched = 0.0
 
@@ -267,6 +288,9 @@ def run_park(park_key: str, sims: int, fingerprint: str | None = None) -> dict:
                                   stadium, simulations_per_batter=sims)
         for e in pred.all_events:
             total += e.weight
+            zone = zone_of(along_line_at_contact(e), e.landing_side,
+                           pole[e.landing_side], near, far)
+            bands[ZONE_TO_GROUP[zone]] += e.weight
             if e.section is None:
                 continue
             matched += e.weight
@@ -293,6 +317,7 @@ def run_park(park_key: str, sims: int, fingerprint: str | None = None) -> dict:
         'into_seats': matched,
         'total_fouls': total,
         'unmatched': total - matched,
+        'bands': bands,
     }
 
 
@@ -304,7 +329,8 @@ def load_stats(refresh: bool, sims: int, cache_path: str = CACHE) -> dict:
     `MODEL_SOURCES` re-simulates every park without anyone having to remember
     to pass `--refresh`. An entry with no `run_on` is re-simulated too: the
     page prints that date, and an entry that cannot say when it ran cannot be
-    dated honestly.
+    dated honestly. So is one with no `bands`, which the page's main table is
+    built from and which entries made before Step 30 do not carry.
     """
     cached: dict = {}
     if os.path.exists(cache_path) and not refresh:
@@ -323,7 +349,8 @@ def load_stats(refresh: bool, sims: int, cache_path: str = CACHE) -> dict:
         entry = cached.get(key)
         if (entry and entry.get('sims') == sims
                 and entry.get('model') == fingerprint
-                and entry.get('run_on') and not refresh):
+                and entry.get('run_on') and entry.get('bands')
+                and not refresh):
             continue
         print(f'  [{i}/{len(keys)}] simulating {key} ...', flush=True)
         out[key] = run_park(key, sims, fingerprint)
@@ -448,6 +475,31 @@ def _merge_foul_lines(zones: list[dict]) -> list[dict]:
     return singles
 
 
+_OBSERVED: dict = {}
+
+
+def observed_bands() -> dict:
+    """FiveThirtyEight's foul balls in the four bands, pooled over the sample.
+
+    All 906, from all ten parks and the zone FiveThirtyEight used for each
+    ball, read with the test's own loader. Pooled because a page sets the
+    model's shares for its park beside the only real distribution there is:
+    eight of the 31 parks are in the sample, each for one day, and a single
+    day's hundred balls at one park is too few to set beside anything. The
+    eight compared parks are what `VALIDATION.md` scores; the two others
+    (Oakland Coliseum, and Arlington's old park) are in the sample, so they
+    are in its shares.
+    """
+    if not _OBSERVED:
+        from validate_538 import load_observed, GROUPS
+        games = load_observed()
+        counts = {g: sum(m['all'][g] for m in games.values()) for g in GROUPS}
+        n = sum(counts.values())
+        _OBSERVED.update(n=int(n), parks=len(games),
+                         share={g: counts[g] / n for g in GROUPS})
+    return _OBSERVED
+
+
 def build_park(park_key: str, stats: dict) -> dict:
     """Everything one page needs, resolved from the model and the sources."""
     stadium = STADIUMS[park_key]()
@@ -456,6 +508,9 @@ def build_park(park_key: str, stats: dict) -> dict:
     st = stats[park_key]
     if not st.get('run_on'):
         raise SystemExit(f'{park_key}: the cached run does not say when it ran; '
+                         f'rebuild without --no-model')
+    if not st.get('bands'):
+        raise SystemExit(f'{park_key}: the cached run predates the four bands; '
                          f'rebuild without --no-model')
 
     by_id = {s.section_id: s for s in stadium.sections}
@@ -499,18 +554,23 @@ def build_park(park_key: str, stats: dict) -> dict:
     if not sides_named:
         zones = _merge_foul_lines(zones)
 
-    # Each row's band: where the figure it is *shaded* by falls against the
-    # busiest such figure at this park. `shade_figure` is the drawing's own
-    # rule — a named pair of foul-line rows is shaded by the mean of the two —
-    # so a row and its wedge cannot land in different bands. Largest band
-    # first, and the figure only to order rows within a band; the figure is
-    # not printed above the fold.
-    rows = {z['id']: z for z in zones}
-    shade = {z['id']: shade_figure(z['id'], rows) for z in zones}
-    top = max(shade.values())
-    for z in zones:
-        z['band'] = band_of(shade[z['id']], top)
-    zones.sort(key=lambda z: (-z['band'], -z['fouls']))
+    # The four bands the model has been tested at, which are the page's main
+    # table and its drawing. A band's share is of every foul the model
+    # produces here, seated or not, as the observed share is; its shade is
+    # where that share falls against the busiest band at this park; and it is
+    # drawn only if some drawn seat lies in it.
+    from validate_538 import DUGOUT_SETTINGS
+    near, far = DUGOUT_SETTINGS[0]
+    drawn = drawn_bands(stadium, band_edges(stadium, near, far))
+    seen = sum(st['bands'].values())
+    observed = observed_bands()['share']
+    bands = [{'key': k, 'name': name,
+              'share': st['bands'][k] / seen if seen else 0.0,
+              'observed': observed[k], 'drawn': k in drawn}
+             for k, name in BANDS]
+    top = max(b['share'] for b in bands)
+    for b in bands:
+        b['shade'] = shade_of(b['share'], top)
 
     return {
         'key': park_key,
@@ -531,6 +591,8 @@ def build_park(park_key: str, stats: dict) -> dict:
         'netting': PARK_NETTING[park_key],
         'sides': sides,
         'map_read': MAP_READS.get(park_key),
+        'bands': bands,
+        'dugout': (near, far),
         'zones': zones,
         'into_seats': into,
         'total_fouls': st['total_fouls'],
@@ -570,18 +632,18 @@ def zone_label(z: dict) -> str:
     return z['heading']
 
 
-def band_cell(z: dict) -> str:
-    """One area's band, as the table above the fold prints it.
+def band_label(b: dict) -> str:
+    """One band's name, as the table above the fold prints it.
 
-    The word, beside a swatch in the shade the drawing gives the same area, so
-    a reader can go from a row to its place on the drawing without a number.
-    An area the model puts no ball in at all says so and carries no swatch:
-    "fewest" would claim it gets some.
+    Beside a swatch in the shade the drawing gives the same band, so a reader
+    can go from a row to its place on the drawing. The band past the pole has
+    no seat drawn in it at any park, so it has no place on the drawing and
+    carries no swatch.
     """
-    if z['fouls'] <= 0.0:
-        return f'<span class="band">{NONE_WORD}</span>'
-    return (f'<span class="band"><i class="z{z["band"]}"></i>'
-            f'{BAND_WORDS[z["band"]]}</span>')
+    # The empty swatch is a placeholder that keeps the four names aligned.
+    swatch = (f'<i class="z{b["shade"]}"></i>' if b['drawn']
+              else '<i class="nil"></i>')
+    return f'<span class="band">{swatch}{e(b["name"])}</span>'
 
 
 def e(s) -> str:
@@ -615,6 +677,8 @@ h1{font-size:1.8rem;line-height:1.08;letter-spacing:-.025em;font-weight:800;
 .hero h1{font-size:2rem;margin:.7rem auto .45rem;max-width:22ch}
 .hero .lede{color:#4a505c;font-size:1rem;line-height:1.5;max-width:46ch;
  margin:0 auto 1.7rem}
+.hero .lede+.tested{color:#5b6270;font-size:.86rem;line-height:1.45;
+ max-width:52ch;margin:-1.2rem auto 1.7rem}
 .grid{list-style:none;padding:0;margin:0 0 2rem;display:grid;gap:.7rem;
  grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr))}
 .grid a{display:block;height:100%;text-decoration:none;color:inherit;
@@ -642,6 +706,12 @@ h1{font-size:1.8rem;line-height:1.08;letter-spacing:-.025em;font-weight:800;
 .band{display:inline-flex;align-items:center;gap:.4rem;font-weight:600}
 .band i{display:block;width:.9rem;height:.62rem;border-radius:2px;
  border:1px solid rgba(22,24,29,.14)}
+.band i.nil{visibility:hidden}
+tfoot td{border-bottom:0;padding-top:.5rem;font-size:.77rem;line-height:1.4;
+ color:#5b6270}
+tfoot tr+tr td{padding-top:.15rem}
+th.obs{white-space:normal;width:8.5rem}
+th.obs span{display:block;font-weight:600;letter-spacing:.04em}
 blockquote.quote{margin:.6rem 0;padding:.05rem 0 .05rem .75rem;
  border-left:2px solid #b9bfc8;font-size:.86rem;line-height:1.5}
 blockquote.quote p{margin:.35rem 0;max-width:72ch}
@@ -746,8 +816,8 @@ footer a:hover{text-decoration:underline}
  a{color:#4fb6c0}a:hover{color:#7fd0d8}
  .wm,.club b{color:#e4e7ee}
  .wm a:hover{color:#4fb6c0}
- .club,.sub,.sub2,.area,.note,footer,thead th,.lhead,.tt,.caveat,.credit,
- .hero .lede,.about .lede{color:#98a0b0}
+ .club,.sub,.sub2,.area,.note,footer,thead th,tfoot td,.lhead,.tt,.caveat,.credit,
+ .hero .lede,.hero .tested,.about .lede{color:#98a0b0}
  .club b,.caveat b{color:#e4e7ee}
  .grid a{background:#171a20}
  .grid a:hover{border-color:#4fb6c0}
@@ -826,8 +896,8 @@ def rows(pairs, head=None, caption: str | None = None,
     The only presentation the figures on this site can carry. A bar, a filled
     share or anything else with a drawn length would put the numbers on a
     scale and imply they were measured to it; they come out of estimated
-    geometry that has never been checked against a foul ball, and a plain
-    right-aligned column claims nothing.
+    geometry tested once, in four broad bands, and a plain right-aligned
+    column claims nothing.
 
     `caption` is the table's own heading, inside the table, so that it is a
     label of the table rather than a line of prose above it.
@@ -954,76 +1024,110 @@ def netting_source_section(p: dict) -> str:
                  f'What the club says about netting at {name}', '\n'.join(out))
 
 
-# The line under the table at a park whose own seating map disagrees with this
-# model's labels. It is the same at all of them, because what it has to say is
-# the same — some row names here are not the seats they name — and the map
-# read under Details says exactly how, park by park. It is visible because a
-# reader who takes the table and leaves takes the wrong seats with them, and
-# the answer-first layout of Step 22 was built for that reader (`LIMITATIONS.md`
-# P1).
+# The line over the area table at a park whose own seating map disagrees with
+# this model's labels. It is the same at all of them, because what it has to
+# say is the same — some area names here are not the seats they name — and the
+# map read in the last panel says exactly how, park by park. Until Step 30 it
+# stood under the table above the fold, because that table named the areas and
+# a reader who took it and left took the wrong seats with them (`LIMITATIONS.md`
+# P1). The table above the fold now names four bands by distance along the
+# foul line and no seats at all, so the line went down with the area names, and
+# stands directly over them.
 MISLABEL_LINE = ('<b>Some areas may be mislabelled.</b> This ballpark\'s own '
-                 'seating map puts some of them somewhere else; see Details.')
+                 'seating map puts some of them somewhere else; the last panel '
+                 'below says how.')
+
+# The one line above the fold that says what the model's figures are worth.
+# Step 28 compared the model with FiveThirtyEight's count, and the sentence is
+# that comparison's result in the fewest words that are still all of it; the
+# figures, and the fact that the back-foul rate was then fitted to the same
+# count, are on the explanatory page it links to.
+TESTED_LINE = ('<b>Tested once against FiveThirtyEight\'s data,</b> it gets '
+               'the general shape roughly right, puts slightly too few '
+               'fouls far down the lines, and does not reliably tell parks '
+               'apart.')
+
+
+def band_table(p: dict) -> str:
+    """The four bands, the model's share in each, and the observed share.
+
+    Three columns, which `rows()` does not lay out: the band, this model's
+    share of the park's foul balls in it, and FiveThirtyEight's share in it
+    across its whole 2019 sample. Whole per cent, because that is what the
+    test read the model at and what six seeds agree to within a point or so
+    (`VALIDATION.md`); a tenth would claim more. The column's own heading
+    says it is pooled and not this park's, because "observed" with no more
+    said would read as observed here, and the footer says what the sample is.
+
+    The footer's second line says why the two columns agree as closely as
+    they do: the back-foul rate, which decides the first band, was calibrated
+    to these same fouls in Step 29, so agreement here is partly by
+    construction. The fair measure is the held-out test, where each park was
+    predicted at a rate fitted without it, and the line links to it.
+    """
+    obs = observed_bands()
+    head = ('<thead><tr><th>Band</th><th class="n">This model</th>'
+            f'<th class="n obs">FiveThirtyEight <span>{obs["parks"]} parks '
+            f'pooled, not this park</span></th></tr></thead>')
+    body = ''.join(
+        f'<tr><td class="k">{band_label(b)}</td>'
+        f'<td class="n">{share_str(b["share"] * 100)}</td>'
+        f'<td class="n">{share_str(b["observed"] * 100)}</td></tr>'
+        for b in p['bands'])
+    foot = (f'<tfoot><tr><td colspan="3">FiveThirtyEight\'s column is '
+            f'{obs["n"]} foul balls from {obs["parks"]} parks in 2019, one '
+            f'unusually foul-heavy day at each, pooled.</td></tr>'
+            f'<tr><td colspan="3">The model\'s back-foul rate was calibrated '
+            f'to this data, so close agreement here is expected; the '
+            f'<a href="../about/#validation">held-out test</a> on the About '
+            f'page is the fair measure.</td></tr></tfoot>')
+    return (f'<table><caption id="zones">Where foul balls come down</caption>'
+            f'{head}<tbody>{body}</tbody>{foot}</table>')
 
 
 def answer_section(p: dict) -> str:
-    """The whole of the visible page: drawing, one sentence, table, a line or two.
+    """The whole of the visible page: drawing, one sentence, table, one line.
 
     Nothing here explains itself first. The drawing is the answer to where
     foul balls land and so it is the first thing on screen; the sentence under
     it is the club's own answer to where the net is; the table is the drawing
-    in words. Under the table, at the 27 parks whose own seating map puts this
-    model's areas somewhere else, one line says so; then the one caveat that
-    qualifies every figure, carrying the link to the page where it is stated
-    in full. Everything else is in the Details disclosure below.
+    in figures, beside the one real distribution there is. Under the table,
+    the one line that says what those figures are worth, carrying the link to
+    the page where the test is reported in full. Everything else is in the
+    Details disclosure below.
 
-    A row is two things: which area, and which of the four bands the model
-    puts it in. The band and not the figure: the run cannot tell 2.1 fouls a
-    game from 2.3, and a figure printed to a tenth of a ball says it can. The
-    figures are in Details, in the one table that holds them, beside each
-    area's share and speed off the bat. The row used to carry what the club
-    says about netting in front of the area as well; it does not, because
-    that was this model's labels read against the club's numbers, and the
-    sentence above the table now quotes the club instead.
+    Since Step 30 the table is the four bands the model was tested at, not the
+    seating areas. Nothing finer than those bands has been compared with a
+    real foul ball, so the areas and decks went into Details, under a heading
+    that says so, and the figures came up: a band's share to the whole per
+    cent is what the test checked, which a seating area's figure to a tenth
+    of a ball never was.
 
-    Label left, band right, a hairline between. No bar and no filled share:
-    the figures rest on estimated geometry, and a drawn length would put them
-    on a scale and claim a precision none of it has.
+    Label left, figures right, a hairline between. No bar and no filled share:
+    a drawn length would put the figures on a scale and claim a precision
+    none of it has.
     """
-    table = rows([(zone_label(z), band_cell(z)) for z in p['zones']],
-                 head=('Seating area', 'Foul balls'),
-                 caption='Foul balls by seating area, against the busiest',
-                 anchor='zones')
-
-    mr = p['map_read']
-    mislabel = (f'\n<p class="mislabel" id="mislabel">{MISLABEL_LINE}</p>'
-                if mr and mr['outcome'] == 'disagrees' else '')
-
-    # The standing caveat, in the fewest words that are still the caveat. It
-    # is not softened: the full statement — no public record of where fouls
-    # land exists, so nothing here has ever been validated against one — is
-    # the first thing on the page this line links to.
-    caveat = ('<p class="caveat"><b>Model estimate, not observed data.</b> '
-              '<a href="../about/">How this works &rarr;</a></p>')
+    tested = (f'<p class="caveat">{TESTED_LINE} '
+              f'<a href="../about/#validation">Results &rarr;</a></p>')
 
     return f'''{park_diagram(p)}
 <p class="netline" id="netting">{netting_line(p)}</p>
-{table}{mislabel}
-{caveat}'''
+{band_table(p)}
+{tested}'''
 
 
 def area_figures(p: dict) -> str:
-    """The figures the table above the fold does not carry, and the only
-    place on the site that carries them.
+    """The seating areas and decks, and the only place on the site that
+    carries them.
 
-    Fouls a game, to a tenth — the figure each band above is drawn from — then
-    the area's share of the fouls that reach seats and how fast the ball left
-    the bat, with the deck the area sits on under its name. They are the same
-    questions asked of every area, and a table is how you compare eleven
-    answers to one question.
+    Fouls a game, to a tenth, then the area's share of the fouls that reach
+    seats and how fast the ball left the bat, with the deck the area sits on
+    under its name. They are the same questions asked of every area, and a
+    table is how you compare eleven answers to one question. Busiest first.
 
     The share is of the fouls that reach *seats*, not of the park's fouls —
-    the model drops a third of those before this table starts, and the line
-    above says so.
+    the model drops some of those before this table starts, and the panel
+    above says how many.
     """
     head = ('<thead><tr><th>Seating area</th><th class="n">A game</th>'
             '<th class="n">Share</th><th class="n">Off the bat</th></tr>'
@@ -1048,39 +1152,76 @@ def area_figures(p: dict) -> str:
 def model_section(p: dict) -> str:
     """How the figures above the fold were produced, and what they drop.
 
-    The two things a reader would be misled without — the share of fouls the
-    model cannot place, and whether the two foul lines are one row or two —
-    lead it. The general method is stated once, on the explanatory page.
+    The band shares first: what a band is, what is counted, and what the
+    observed column beside them is. Then the share of fouls the model cannot
+    put in a seat, which a reader would be misled without. The general method
+    and the test are stated once, on the explanatory page.
     """
-    notes = [f'''<div class="warn"><p><strong>About {p['unmatched_pct']:.0f}% of
+    near, far = (f'{x:.0f}' for x in p['dugout'])
+    obs = observed_bands()
+    inner = f'''<p>One full game, both lineups, the same 18 batters at every park on this site
+&mdash; real hitters chosen to stand for the league, not any one club &mdash;
+so the park is the only thing that changes. {p['sims']} simulations per batter,
+fixed seed, run on {e(p['run_on'])}. Every foul the model produces is put in
+one of four bands by how far along the foul line it comes down: behind the
+plate up to {near} feet out, near the dugout from {near} to {far} feet, from
+there to the foul pole, and past the pole. The dugout ends are an estimate from
+the rule-book layout, and moving them by ten feet either way moves the shares
+by several points. Every foul counts, whether or not it reaches a seat, because
+FiveThirtyEight's zones count balls on the field too.</p>
+<p>The FiveThirtyEight column is the {obs['n']} foul balls FiveThirtyEight
+logged in 2019, one day at each of {obs['parks']} parks, each ball placed by eye
+into one of seven zones, folded here into the same four bands and pooled over
+all {obs['parks']} parks. Those days were chosen because they produced unusually
+many fouls, and a foul-heavy day may not send balls where an ordinary one does.
+It is set beside every park because it is the only public count there is, not
+because it is this park's.</p>
+<div class="warn"><p><strong>About {p['unmatched_pct']:.0f}% of
 the fouls this model produces at {e(p['name'])} land where it has no seating
 area to put them</strong> &mdash; deep down the lines near the poles, in the gap
-in front of the first row, or under a covered deck. They are counted in the
-park's total and then dropped, which is why the figures above are a shape rather
-than a census.</p></div>''']
+in front of the first row, or under a covered deck. They are in the bands above,
+which count every foul, and they are left out of the seating areas in the next
+panel, which is why those figures are a shape rather than a census.</p></div>'''
+    return panel('model', 'How these figures were produced', inner)
+
+
+def areas_section(p: dict) -> str:
+    """The seating areas and decks, labelled as untested.
+
+    Everything this page used to lead with: which of this model's seating
+    areas a foul comes down in, deck by deck. It is here rather than gone
+    because it is what the model produces and a reader may want it, and it is
+    here rather than above the fold because nothing has ever tested it —
+    FiveThirtyEight's count has four bands, and no area, deck or section is
+    finer than that. The heading says so before the table does.
+    """
+    out = []
+    mr = p['map_read']
+    if mr and mr['outcome'] == 'disagrees':
+        out.append(f'<p class="mislabel" id="mislabel">{MISLABEL_LINE}</p>')
+    out.append('<p><strong>No real data has tested any figure in this '
+               'panel.</strong> The only public count of where foul balls '
+               'land puts each ball in one of four broad bands, and that is '
+               'the table above. Which seating area or deck a ball comes down '
+               'in is finer than anything it records, so these are the '
+               'model\'s figures and nothing more: a model estimate, not a '
+               'count of anything observed, and not good to the tenth they '
+               'are printed to.</p>')
     if not p['sides']['named']:
-        notes.append('''<p class="note">The two foul lines are one area each
+        out.append('''<p class="note">The two foul lines are one area each
 rather than a first-base area and a third-base one, because nothing says which
 line is which here. A figure on one of those rows is what reaches <em>one</em> of
 the two lines, which keeps it comparable with the behind-plate rows beside it.
 The model builds both lines identically, so the pair would differ only by
 simulation noise in any case.</p>''')
-
-    inner = f'''<p>One full game, both lineups, the same 18 batters at every park on this site
-&mdash; real hitters chosen to stand for the league, not any one club &mdash;
-so the park is the only thing that changes. {p['sims']} simulations per batter,
-fixed seed, run on {e(p['run_on'])}. The table above puts each area in one of
-four bands against the busiest area here; the figures it is banded from are
-below, in foul balls a game &mdash; a model estimate, not a count of anything
-observed, and not good to the tenth it is printed to.</p>
-{chr(10).join(notes)}
-{area_figures(p)}
-<p class="sub">Fouls a game in each area, which deck it sits on, what share of the
-fouls that reach seats the model puts in it, and how fast those balls left the
-bat &mdash; not how fast they arrive: a ball slows on the way, by an amount this
-model computes and has never checked against a measured landing. The order is
-the order of the table above.</p>'''
-    return panel('model', 'How these figures were produced', inner)
+    out.append(area_figures(p))
+    out.append('''<p class="sub">Fouls a game in each area, which deck it sits on, what
+share of the fouls that reach seats the model puts in it, and how fast those
+balls left the bat &mdash; not how fast they arrive: a ball slows on the way, by
+an amount this model computes and has never checked against a measured
+landing.</p>''')
+    return panel('areas', 'Seating areas and decks: untested by any real data',
+                 '\n'.join(out))
 
 
 def figures_section(p: dict) -> str:
@@ -1252,7 +1393,7 @@ def labels_section(p: dict) -> str:
             'That says nothing about the figures above: the map fixes which '
             'foul line is which and where the plate sits, and says nothing at '
             'all about how many foul balls reach any of these seats, which '
-            'nothing on this site has ever checked.</p>')
+            'no real data has tested.</p>')
     else:
         out.append(f'<p>{NO_MAP_READ}</p>')
 
@@ -1278,6 +1419,10 @@ def description(p: dict) -> str:
     figures" at every park, including Las Vegas Ballpark, where neither is
     published anywhere and the page says so. The figures are named only where
     `PARK_SOURCES` has them.
+
+    Until Step 30 it ended "Never checked against real fouls", which stopped
+    being true when Step 28 compared the model with FiveThirtyEight's count.
+    The page's table now sets the two side by side, and the snippet says so.
     """
     src = p['src']
     have = [w for w, v in (('foul territory', src['foul_area']),
@@ -1290,8 +1435,8 @@ def description(p: dict) -> str:
         figures = ('a note that neither its foul territory nor its backstop '
                    'is published')
     return (f"Where foul balls land at {p['name']}, {p['city']}: a model "
-            f"estimate by seating area, {NETTING_DESC[p['club']['kind']]}, "
-            f"and {figures}. Never checked against real fouls.")
+            f"estimate in four bands beside FiveThirtyEight's count of real "
+            f"fouls, {NETTING_DESC[p['club']['kind']]}, and {figures}.")
 
 
 def park_page(p: dict, base_url: str) -> str:
@@ -1328,6 +1473,8 @@ def park_page(p: dict, base_url: str) -> str:
 
 {model_section(p)}
 
+{areas_section(p)}
+
 {figures_section(p)}
 
 {labels_section(p)}
@@ -1357,8 +1504,11 @@ def home_page(parks: list[dict], base_url: str) -> str:
     own busiest area. Alphabetical, because any other order would be a
     ranking, and the figures cannot support one.
 
-    One headline and one sentence above the grid. `tests/test_site.py` holds
-    the prose outside the tiles to forty words.
+    One headline and two sentences above the grid. The second, since Step 30,
+    says what the grid can and cannot show: the tiles differ mostly in size,
+    which is the parks' published dimensions, and the test against real fouls
+    found the model's shading does not reliably tell one park from another.
+    `tests/test_site.py` holds the prose outside the tiles to forty words.
     """
     parks = sorted(parks, key=lambda p: p['name'])
     tiles = ''.join(
@@ -1376,8 +1526,10 @@ def home_page(parks: list[dict], base_url: str) -> str:
 <header class="hero">
 <p class="wm">FoulCast</p>
 <h1>Where foul balls land, ballpark by ballpark</h1>
-<p class="lede">Each club's published netting, and a physics estimate of
-where foul balls come down that has never been checked against a real one.</p>
+<p class="lede">Each club's netting, and a physics estimate of where foul
+balls land.</p>
+<p class="tested">Parks differ mostly by published dimensions; tested on real
+fouls, the model doesn't reliably tell them apart.</p>
 </header>
 <main>
 <ul class="grid">{tiles}</ul>
@@ -1480,8 +1632,8 @@ def about_page(parks: list[dict], base_url: str) -> str:
     club says about its netting and which parks are in each group, why most
     pages will not name a foul line, why no section number is printed outside
     a quotation, how the drawing and its bands are to be read, the method, the
-    model's limits, and the never-validated caveat in full. The caveat line on
-    every park page links here.
+    model's limits, and the one test the model has had, in full. The line
+    under every park page's table links here.
     """
     parks = sorted(parks, key=lambda p: p['name'])
     by_group = {kinds: [p for p in parks if p['club']['kind'] in kinds]
@@ -1527,15 +1679,33 @@ def about_page(parks: list[dict], base_url: str) -> str:
         f'<p>{body.replace("{unnamed_sides}", str(unnamed))}</p>'
         for t, body in MODEL_LIMITS)
 
-    bands = ' '.join(
-        f'<span class="band"><i class="z{i}"></i>{BAND_WORDS[i]}</span>'
-        for i in reversed(range(len(BAND_WORDS))))
+    near, far = parks[0]['dugout']
+    shades = ' '.join(
+        f'<span class="band"><i class="z{i}"></i>{SHADE_WORDS[i]}</span>'
+        for i in reversed(range(len(SHADE_WORDS))))
+
+    # The test's results, pooled over the eight parks it could compare. The
+    # figures are `CALIBRATION.md`'s, which is where the run that made them is
+    # recorded; they are not recomputed here because they come from a fit and
+    # a held-out run that the site build does not repeat.
+    obs = observed_bands()
+    names = dict(BANDS)
+    tested = ''.join(
+        f'<tr><td class="k">{e(names[k])}</td>'
+        + ''.join(f'<td class="n">{v:.0f}%</td>' for v in vals)
+        + '</tr>' for k, vals in VALIDATION_SHARES)
+    tested_table = (
+        '<table><caption>The test, pooled over eight parks</caption>'
+        '<thead><tr><th>Band</th><th class="n">Observed</th>'
+        '<th class="n">Model, park held out</th>'
+        '<th class="n">Model before the fit</th></tr></thead>'
+        f'<tbody>{tested}</tbody></table>')
 
     title = 'How this works | FoulCast'
     desc = ('How FoulCast is built: what is sourced and what is a model, what '
             'each club says about its netting, why no section number or foul '
-            'line is named where nothing establishes one, and why none of it '
-            'has ever been checked against a real foul ball.')
+            'line is named where nothing establishes one, and how the model '
+            'did in its one test against real foul balls.')
 
     body = f'''<body class="about">
 <header>
@@ -1544,19 +1714,50 @@ def about_page(parks: list[dict], base_url: str) -> str:
 </header>
 <main>
 <p class="lede">Every page here does two things: it quotes what the club
-publishes about where its protective netting runs, and it estimates how many
-foul balls a game reach each area of seats. The first is sourced. The second
-is a model.</p>
+publishes about where its protective netting runs, and it estimates where
+foul balls come down, beside the one public count of real ones. The first is
+sourced. The second is a model.</p>
 
-<h2 id="validation">The model has never been checked against a real foul ball</h2>
-<p>There is no public record of where foul balls actually land &mdash;
-Statcast logs that a foul happened, not where it came down. So the
-distributions on these pages are estimates from physics and published park
-dimensions, and no page here puts a number on how often the model gets it
-right, because there is nothing to compute one from. Every figure on every
-park page is a physics model that has never been validated against an
-observed landing, and the line under each table &mdash; model estimate, not
-observed data &mdash; is the short form of this paragraph.</p>
+<h2 id="validation">The model has been tested once against real foul balls</h2>
+<p><strong>The short version.</strong> The model was tested once against
+FiveThirtyEight's data. It gets the general shape roughly right, puts slightly
+too few fouls far down the lines, and does not reliably tell parks apart. The
+line under each park page's table says the same.</p>
+<p><strong>The data.</strong> Statcast logs that a foul happened, not where it
+came down, so there is no large public record of where foul balls land. The one
+public count is FiveThirtyEight's: {obs['n']} foul balls from one day at each
+of {obs['parks']} parks in 2019, each placed by eye off camera footage into one
+of seven broad zones. Those days were picked because they produced unusually
+many fouls. The zones fold into four bands by distance along the foul line:
+behind the plate, near the dugout, from the dugout to the foul pole, and past
+the pole. Eight of the {obs['parks']} parks could be compared with this model;
+Oakland Coliseum is not modelled, and the Rangers' 2019 park has been replaced
+by a different building.</p>
+<p><strong>What the test found.</strong> As first run, the model was closer to
+the observed bands than an even split at all eight parks, but put too many
+fouls behind the plate and too few down the lines. The one number that decides
+the first of those, the share of fouls that leave the bat travelling backward,
+had been set by hand. It has since been calibrated to these same fouls: it was
+0.28 and is now 0.17. Because it was fitted to this data, the figures the model
+now gives at these eight parks agree with it partly because they were made to.
+The fair measure is to fit the rate on seven parks and predict the eighth, for
+each park in turn, and that is the middle column below.</p>
+{tested_table}
+<p>Fitted that way, the model is nearer the observed bands than before at
+seven of the eight parks. It still puts too many fouls just past the dugouts
+and slightly too few from there to the poles: its forward fouls come down too
+close to the plate, which the back-foul rate cannot change. And it does not
+tell the parks apart. It puts about the same share behind the plate at every
+park, where the observed share runs from about a quarter at some parks to half
+at one; the average of the other seven parks predicts each park's bands better
+than the model does at six of the eight. Some of the observed spread is each
+day's hitters and some is chance on a hundred balls, but the model is not in a
+position to show any of it.</p>
+<p><strong>What has not been tested.</strong> Anything finer than the four
+bands. No seating area, deck or section on this site has been compared with a
+real foul ball, so those figures are on each park page under Details, under a
+heading that says so. No page here puts a single number on how often the model
+is right, because one coarse test on {obs['parks']} days cannot support one.</p>
 
 <h2 id="sourced">What is sourced and what is not</h2>
 <p><strong>Netting is sourced, and quoted rather than interpreted.</strong>
@@ -1592,15 +1793,16 @@ bowl shape. It is not a finding about any individual ballpark.</p>
 <p>No seat on this site is described as protected outright, and none of them is
 called a good bet either. The clubs' own netting pages say fans sitting behind
 netting "are still exposed to objects leaving the field of play", and this model
-has never seen a real foul ball.</p>
+has been tested against real foul balls only in four broad bands, never seat by
+seat.</p>
 
 <h2 id="parks">What each club says about its netting</h2>
 <p>All 31 ballparks, grouped by what the club publishes, not by how good the
 ballpark is. The tag against each park is whether anything establishes which
 of its two foul lines is which &mdash; a separate question from netting, and
 one where the answer is no at most of them. The figure on the right is this
-model's estimate of how many foul balls a game reach seats at all, and nothing
-has ever checked it against one.</p>
+model's estimate of how many foul balls a game reach seats at all, and no real
+data has tested it.</p>
 {groups}
 
 <h2 id="sides">Which foul line is which, and why most pages will not say</h2>
@@ -1636,7 +1838,7 @@ half one line and half the other. At twenty-four the seats behind home plate are
 not the seats this model calls the seats behind home plate, in one case eighteen
 positions away at a corner of the ballpark. Several name whole decks that are
 not in the building. Each of the twenty-seven park pages says so in a line
-under its table.</p>
+over its table of seating areas, under Details.</p>
 <p>Three ballparks agreed, on both questions a map can settle. They are stated
 on their own pages in the same place and at the same length as the twenty-seven,
 because they were checked the same way, and an agreement nobody publishes reads
@@ -1649,7 +1851,7 @@ model's errors.</p>
 
 <h2 id="diagram">Reading the drawing and the table</h2>
 <p>Home plate at the bottom, the two foul lines running out, and the seating
-areas the model tracks drawn as bands of an arc behind them. It is a schematic,
+the model tracks drawn as an arc behind them. It is a schematic,
 not to scale and not a seating chart: one generic bowl, its depth set by each
 park's published foul territory and backstop. Every park is drawn in the same
 feet, so a park with more published foul ground really is a larger drawing
@@ -1657,31 +1859,35 @@ feet, so a park with more published foul ground really is a larger drawing
 place the 31 are side by side. A park's own page compares it with nothing and
 crops the same drawing to that park. The drawing carries no netting: the
 club's own sentence, directly under it, is where that is.</p>
-<p>Shade carries the model's figures, in four bands: {bands}. They are bands
-against the busiest area at the same park &mdash; "most" is at least three
-quarters of that area's figure, "more" at least half, "fewer" at least a
-quarter, "fewest" anything less &mdash; and the table under each drawing gives
-every area's band in the same words, beside a swatch of the same shade. "None"
-is an area the model sends no ball to at all: at one park, a whole deck under a
-roof. The figures the bands are drawn from are on each park page under
-Details, and nowhere above it. Both foul lines are always shaded alike: the
-model builds them as exact mirrors, so the gap between the two figures is
-simulation noise.</p>
-<p>The bands are relative to the park and not fixed across the 31, because the
-parks barely differ. The model puts the same number of fouls into every game,
-most parks put within a few of one another into seats, and what difference
-there is comes mostly from the one bowl shape they all share. Shading the parks
-against one another would compare that shape with itself; within one park,
-which areas the model sends more balls to than others is the thing it does
-say.</p>
+<p>The seating is cut into the four bands FiveThirtyEight's count of real
+fouls can be compared in, by distance along the foul line: behind the plate,
+up to {near:.0f} feet out; near the dugout, from {near:.0f} to {far:.0f} feet; from
+there to the foul pole; and past the pole. The dugout ends are an estimate from the rule-book
+layout. A seat is in the band a ball landing on it would be counted in. No
+drawn seat at any park reaches a foul pole, so the band past the pole is in
+the table and not on the drawing. The decks within a band are drawn as one
+piece, because nothing finer than a band has been tested; the seating areas
+and decks are on each park page under Details, labelled as untested.</p>
+<p>Shade carries the model's share of foul balls in each band: {shades}.
+Shades are against the busiest band at the same park &mdash; "most" is at
+least three quarters of that band's share, "more" at least half, "fewer" at
+least a quarter, "fewest" anything less &mdash; and the table under each drawing
+gives every band's share to the whole per cent, beside a swatch of its shade
+and beside FiveThirtyEight's share for the same band. Both foul lines are
+always shaded alike: a band is pooled over both lines, and the model builds
+them as exact mirrors.</p>
+<p>The shades are relative to the park and not fixed across the 31, because the
+parks barely differ: the model puts the same share behind the plate at every
+park to within a point, and the same share in each of the other bands to
+within a few points, and what difference there is comes mostly from each park's
+published dimensions, which also set how big the drawing is. Shading the parks against one another would compare one bowl shape
+with itself.</p>
 <p>No figure on this site is ever drawn as a length &mdash; no bars, no filled
-shares, no meters. The numbers come out of estimated geometry that has never
-been compared with a foul ball, and a drawn length would put them on a scale
-and say they were measured to it. The drawing's own lengths are the two
-sourced measurements; the model's figures are carried by shade and by a word,
-because the run cannot resolve the difference between 2.1 and 2.3 fouls a game
-and neither a smooth ramp nor a figure printed to a tenth of a ball should say
-it could.</p>
+shares, no meters. The numbers come out of estimated geometry that has been
+tested once, coarsely, and a drawn length would put them on a scale and say
+they were measured to it. The drawing's own lengths are the two sourced
+measurements; the model's figures are carried by shade and printed in the
+table, to the whole per cent the test read them at.</p>
 
 <h2 id="method">How the figures were produced</h2>
 <p>One full game, both lineups, the same 18 batters at every park on this site,
@@ -1693,14 +1899,15 @@ pull tendency on Statcast for 2025&ndash;26 sit nearest the league average. Thos
 figures, the hitter&rsquo;s own, are what the model samples from. {sims}
 simulations per batter,
 fixed seed, run on {e(run_dates(parks))}. The table on each park page gives
-each area's band, busiest first; the figures behind the bands, in foul balls a
-game, are under Details &mdash; a model estimate, not a count of anything
-observed.</p>
+the share of every foul the model produces that comes down in each of the four
+bands, seated or not, as FiveThirtyEight's zones count them. The seating areas
+and decks, in foul balls a game, are under Details &mdash; a model estimate, not
+a count of anything observed, and untested by any real data.</p>
 <p>A share of the fouls the model produces land where it has no seating area
 to put them &mdash; deep down the lines near the poles, in the gap in front of
-the first row, or under a covered deck. They are counted in the park's total
-and then dropped, and each park page states its own share, which is why the
-figures are a shape rather than a census.</p>
+the first row, or under a covered deck. They are in the bands, which count
+every foul, and dropped from the seating areas, and each park page states its
+own share, which is why the area figures are a shape rather than a census.</p>
 <p>At a park where nothing says which foul line is which, the two foul lines
 are one area each rather than a first-base area and a third-base one. A figure
 on one of those rows is what reaches <em>one</em> of the two lines, which keeps

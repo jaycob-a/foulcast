@@ -3,43 +3,51 @@ site_diagram.py — the plan-view schematic that sits above each park's
 distribution table.
 
 Home plate at the bottom, the two foul lines running out, the seating the
-model tracks drawn as segments of an arc behind them, shaded in four bands —
-most, more, fewer, fewest — by how many fouls a game the model puts in each
-against the busiest area at the same park. Inline SVG, no images, no scripts,
-no external requests: the same one-request-per-page rule the rest of the site
-keeps.
+model tracks drawn as one arc behind them, cut into the four bands
+FiveThirtyEight's count of real foul balls is folded into (`VALIDATION.md`):
+behind the plate, near the dugout, dugout to foul pole, and past the pole.
+Each band is shaded — most, more, fewer, fewest — by the share of the park's
+foul balls the model puts in it, against the busiest band at the same park.
+Inline SVG, no images, no scripts, no external requests: the same
+one-request-per-page rule the rest of the site keeps.
+
+WHY FOUR BANDS AND NOT THE SEATING AREAS
+----------------------------------------
+Until Step 30 the drawing was shaded area by area and deck by deck. None of
+those areas has been compared with a real foul ball: the only public count
+of where fouls land, FiveThirtyEight's 906 from 2019, places each ball in one
+of seven broad zones, and Step 28 folded those into four bands by distance
+along the foul line. That is the resolution at which this model has been
+tested, so it is the resolution the drawing now shows. The decks inside a
+band are folded together — the drawing carries no deck boundary at all — and
+the area-by-area figures are under Details on each page, labelled as untested.
+
+A band is decided exactly as the test decided it: by how far along the foul
+line a ball comes down, with the dugout strip running from 50 to 130 feet and
+the last band starting at the park's published foul-pole distance. Here that
+is a cut across the drawn seating at the same distances, so a seat is in the
+band a ball landing on it would have been counted in.
 
 WHAT THE DRAWING IS ALLOWED TO CLAIM
 ------------------------------------
 The site's standing rule is that **no figure is ever drawn as a length** — no
 bars, no filled shares, no meters — because every number on these pages comes
-out of estimated geometry that has never been compared with a foul ball, and a
-drawn length puts it on a scale and says it was measured to that scale. This
-file does not break that rule, and the way it stays inside it is the whole
-design:
+out of estimated geometry, tested only once and coarsely, and a drawn length
+puts it on a scale and says it was measured to that scale. This file does not
+break that rule, and the way it stays inside it is the whole design:
 
-* **The model's figures are carried by fill, in four discrete bands.** Not by
-  area, not by radius, not by a continuous ramp. A smooth gradient would be a
-  length by another name: it would assert that the difference between 2.1 and
-  2.3 fouls a game is a real difference this model can resolve. It is not —
-  the run is 400 simulations a batter off a generic bowl, and the honest
-  resolution is a band, so the reader gets bands.
+* **The model's figures are carried by fill, in four discrete shades.** Not
+  by area, not by radius, not by a continuous ramp. A smooth gradient would be
+  a length by another name, and the table under the drawing prints the shares
+  themselves, to the whole per cent the test was read at.
 
-  The bands are relative, and since Step 26 they are also what the table
-  prints: an area's band is where its figure falls against the busiest area
-  at the same park, in quarters (`BAND_EDGES`), and the table under the
-  drawing says "most", "more", "fewer" or "fewest" where it used to print the
-  figure to a tenth of a ball. The figures themselves are under Details.
-
-  Relative to the park, not to the fleet. The steps used to have fixed
-  boundaries in fouls a game, so that a quiet park would look quiet beside a
-  busy one. But the parks are barely different — the simulated total is the
-  same at every park, and 27 of 31 put between 30 and 33 fouls a game into
-  seats — and what difference there is comes mostly from the one bowl shape
-  they all share (`LIMITATIONS.md` 2.7). Shading the 31 against one another
-  compared the template with itself. Within one park, which areas the model
-  puts more balls into than others is the thing it does say, so that is what
-  the shade now carries.
+  The shades are relative: a band's shade is where its share falls against
+  the busiest band at the same park, in quarters (`SHADE_EDGES`). Relative to
+  the park, not to the fleet, because the parks barely differ — the model
+  puts the same share behind the plate at every park to within a point, and
+  the forward bands move by a few points with each park's published
+  dimensions — and shading the 31 against one another would compare one bowl
+  shape with itself.
 * **The lengths in the drawing are the sourced ones.** Radial distance is feet
   from home plate, and where a zone's front and back edges sit comes from
   `stadium.py`'s section table after `_apply_sourced_params` has stretched it
@@ -66,10 +74,10 @@ design:
 WHAT IT IS NOT ALLOWED TO CLAIM
 -------------------------------
 1. **No section numbers, and no printed labels.** Nothing in the emitted markup
-   carries a `section_id`: the only classes on a wedge are `z0`-`z4`, the step
-   it fell in. `tests/test_site.py` greps the finished page for printed ranges
-   and prefixed labels, and a path full of `1B-LB1` would sail straight into
-   it.
+   carries a `section_id`: the only classes on a band are `z0`-`z3`, the
+   shade it fell in, and the seating outline is one anonymous mask.
+   `tests/test_site.py` greps the finished page for printed ranges and
+   prefixed labels, and a path full of `1B-LB1` would sail straight into it.
 2. **No negative numbers in path data.** Same test greps for `\\d{2,3}-\\d{2,3}`
    as a printed seat range, and `M 119-121` is indistinguishable from one.
    The origin is placed so that every coordinate the drawing emits is positive,
@@ -78,15 +86,15 @@ WHAT IT IS NOT ALLOWED TO CLAIM
    labels are emitted only when `p['sides']['named']` is true. At the other
    fifteen parks both lines are drawn and neither is labelled.
 4. **The two foul lines always carry the same shade, at every park.** Every
-   park in `stadium.py` is built as an exact left-right mirror, so the
-   difference between a park's `1B-LB1` row and its `3B-LB1` row is simulation
-   noise and nothing else. A *map* that shaded them differently would assert a
-   left-right asymmetry the geometry does not contain, and at a park whose
-   sides are folded it would leak a side. So a matched pair is shaded by the
-   mean of the two, which is exactly the figure the folded row already
-   carries, and the table gives both halves of a named pair that same band.
-   The third-base half of the drawing is the first-base half mirrored
-   coordinate by coordinate — see `_mirror` for why it is not an SVG `<use>`.
+   park in `stadium.py` is built as an exact left-right mirror, so a
+   left-right difference in the drawing would be simulation noise presented
+   as ground, and at a park whose sides are folded it would leak a side. A
+   band's share is pooled over both lines, as the test pooled it, and the
+   band is drawn on both: the third-base half of every shape is the
+   first-base half mirrored coordinate by coordinate — see `_mirror` for why
+   it is not an SVG `<use>`. The two lines' foul poles are not always the
+   same distance out, but no drawn seat at any park reaches either pole
+   (`drawn_bands`), so the last cut is never drawn and cannot differ.
 5. **No netting.** Until Step 26 a heavy dashed line along the front of an
    area meant the club's page put those seats behind netting. It was drawn on
    this model's template geometry, at the position of this model's seat
@@ -127,35 +135,34 @@ import math
 from foulball.stadium import STADIUMS, exposed_bands
 
 # ============================================================
-# The four bands
+# The four bands, and the four shades
 # ============================================================
 #
-# Boundaries as fractions of the busiest area's figure at the same park:
+# The bands are FiveThirtyEight's seven zones folded into four, as Step 28
+# folded them (`validate_538.GROUPS`), in order out from the plate. The names
+# are what a page prints; the keys are the test's own, so a page's figures
+# can be read straight off its output.
+BANDS = (('Z1', 'Behind the plate'),
+         ('Z23', 'Near the dugout'),
+         ('Z45', 'Dugout to foul pole'),
+         ('Z67', 'Past the pole'))
+
+# Shade boundaries as fractions of the busiest band's share at the same park:
 # "most" is at least three quarters of it, "more" at least half, "fewer" at
 # least a quarter, "fewest" anything below. Quarters because they are the
-# plainest boundaries that can be said out loud, and because across the
-# registry they leave every band populated — the top area alone, or with
-# near-equals, in "most"; the lower bowl behind the plate and its like in
-# "more"; most foul-line areas in "fewer"; the upper decks in "fewest". The
-# module docstring says why the bands are relative to the park and not fixed
-# across the fleet.
-BAND_EDGES = (0.25, 0.5, 0.75)
+# plainest boundaries that can be said out loud. The module docstring says why
+# they are relative to the park and not fixed across the fleet.
+SHADE_EDGES = (0.25, 0.5, 0.75)
 
-# Lowest to highest, indexed by band. The table prints these words and the
-# legend is built from them, so neither can drift from the shading.
-BAND_WORDS = ('Fewest', 'Fewer', 'More', 'Most')
-
-# What the table prints for an area the model puts no ball in at all. Not a
-# band: at Wrigley Field it is the whole upper deck, which is entirely under a
-# roof this model treats as stopping every ball, and "fewest" would say the
-# model sends some there.
-NONE_WORD = 'None'
+# Lowest to highest, indexed by shade. The legend is built from these, so it
+# cannot drift from the shading.
+SHADE_WORDS = ('Fewest', 'Fewer', 'More', 'Most')
 
 
-def band_of(fouls: float, top: float) -> int:
-    """Which band a figure falls in, against the park's busiest figure."""
-    share = fouls / top if top > 0 else 0.0
-    return sum(1 for edge in BAND_EDGES if share >= edge)
+def shade_of(share: float, top: float) -> int:
+    """Which shade a band's share falls in, against the park's busiest band."""
+    frac = share / top if top > 0 else 0.0
+    return sum(1 for edge in SHADE_EDGES if frac >= edge)
 
 
 # ============================================================
@@ -455,57 +462,119 @@ def _sector(a0: float, a1: float, r0: float, r1: float) -> str:
 
 
 # ============================================================
-# Joining the drawing to what the table prints
+# The seating outline, and the bands cut across it
 # ============================================================
 
-def _rows(p: dict) -> dict[str, dict]:
-    """Every row of the distribution table, by the id it was built under."""
-    return {z['id']: z for z in p['zones']}
+def footprint(stadium) -> str:
+    """Every drawn seat, as one path: the outline the bands are masked to.
 
-
-def shade_figure(sid: str, rows: dict[str, dict]) -> float | None:
-    """The figure a zone is **shaded** by, and so the figure its band is of.
-
-    A behind-plate zone is shaded by its own figure. A foul-line zone is half
-    of a matched pair, and the pair is always read as one thing:
-
-    * at a park whose sides are folded, the pair is already one row, carrying
-      the mean of the two;
-    * at a park whose sides are named, the two rows are still drawn with one
-      shade, from the mean of the two figures, and the table gives both rows
-      the band of that mean.
-
-    Note 4 in the module docstring is why. The foul-line case is tested
-    *before* the direct lookup, and that ordering is the point of the function
-    rather than a detail: at a park whose sides are named both halves are real
-    rows, so a direct lookup would find `1B-LB1` and shade the drawing — both
-    sides of it — from the first-base row alone, which is the asymmetry the
-    mean exists to avoid, only hidden behind a symmetrical picture.
+    The decks are folded together here. Within one wedge, radial bands that
+    touch become one ring, so the outline carries no deck boundary: nothing
+    finer than a band has been compared with a real foul ball, and a line
+    between two decks would invite a reader to read the decks.
     """
-    if sid[:3] not in ('1B-', '3B-'):
-        row = rows.get(sid)
-        return row['fouls'] if row else None
-    suffix = sid[3:]
-    folded = rows.get('LINES-' + suffix)
-    if folded is not None:
-        return folded['fouls']
-    a, b = rows.get('1B-' + suffix), rows.get('3B-' + suffix)
-    if a is None or b is None:
-        return (a or b)['fouls'] if (a or b) else None
-    return (a['fouls'] + b['fouls']) / 2.0
+    subs = []
+    for a0, a1, bands in wedges(stadium):
+        rings: list[list[float]] = []
+        for r0, r1 in sorted((b0, b1) for _, b0, b1 in bands):
+            if rings and r0 <= rings[-1][1] + 0.5:
+                rings[-1][1] = max(rings[-1][1], r1)
+            else:
+                rings.append([r0, r1])
+        subs += [_sector(a0, a1, r0, r1) for r0, r1 in rings]
+    return ''.join(subs)
 
 
-def _row_for(sid: str, rows: dict[str, dict]) -> dict | None:
-    """The table row a drawn wedge belongs to.
+def band_edges(stadium, near: float, far: float) -> dict[str, tuple]:
+    """Each band as (from, to) in feet along the foul line; None is open.
 
-    Its own row, or the folded `LINES-` row its pair became. At a park whose
-    sides are named a first-base wedge returns the first-base row; both rows
-    of a pair carry the same band (`shade_figure`), so which half answers does
-    not change the shade.
+    The dugout ends are the test's (`validate_538.DUGOUT_SETTINGS`), passed in
+    rather than written here. The last cut is the nearer of the two published
+    foul-pole distances, which is the conservative reading for the one thing
+    it is used for here: deciding whether any drawn seat reaches a pole.
     """
-    if sid[:3] in ('1B-', '3B-') and 'LINES-' + sid[3:] in rows:
-        return rows['LINES-' + sid[3:]]
-    return rows.get(sid)
+    pole = float(min(stadium.lf_distance, stadium.rf_distance))
+    return {'Z1': (None, near), 'Z23': (near, far), 'Z45': (far, pole),
+            'Z67': (pole, None)}
+
+
+def drawn_bands(stadium, edges: dict[str, tuple]) -> set[str]:
+    """The bands that cross at least one drawn seat.
+
+    A sector from model angle `a0` to `a1` and radius `r0` to `r1` comes
+    nearest the plate, along the line, at its inner corner on the `a1` edge
+    and reaches furthest at its outer corner on the `a0` edge; it is one
+    connected piece, so it crosses every distance in between. At every park in
+    the registry the result leaves out the band past the pole: no drawn seat
+    reaches either foul pole, so that band is in the table and not on the
+    drawing.
+    """
+    out = set()
+    for a0, a1, bands in wedges(stadium):
+        c_near, c_far = math.cos(math.radians(a1)), math.cos(math.radians(a0))
+        for _, r0, r1 in bands:
+            lo_x, hi_x = r0 * c_near, r1 * c_far
+            for key, (lo, hi) in edges.items():
+                if (lo is None or hi_x > lo) and (hi is None or lo_x < hi):
+                    out.add(key)
+    return out
+
+
+# Degrees of model angle between the points along a cut. The cut is a
+# straight line in the model's own axes and curves on the drawing only
+# because `_phi` spreads 90 degrees over 135; at the radii drawn here a chord
+# of six degrees strays from the curve by under a foot.
+_STEP = 6.0
+
+
+def _span(t0: float, t1: float) -> list[float]:
+    n = max(1, math.ceil((t1 - t0) / _STEP))
+    return [t0 + (t1 - t0) * i / n for i in range(n + 1)]
+
+
+def _meets(c: float, reach: float) -> float:
+    """The model angle at which the cut `c` feet along the line is `reach`
+    feet from the plate."""
+    return math.degrees(math.acos(c / reach))
+
+
+def _cut_r(c: float, theta: float, reach: float) -> float:
+    """How far from the plate the cut `c` feet along the line runs at model
+    angle `theta`, stopping at `reach`."""
+    cos = math.cos(math.radians(theta))
+    return reach if c >= reach * cos else c / cos
+
+
+def _poly(pts) -> str:
+    out, last = [], None
+    for x, y in pts:
+        q = (_n(x), _n(y))
+        if q != last:
+            out.append(q)
+            last = q
+    return 'M' + 'L'.join(f'{x} {y}' for x, y in out) + 'Z'
+
+
+def band_path(lo: float | None, hi: float | None, reach: float) -> str:
+    """One band's ground on both sides of the plate, as path data.
+
+    The shape runs from the cut at `lo` feet along the line to the cut at
+    `hi`, out to `reach`, which is past every drawn seat; it is masked to the
+    seating outline when drawn, so only its cuts show. The band behind the
+    plate is one shape across both halves, from the plate out, for the reason
+    `_sector` gives: it is one block of seats and a seam down the middle of
+    it would be a division that is not there.
+    """
+    top = 90.0 if lo is None else _meets(lo, reach)
+    ts = _span(0.0, top)
+    if hi is not None and hi < reach and _meets(hi, reach) < top:
+        ts = sorted(set(ts) | {_meets(hi, reach)})
+    outer = [_pt(t, reach if hi is None else _cut_r(hi, t, reach)) for t in ts]
+    if lo is None:
+        pts = [_pt(0.0, 0.0)] + outer
+        return _poly(pts + [_mirror(q) for q in reversed(pts[1:-1])])
+    inner = [_pt(t, lo / math.cos(math.radians(t))) for t in reversed(ts)]
+    return _poly(outer + inner) + _poly([_mirror(q) for q in outer + inner])
 
 
 # ============================================================
@@ -515,50 +584,61 @@ def _row_for(sid: str, rows: dict[str, dict]) -> dict | None:
 def _alt(p: dict) -> str:
     """What the drawing says, for a reader who is not looking at it.
 
-    The areas in the top two bands, by name and band, in the order the table
-    below has them, because that ordering is the one thing the shading is
-    for. No figures: the drawing carries none, so its description does not
-    either.
+    The bands it draws, by shade, darkest first, and the band it cannot draw.
+    No figures: the drawing carries none, and the table under it does.
     """
     said = []
-    for band in (3, 2):
-        names = [z['heading'][0].lower() + z['heading'][1:]
-                 for z in p['zones'] if z['band'] == band and z['fouls'] > 0]
+    for shade in reversed(range(len(SHADE_WORDS))):
+        names = [b['name'][0].lower() + b['name'][1:]
+                 for b in p['bands'] if b['drawn'] and b['shade'] == shade]
         if names:
-            said.append(f'{BAND_WORDS[band]}: {"; ".join(names)}.')
+            said.append(f'{SHADE_WORDS[shade]}: {"; ".join(names)}.')
     sides = ('First base is drawn on the right, third base on the left.'
              if p['sides']['named'] else
              'Neither line is labelled: nothing establishes which is which.')
     return (f'Schematic plan of the foul ground at {p["name"]}, home plate at '
-            f'the bottom and the seating areas drawn as bands of an arc '
-            f'behind the two foul lines, shaded in four bands by fouls a game '
-            f'against the busiest area here. {" ".join(said)} {sides}')
+            f'the bottom and the seating drawn as an arc behind the two foul '
+            f'lines, cut into bands by distance along the line and shaded by '
+            f'the model\'s share of foul balls in each, against the busiest '
+            f'band here. {" ".join(said)} No seat drawn here reaches a foul '
+            f'pole, so the band past the pole is not drawn. {sides}')
 
 
-def _legend() -> str:
+def _legend(p: dict) -> str:
     """The key to the drawing, and nothing else.
 
-    The four bands are what a reader needs in order to read the picture at
-    all, so they sit directly under it, darkest first, in the words the table
-    uses. Everything the drawing has to admit to beyond that — that it is one
-    generic bowl, why the two foul lines are shaded alike, where the band
-    boundaries fall — is prose about the drawing rather than the drawing
-    itself, and it lives on the site's one explanatory page
-    (`site_build.about_page`) instead of under every one of the 31 drawings.
+    Only the shades this drawing uses, darkest first. With three bands on the
+    drawing a four-swatch key would always carry one shade that appears
+    nowhere on it. Everything else the drawing has to admit to — that it is
+    one generic bowl, where the cuts fall, why the two foul lines are shaded
+    alike — is prose about the drawing, and it lives on the site's one
+    explanatory page (`site_build.about_page`).
     """
-    swatches = ''.join(f'<span><i class="z{i}"></i>{BAND_WORDS[i]}</span>'
-                       for i in reversed(range(len(BAND_WORDS))))
-    return (f'<p class="leg"><b>Foul balls, against the busiest area here</b>'
-            f'{swatches}</p>')
+    used = {b['shade'] for b in p['bands'] if b['drawn']}
+    swatches = ''.join(f'<span><i class="z{i}"></i>{SHADE_WORDS[i]}</span>'
+                       for i in sorted(used, reverse=True))
+    return (f'<p class="leg"><b>Share of foul balls, against the busiest band '
+            f'here</b>{swatches}</p>')
 
 
 def park_svg(p: dict, mini: bool = False) -> str:
     """The drawing itself, as one inline `<svg>`.
 
     `p` is what `site_build.build_park` produced, and the shading comes off
-    `p['zones']` — the same bands, row for row, that the table under the
+    `p['bands']` — the same shares, band for band, that the table under the
     drawing prints. That is the invariant worth keeping: a drawing that
     disagreed with the table beneath it would be worse than no drawing.
+
+    The seating outline is drawn once, as a mask, and each band is a shape
+    cut across it; the white rule between two bands is the cut. A mask and not
+    a clip path: the outline is many sectors edge to edge, and a browser
+    clipping to them leaves a hairline of background along every edge where
+    two meet, which drew the decks back in as seams. A mask is painted like
+    any other fill, and its outline carries a thin white stroke, which closes
+    the hairlines the whole-foot coordinates leave where two sectors of
+    different depth share an edge. Its id carries the park's slug, because the
+    home page puts all 31 drawings in one document and an id is unique to a
+    document, not to an `<svg>`.
 
     `mini` is the home-page tile: the same paths in the same feet, with no
     text, and in the whole fleet's viewBox so that the 31 of them together are
@@ -571,27 +651,32 @@ def park_svg(p: dict, mini: bool = False) -> str:
     Nothing in the drawing moves; the window does.
     """
     stadium = p['stadium']
-    rows = _rows(p)
     f = frame()
     ox, oy = f['ox'], f['oy']
+    near, far = p['dugout']
 
-    # Subpaths, gathered per band rather than per zone. Every wedge in a band
-    # is one `<path>`, which is both smaller and truer: the band is the only
-    # thing the fill means, and one element per zone would invite a future
-    # edit to hang a zone's identity off it.
-    steps: dict[int, list[str]] = {}
-    outer = 0.0
+    drawn = {b['key'] for b in p['bands'] if b['drawn']}
+    if 'Z67' in drawn:
+        # The last cut is drawn at neither pole, because the two poles are
+        # not always the same distance out and the drawing is a mirror. No
+        # park needs it; this says so if one ever does.
+        raise SystemExit(f'{p["name"]}: a drawn seat reaches a foul pole')
+    cuts = {'Z1': (None, near), 'Z23': (near, far), 'Z45': (far, None)}
+
+    reach, outer = 0.0, 0.0
     for a0, a1, bands in wedges(stadium):
-        for sid, r0, r1 in bands:
-            row = _row_for(sid, rows)
-            if row is None:
-                continue
-            steps.setdefault(row['band'], []).append(_sector(a0, a1, r0, r1))
+        for _, r0, r1 in bands:
+            reach = max(reach, r1)
             if a0 <= 0.0:
                 outer = max(outer, r1)
+    reach += 15.0
 
-    paths = [f'<path class="z{i}" d="{"".join(subs)}"/>'
-             for i, subs in sorted(steps.items())]
+    uid = f'{p["slug"]}-seats'
+    shapes = ''.join(
+        f'<path class="z{b["shade"]}" d="{band_path(*cuts[b["key"]], reach)}"/>'
+        for b in p['bands'] if b['drawn'])
+    paths = [f'<mask id="{uid}"><path d="{footprint(stadium)}"/></mask>'
+             f'<g mask="url(#{uid})">{shapes}</g>']
 
     # The foul lines run out along the outer angular edge of the bowl, which is
     # where they are: the stands on a side begin at the line. Drawn a little
@@ -652,7 +737,7 @@ def park_diagram(p: dict) -> str:
     a seating chart. Everything else the drawing has to explain is on the
     site's explanatory page, one link away, rather than under all 31 of them.
     """
-    return (f'<figure class="dia">{park_svg(p)}{_legend()}'
+    return (f'<figure class="dia">{park_svg(p)}{_legend(p)}'
             f'<figcaption class="dcap">Schematic, not to scale and not a '
             f'seating chart</figcaption></figure>')
 
@@ -692,6 +777,7 @@ CSS = r"""
 .dia{margin:0}
 .dia svg{display:block;width:100%;height:auto;margin:0 auto}
 .dia path{stroke:#fff;stroke-width:1.1;stroke-linejoin:round}
+.dia mask path{fill:#fff;stroke:#fff;stroke-width:1.6}
 .z0{fill:#e1ecee;background:#e1ecee}
 .z1{fill:#9fcbd1;background:#9fcbd1}
 .z2{fill:#4f9aa4;background:#4f9aa4}

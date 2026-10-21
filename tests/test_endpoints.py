@@ -181,7 +181,8 @@ def test_no_public_page_recommends_a_seat(client, url):
     The site describes where the model puts fouls and what the clubs publish
     about netting, and leaves the reader to decide what to do about it. It
     cannot recommend a seat without claiming the figures are good enough to
-    pick one, and nothing here has ever been checked against a foul ball.
+    pick one, and the one test against real fouls was four broad bands,
+    never a seat.
     """
     text = re.sub(r'\s+', ' ', visible(client.get(url).data))
     for phrase in ('best section', 'sit on the', 'recommend', 'where to sit',
