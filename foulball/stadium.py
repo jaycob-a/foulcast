@@ -311,6 +311,17 @@ def find_landing_section(
     horiz_dists: np.ndarray,
     heights: np.ndarray,
 ) -> SeatSection | None:
+    """The section a foul ball comes down in, or None. See
+    `find_landing_contact`, which also says *where along the flight* it did."""
+    return find_landing_contact(sections, angle, horiz_dists, heights)[0]
+
+
+def find_landing_contact(
+    sections: list[SeatSection],
+    angle: float,
+    horiz_dists: np.ndarray,
+    heights: np.ndarray,
+) -> tuple[SeatSection | None, int | None]:
     """Assign a foul ball to the section its trajectory actually comes down in.
 
     Walks the trajectory from its apex to find the contact point: the first
@@ -320,11 +331,15 @@ def find_landing_section(
     exposed deck surface, so a ball that dives under a deck facade belongs to
     the section in front of it, not the deck overhead.
 
-    Returns None if the ball never reaches any stands surface.
+    Returns `(section, index)`, where `index` is the row of `horiz_dists` /
+    `heights` at which the ball met the deck — the moment it reached the seat,
+    which is earlier and higher than where the same trajectory reaches the
+    ground, and the moment whose speed decides whether a fan could catch it.
+    Returns `(None, None)` if the ball never reaches any stands surface.
     """
     bands = exposed_bands(sections, angle)
     if not bands:
-        return None
+        return None, None
 
     apex = int(np.argmax(heights))
     d = horiz_dists[apex:]
@@ -341,7 +356,7 @@ def find_landing_section(
             if contact_idx is None or first < contact_idx:
                 contact_idx = first
     if contact_idx is None:
-        return None
+        return None, None
 
     cd = float(d[contact_idx])
     cz = float(z[contact_idx])
@@ -360,9 +375,9 @@ def find_landing_section(
     # A ball whose nearest surface is a deck entirely under a blocking cover
     # came down on the cover, not in the seats. One that dived under that
     # deck's front edge resolves to the seats in front and is unaffected.
-    if best is not None and best.fully_covered:
-        return None
-    return best
+    if best is None or best.fully_covered:
+        return None, None
+    return best, apex + contact_idx
 
 
 # ============================================================

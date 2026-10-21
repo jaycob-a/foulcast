@@ -39,6 +39,11 @@ class TrajectoryResult:
     # oblique_contact_speed_factor(). Downstream code should report this rather
     # than the raw sample.
     exit_velocity: float = 0.0
+    # Speed (mph) at every row of `positions`. `landing_speed` is the last
+    # entry, the speed at ground level; a ball that reaches a seat does so
+    # earlier, higher, and at a different speed, and `matchup_engine` reads
+    # that speed from here at the row where the trajectory meets the deck.
+    speeds: np.ndarray | None = None
 
 
 # Physical constants
@@ -156,10 +161,12 @@ def simulate_trajectory(
     # Drag factor: F_drag = 0.5 * Cd * rho * A * v^2
     drag_factor = 0.5 * DRAG_COEFFICIENT * air_density * BALL_CROSS_SECTION / BALL_MASS
 
-    # Magnus (spin) factor: F_magnus = 0.5 * Cl * rho * A * v^2
+    # Magnus (spin) factor: F_magnus = 0.5 * Cl * rho * A * v^2, with
+    # Cl = MAGNUS_COEFFICIENT * (r * omega / v), so the acceleration is
+    # magnus_factor * r * (omega_vec x v) — proportional to spin and speed,
+    # and perpendicular to both the spin axis and the velocity.
     spin_rate, backspin_frac, sidespin_frac = _estimate_spin(exit_velocity_mph, launch_angle_deg)
     omega = spin_rate * 2 * np.pi / 60  # rpm to rad/s
-    spin_factor = BALL_RADIUS * omega  # characteristic spin speed (ft/s)
     magnus_factor = 0.5 * MAGNUS_COEFFICIENT * air_density * BALL_CROSS_SECTION / BALL_MASS
 
     # Convert inputs
@@ -173,9 +180,31 @@ def simulate_trajectory(
     vy = horizontal_speed * np.sin(sa)  # into stands
     vz = ev * np.sin(la)               # vertical
 
+    # Spin axis, fixed in space for the whole flight (a spinning ball is a
+    # gyroscope; the axis is set at contact and does not follow the velocity
+    # round the arc). Backspin is about a horizontal axis perpendicular to the
+    # launch direction, oriented so that omega x v points up; sidespin is about
+    # the vertical, oriented so that a ball launched along +x is pushed to +y,
+    # into the stands. The Magnus force is omega_vec x v, which is
+    # perpendicular to the velocity at every step: pure backspin lifts a
+    # rising ball up-and-back and a falling ball up-and-forward, rather than
+    # straight up throughout, and sidespin turns the ball sideways in
+    # proportion to its horizontal speed rather than pushing it toward the
+    # stands at a fixed rate.
+    h_norm = np.hypot(vx, vy)
+    if h_norm > 1e-9:
+        back_axis = (vy / h_norm, -vx / h_norm, 0.0)       # h_hat x z_hat
+    else:
+        back_axis = (0.0, -1.0, 0.0)                        # straight up: any horizontal axis
+    wx = omega * backspin_frac * back_axis[0]
+    wy = omega * backspin_frac * back_axis[1]
+    wz = omega * sidespin_frac
+    magnus_r = magnus_factor * BALL_RADIUS
+
     # State
     x, y, z = 0.0, 0.0, start_height_ft
     positions = [(x, y, z)]
+    speeds = [ev]
     t = 0.0
 
     while t < max_time:
@@ -189,13 +218,11 @@ def simulate_trajectory(
         ay = -drag * vy
         az = -drag * vz - GRAVITY
 
-        # Magnus acceleration (perpendicular to velocity)
-        # F_magnus = 0.5 * Cl * rho * A * v^2, where Cl ~ spin_factor/v
-        # So a_magnus = magnus_factor * spin_factor * speed
+        # Magnus acceleration: magnus_r * (omega_vec x v), perpendicular to v.
         if speed > 1:
-            mag_strength = magnus_factor * spin_factor * speed
-            az += mag_strength * backspin_frac
-            ay += mag_strength * sidespin_frac
+            ax += magnus_r * (wy * vz - wz * vy)
+            ay += magnus_r * (wz * vx - wx * vz)
+            az += magnus_r * (wx * vy - wy * vx)
 
         # Update velocity
         vx += ax * dt
@@ -209,6 +236,7 @@ def simulate_trajectory(
         t += dt
 
         positions.append((x, y, z))
+        speeds.append(np.sqrt(vx**2 + vy**2 + vz**2))
 
         # Stop if ball hits ground or a reasonable stand height
         if z < 0:
@@ -227,6 +255,7 @@ def simulate_trajectory(
             vx = vx_prev + frac * (vx - vx_prev)
             vy = vy_prev + frac * (vy - vy_prev)
             vz = vz_prev + frac * (vz - vz_prev)
+            speeds[-1] = np.sqrt(vx**2 + vy**2 + vz**2)
             break
 
     pos_array = np.array(positions)
@@ -242,6 +271,7 @@ def simulate_trajectory(
         flight_time=t,
         landing_speed=landing_speed_fps * 3600 / 5280,  # back to mph
         exit_velocity=exit_velocity_mph,
+        speeds=np.array(speeds) * 3600 / 5280,
     )
 
 

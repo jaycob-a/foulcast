@@ -9,7 +9,7 @@ import numpy as np
 from dataclasses import dataclass, field
 from .batter_profiles import BatterFoulProfile
 from .trajectory import simulate_foul_ball, TrajectoryResult
-from .stadium import Stadium, SeatSection, find_landing_section
+from .stadium import Stadium, SeatSection, find_landing_contact
 from .netting import ZoneNetting
 from .log import get_logger, _warn_once
 from .validators import validate_trajectory, validate_sample, validate_monte_carlo_completeness, validate_side_consistency
@@ -39,6 +39,12 @@ class FoulBallEvent:
     # `is_catchable` so the two reasons a ball is uncatchable — too hot or
     # too high, versus screened — stay distinguishable downstream.
     hit_netting: bool = False
+    # Speed (mph) at the moment the ball reached the seats — the row of the
+    # trajectory where it met the deck surface — or at ground level when it
+    # reached no seat. `trajectory.landing_speed` is always the ground figure,
+    # which the old catchability test read even for a ball that stopped in a
+    # deck forty feet up.
+    arrival_speed: float = 0.0
 
 
 @dataclass
@@ -284,8 +290,20 @@ def predict_game_fouls(
             # actually comes down on. Search only matching-side + HOME sections.
             horiz_dists = np.sqrt(traj.positions[:, 0]**2 + traj.positions[:, 1]**2)
             candidates = sections_by_side.get(side, []) + sections_by_side.get('HOME', [])
-            section = find_landing_section(candidates, angle, horiz_dists,
-                                           traj.positions[:, 2])
+            section, contact_idx = find_landing_contact(
+                candidates, angle, horiz_dists, traj.positions[:, 2])
+
+            # The ball's state where it met the deck. The trajectory runs on
+            # to ground level, so `landing_speed` is the speed after a further
+            # fall the ball never made; a fly ball arrives at an upper deck
+            # slower than it would reach the ground, and a line drive into
+            # the field boxes faster, because drag has had less of it.
+            if contact_idx is not None:
+                arrival_speed = float(traj.speeds[contact_idx])
+                arrival_height = float(traj.positions[contact_idx, 2])
+            else:
+                arrival_speed = traj.landing_speed
+                arrival_height = traj.landing_z
 
             # Did it come down behind netting? Published fact about the
             # section, not a property of this trajectory: the model has no net
@@ -295,12 +313,13 @@ def predict_game_fouls(
                 section is not None and stadium.is_netted(section.section_id)
             )
 
-            # Is it catchable? (reasonable speed, in the stands, and not into
-            # a net — no one catches a souvenir through the screen)
+            # Is it catchable? (reasonable speed where it reaches the seat, in
+            # the stands, and not into a net — no one catches a souvenir
+            # through the screen)
             is_catchable = (
                 section is not None and
                 not hit_netting and
-                traj.landing_speed < 95 and  # not a missile
+                arrival_speed < 95 and  # not a missile
                 distance > 15 and
                 distance < 350
             )
@@ -317,11 +336,12 @@ def predict_game_fouls(
                 landing_side=side,
                 section=section,
                 landing_distance=distance,
-                landing_height=traj.landing_z,
+                landing_height=arrival_height,
                 is_catchable=is_catchable,
                 weight=batter_weight,
                 batter_id=batter.player_id,
                 hit_netting=hit_netting,
+                arrival_speed=arrival_speed,
             )
             all_events.append(event)
 

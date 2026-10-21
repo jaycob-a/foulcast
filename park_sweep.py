@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
 
-from foulball.batter_profiles import YANKEES_2024_PROFILES, RED_SOX_2024_PROFILES
+from foulball.league_lineup import league_lineups
 from foulball.matchup_engine import predict_game_fouls
 from foulball.stadium import STADIUMS, exposed_bands
 
@@ -52,8 +52,9 @@ OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cache', 'pa
 
 
 def standard_lineups():
-    """The two lineups that make up one standard game, in a fixed order."""
-    return [list(RED_SOX_2024_PROFILES.values()), list(YANKEES_2024_PROFILES.values())]
+    """The two lineups that make up one standard game, in a fixed order: the
+    same league-representative eighteen the site simulates (Step 27)."""
+    return league_lineups()
 
 
 def handed_lineups(side: str):

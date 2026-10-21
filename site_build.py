@@ -149,7 +149,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
 
-from foulball.batter_profiles import YANKEES_2024_PROFILES, RED_SOX_2024_PROFILES
+from foulball.league_lineup import league_lineups
 from foulball.matchup_engine import predict_game_fouls
 from foulball.stadium import STADIUMS, PARK_PARAMS
 from foulball.netting import PARK_NETTING, PDL_RULE
@@ -236,9 +236,16 @@ def model_fingerprint() -> str:
 
 def standard_lineups():
     """The two lineups that make one game. Held identical across all parks so
-    the only thing varying between pages is the park."""
-    return [list(RED_SOX_2024_PROFILES.values()),
-            list(YANKEES_2024_PROFILES.values())]
+    the only thing varying between pages is the park.
+
+    Eighteen real batters chosen to stand for the league — nine from each side
+    of the plate, spanning the league's range of fouls per plate appearance,
+    with computed 2025-26 exit velocity, launch angle and pull share. They
+    replaced the hand-typed 2024 Yankees and Red Sox in Step 27; the rule that
+    picked them is `build_league_lineup.py`, and the fingerprint below covers
+    their values, so a regenerated lineup re-simulates every park.
+    """
+    return league_lineups()
 
 
 def run_park(park_key: str, sims: int, fingerprint: str | None = None) -> dict:
@@ -1059,7 +1066,8 @@ the two lines, which keeps it comparable with the behind-plate rows beside it.
 The model builds both lines identically, so the pair would differ only by
 simulation noise in any case.</p>''')
 
-    inner = f'''<p>One full game, both lineups, the same 18 batters at every park on this site,
+    inner = f'''<p>One full game, both lineups, the same 18 batters at every park on this site
+&mdash; real hitters chosen to stand for the league, not any one club &mdash;
 so the park is the only thing that changes. {p['sims']} simulations per batter,
 fixed seed, run on {e(p['run_on'])}. The table above puts each area in one of
 four bands against the busiest area here; the figures it is banded from are
@@ -1440,6 +1448,29 @@ def run_dates(parks: list[dict]) -> str:
     return days[0] if len(days) == 1 else f'between {days[0]} and {days[-1]}'
 
 
+def busiest_sentence(parks: list[dict]) -> str:
+    """Where the busiest area sits, counted from the run rather than asserted.
+
+    Until Step 27 the About page said the field-level seats behind the plate
+    came out busiest at all 31 parks, as a fixed sentence. With the computed
+    lineup the deck above them overtakes at a third of the parks, so the
+    sentence is now computed from the same rows the park tables rank, and
+    says so if a park's busiest area is ever not behind the plate at all.
+    """
+    tops = [p['zones'][0]['id'] for p in parks]
+    home = [t for t in tops if t.startswith('HOME-')]
+    if len(home) != len(tops):
+        return (f'the seats behind home plate come out busiest at {len(home)} of '
+                f'the {len(tops)} parks here.')
+    field = sum(1 for t in tops if t == 'HOME-F')
+    if field == len(tops):
+        return (f'the seats at field level behind home plate come out busiest '
+                f'at all {len(tops)} parks.')
+    return (f'the seats behind home plate come out busiest at all {len(tops)} '
+            f'parks &mdash; at field level at {field} of them, and on the deck '
+            f'above at the other {len(tops) - field}.')
+
+
 def about_page(parks: list[dict], base_url: str) -> str:
     """Every explanation the site has, once, in full.
 
@@ -1551,11 +1582,10 @@ public source gives the angle of a seating area off the foul line or the height
 of a deck in feet, for any ballpark, so every park here shares one bowl shape
 and every park is modelled as an exact left-right mirror.</p>
 <p>One consequence is visible from the grid of drawings and worth saying out
-loud: the seats at field level behind home plate come out busiest at all 31
-parks. That is partly a real effect &mdash; balls deflected back over the
-catcher have to land somewhere, and it is why there is a screen there &mdash;
-and partly an artefact of every park sharing one bowl shape. It is not a
-finding about any individual ballpark.</p>
+loud: {busiest_sentence(parks)} That is partly a real effect &mdash; balls
+deflected back over the catcher have to land somewhere, and it is why there
+is a screen there &mdash; and partly an artefact of every park sharing one
+bowl shape. It is not a finding about any individual ballpark.</p>
 
 <h2 id="netting-words">What a club's netting statement means</h2>
 <p>{NETTING_CLUB_CAVEAT}</p>
@@ -1655,7 +1685,13 @@ it could.</p>
 
 <h2 id="method">How the figures were produced</h2>
 <p>One full game, both lineups, the same 18 batters at every park on this site,
-so the park is the only thing that changes. {sims} simulations per batter,
+so the park is the only thing that changes. The eighteen are real hitters chosen
+to stand for the league rather than for any club: nine from each side of the
+plate, one from each ninth of the league&rsquo;s range of fouls per plate
+appearance, each the hitter in that ninth whose exit speed, launch angle and
+pull tendency on Statcast for 2025&ndash;26 sit nearest the league average. Those
+figures, the hitter&rsquo;s own, are what the model samples from. {sims}
+simulations per batter,
 fixed seed, run on {e(run_dates(parks))}. The table on each park page gives
 each area's band, busiest first; the figures behind the bands, in foul balls a
 game, are under Details &mdash; a model estimate, not a count of anything

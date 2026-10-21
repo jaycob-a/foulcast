@@ -65,6 +65,36 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
 
 
 # ===== Baselines =====
+# ===== Relocked 2026-10-20 (Step 27) after the Magnus direction and the seat-speed fixes =====
+# Two physics changes, both in the flight and arrival of the ball, neither in
+# the spray model or the geometry:
+#
+#   1. The Magnus acceleration is now omega x v — perpendicular to the velocity
+#      at every step, about a spin axis fixed at contact — where it had been a
+#      fixed vertical lift plus a fixed push toward the stands regardless of
+#      which way the ball was moving (`trajectory.simulate_trajectory`). Lift
+#      with a horizontal component is a little less lift: every ball lands a
+#      touch shorter, by 0.9 to 1.0 ft on the mean here and never more than
+#      8 ft on any one ball, and the match to Statcast's own distance figure
+#      over 6,000 tracked 2025-26 fouls improves slightly (bias 16.7 -> 15.1 ft,
+#      MAE 20.1 -> 18.8 ft, r 0.9689 -> 0.9691).
+#   2. Catchability reads the ball's speed where it meets the deck surface, not
+#      where the same trajectory would have reached the ground
+#      (`matchup_engine`, via `stadium.find_landing_contact`). A fly ball
+#      arrives at an upper deck slower than the old figure said; a line drive
+#      into the field boxes faster, by 6 to 12 mph either way.
+#
+# What moved, and why it is the expected size: `total` is down 1 to 2 at every
+# game (a couple of balls that used to clear 5 ft now do not), `no_section` is
+# down 6 to 9 (shorter flights, a few more balls stop in a deck rather than
+# carrying past it), `n_1b`/`n_3b` move by one, and `top10` swaps neighbours
+# only — `1B-DUG` above `3B-LR` at Yankee Stadium, `3B-UB` above `1B-UB` at
+# Fenway against Bello — where the seat-speed test moved a few hard line drives
+# out of the catchable count. The leading section is unchanged at all five.
+# The old lock was not wrong about the model it locked; it locked a Magnus
+# force that pointed the wrong way, and this is the same five games with the
+# force pointing where physics puts it.
+#
 # ===== Relocked 2026-08-10 (Step 10) after the netting layer =====
 # Sections published as fully behind protective netting are excluded from the
 # souvenir ranking: a ball into a net is not a souvenir. They are held in
@@ -174,54 +204,54 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
 # sections moved from the bottom of the rankings to the top.
 _BASELINES = {
     'yanks_vs_cole_yankee': {
-        'total': 2504,
-        'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-DUG', '1B-LR', '3B-FB1', '1B-FB1', '1B-LB1', '3B-DUG', '3B-LB1'],
+        'total': 2502,
+        'top10': ['HOME-F', 'HOME-B', '1B-DUG', '3B-LR', '1B-LR', '3B-FB1', '1B-FB1', '1B-LB1', '3B-DUG', '3B-LB1'],
         'netted': [],
-        'mean_dist': 131.0,
-        'mean_angle': 73.3,
-        'n_1b': 1329,
-        'n_3b': 1175,
-        'no_section': 1025,
+        'mean_dist': 130.1,
+        'mean_angle': 72.7,
+        'n_1b': 1328,
+        'n_3b': 1174,
+        'no_section': 1019,
     },
     'sox_vs_bello_fenway': {
-        'total': 2476,
-        'top10': ['3B-LB1', '1B-LB1', 'HOME-B', '3B-DUG', 'HOME-U', '1B-UB', '3B-UB'],
+        'total': 2475,
+        'top10': ['3B-LB1', '1B-LB1', 'HOME-B', '3B-DUG', 'HOME-U', '3B-UB', '1B-UB'],
         'netted': ['1B-DUG', '1B-FB1', '3B-FB1', 'HOME-F'],
-        'mean_dist': 129.4,
-        'mean_angle': 71.0,
-        'n_1b': 1204,
+        'mean_dist': 128.5,
+        'mean_angle': 70.4,
+        'n_1b': 1203,
         'n_3b': 1272,
-        'no_section': 992,
+        'no_section': 983,
     },
     'yanks_vs_houck_fenway': {
-        'total': 2487,
+        'total': 2485,
         'top10': ['3B-LB1', '1B-LB1', 'HOME-B', '3B-DUG', 'HOME-U', '1B-UB', '3B-UB'],
         'netted': ['1B-DUG', '1B-FB1', '3B-FB1', 'HOME-F'],
-        'mean_dist': 134.2,
-        'mean_angle': 73.3,
-        'n_1b': 1279,
-        'n_3b': 1208,
-        'no_section': 1045,
+        'mean_dist': 133.3,
+        'mean_angle': 72.7,
+        'n_1b': 1278,
+        'n_3b': 1207,
+        'no_section': 1038,
     },
     'sox_vs_cortes_yankee': {
-        'total': 2502,
-        'top10': ['HOME-F', 'HOME-B', '3B-LR', '1B-FB1', '3B-DUG', '1B-DUG', '3B-FB1', '1B-LB1', '1B-LR', '3B-LB1'],
+        'total': 2500,
+        'top10': ['HOME-F', 'HOME-B', '1B-FB1', '3B-LR', '3B-DUG', '1B-DUG', '3B-FB1', '1B-LB1', '1B-LR', '3B-LB1'],
         'netted': [],
-        'mean_dist': 128.9,
-        'mean_angle': 72.2,
-        'n_1b': 1207,
-        'n_3b': 1295,
-        'no_section': 987,
+        'mean_dist': 128.0,
+        'mean_angle': 71.6,
+        'n_1b': 1206,
+        'n_3b': 1294,
+        'no_section': 975,
     },
     'yanks_vs_bello_dodger': {
-        'total': 2477,
+        'total': 2476,
         'top10': ['HOME-DC', 'HOME-B', '1B-DUG', '3B-DUG', '1B-LB1', '1B-UB', '3B-UB', '3B-LB1', 'HOME-U'],
         'netted': ['1B-FB1', '3B-FB1', 'HOME-F'],
-        'mean_dist': 137.4,
-        'mean_angle': 75.1,
+        'mean_dist': 136.4,
+        'mean_angle': 74.5,
         'n_1b': 1253,
-        'n_3b': 1224,
-        'no_section': 980,
+        'n_3b': 1223,
+        'no_section': 973,
     },
 }
 
