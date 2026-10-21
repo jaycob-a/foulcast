@@ -68,11 +68,20 @@ BEHIND_PLATE_ANGLE = 135.0
 # the edge of the bat, and swings late enough that the ball is deflected rather
 # than driven. Statcast cannot supply this number: its `foul_tip` event only
 # counts tips the catcher holds onto, while everything that flies back into the
-# screen is logged as a plain `foul` with no direction. So this is a calibration
-# constant, set from the requirement that a typical game puts 30-40 fouls in the
-# stands with the seats behind the plate among the busiest. It is the single
-# biggest unvalidated assumption in the model — see NOTES.md.
-BACK_FOUL_BASE_RATE = 0.28
+# screen is logged as a plain `foul` with no direction.
+#
+# 0.17 is fitted (Step 29, CALIBRATION.md) to FiveThirtyEight's 906 observed
+# fouls from 2019: the multinomial maximum-likelihood value, on a grid of 0.01,
+# for the four-band zone distribution of the 710 fouls at the eight parks the
+# model could be compared with. Fitted on all eight; the leave-one-park-out
+# fits ran 0.17-0.21, and the held-out predictions beat the previous value at
+# seven of the eight parks. Before Step 29 this was 0.28, a constant tuned so
+# that the seats behind the plate would come out busiest, with no source; the
+# data put 31% of fouls behind the plate against the 40% that 0.28 produced.
+# One day at each of eight parks is not much to fit on, and nothing is left to
+# test the fitted value against — see CALIBRATION.md for what it does and does
+# not establish.
+BACK_FOUL_BASE_RATE = 0.17
 
 
 def _estimate_spin(exit_velocity_mph: float, launch_angle_deg: float) -> tuple[float, float, float]:

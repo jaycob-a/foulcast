@@ -441,17 +441,24 @@ class TestOppositeConclusions:
 
     def test_netted_sections_keep_every_foul_they_drew(self, fenway_pred):
         """The safety half. Excluding a section from a ranking must not
-        delete it from the model — the fouls still arrive, and behind-plate
-        remains the busiest part of the park."""
+        delete it from the model — the fouls still arrive, and the netted
+        area behind the plate stays among the busiest parts of the park."""
         by_id = {p.section.section_id: p for p in fenway_pred.section_predictions}
         home = by_id['HOME-F']
         assert home.netting_status == 'netted'
         assert home.expected_fouls > 0
         assert home.danger_rating > 0
-        # And it is still the busiest section in the park by expected fouls.
-        busiest = max(fenway_pred.section_predictions,
-                      key=lambda p: p.expected_fouls)
-        assert busiest.section.section_id == 'HOME-F'
+        # And it still ranks with the busiest sections by expected fouls. Until
+        # Step 29 this asserted HOME-F was *the* busiest, which it was only
+        # because the back-foul rate was tuned to make it so (0.28); fitted to
+        # FiveThirtyEight's observed fouls the rate is 0.17, the Loge boxes
+        # lead this half-game and HOME-F is fourth, a few tenths of a foul
+        # behind (CALIBRATION.md). What this test guards is that netting
+        # does not delete the fouls, not which area wins.
+        ranked = sorted(fenway_pred.section_predictions,
+                        key=lambda p: -p.expected_fouls)
+        top5 = [p.section.section_id for p in ranked[:5]]
+        assert 'HOME-F' in top5, top5
 
     def test_partially_netted_sections_stay_in_the_ranking(self, fenway_pred):
         """Part of the zone is open, so the fouls there are still catchable.

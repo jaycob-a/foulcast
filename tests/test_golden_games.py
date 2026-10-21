@@ -65,6 +65,42 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
 
 
 # ===== Baselines =====
+# ===== Relocked 2026-10-21 (Step 29) after the back-foul rate was fitted to real fouls =====
+# One constant moved: `trajectory.BACK_FOUL_BASE_RATE`, 0.28 -> 0.17, fitted to
+# FiveThirtyEight's 906 observed fouls (CALIBRATION_PLAN.md, CALIBRATION.md).
+# Nothing in the physics, the forward spray model, the geometry or the netting
+# changed. The engine draws backward-or-forward for every ball by comparing one
+# uniform with the ball's probability, so the random stream is identical to the
+# Step 27 lock and only the balls whose uniform fell between the old and new
+# probability changed branch: about a third of the balls that used to go back
+# over the catcher now go forward into foul ground.
+#
+# What moved, and why it is the expected size:
+#   - `mean_dist` is up 8 to 13 ft at every game (130.1 -> 143.0, 128.5 -> 136.3,
+#     133.3 -> 144.2, 128.0 -> 137.5, 136.4 -> 144.9). A backward foul carries the
+#     glancing-contact speed penalty and lands near the plate; the same ball hit
+#     forward keeps its sampled exit velocity and carries. Fewer short balls,
+#     longer mean.
+#   - `total` moves by -24 to +57: it counts balls that travel at least 5 ft,
+#     and a forward ball with a low launch angle and low exit velocity can fall
+#     inside 5 ft where its backward twin did not, and vice versa.
+#   - `no_section` is up 30 to 87 at four games and down 15 at one. The backstop
+#     seats catch nearly every ball sent at them; the same balls sent forward
+#     land more often in the gap in front of the first row or deep down the
+#     lines where the template has no seats (LIMITATIONS.md 2.6).
+#   - `n_1b`/`n_3b` move by 20 to 50 each way: a backward foul had its pull
+#     tendency compressed toward 50/50, and the same ball hit forward follows
+#     the batter's pull side.
+#   - `mean_angle` (mean |landing_y|) moves by about a degree either way.
+#   - `top10`: the leader is unchanged at all five games (HOME-F at Yankee
+#     Stadium, 3B-LB1 / 1B-LB1 at Fenway, HOME-DC at Dodger Stadium). HOME-B
+#     drops from second to third or fourth everywhere it was second, and the
+#     dugout boxes (3B-DUG, 1B-DUG) rise; that is the behind-plate areas losing
+#     about a quarter of their fouls to the field boxes down the lines, which is
+#     the point of the change. `netted` is identical at all five.
+# The old lock was not wrong about the model it locked; it locked a back-foul
+# rate that put 40% of fouls behind the plate where 31% are observed.
+#
 # ===== Relocked 2026-10-20 (Step 27) after the Magnus direction and the seat-speed fixes =====
 # Two physics changes, both in the flight and arrival of the ball, neither in
 # the spray model or the geometry:
@@ -204,54 +240,54 @@ def _run_golden(lineup, pitcher_name, pitch_mix, stadium_key, sims=300):
 # sections moved from the bottom of the rankings to the top.
 _BASELINES = {
     'yanks_vs_cole_yankee': {
-        'total': 2502,
-        'top10': ['HOME-F', 'HOME-B', '1B-DUG', '3B-LR', '1B-LR', '3B-FB1', '1B-FB1', '1B-LB1', '3B-DUG', '3B-LB1'],
+        'total': 2516,
+        'top10': ['HOME-F', '3B-DUG', 'HOME-B', '1B-LR', '3B-LB1', '1B-DUG', '1B-FB1', '1B-LB1', '3B-LR', '3B-FB1'],
         'netted': [],
-        'mean_dist': 130.1,
-        'mean_angle': 72.7,
-        'n_1b': 1328,
-        'n_3b': 1174,
-        'no_section': 1019,
+        'mean_dist': 143.0,
+        'mean_angle': 73.7,
+        'n_1b': 1305,
+        'n_3b': 1211,
+        'no_section': 1065,
     },
     'sox_vs_bello_fenway': {
-        'total': 2475,
-        'top10': ['3B-LB1', '1B-LB1', 'HOME-B', '3B-DUG', 'HOME-U', '3B-UB', '1B-UB'],
+        'total': 2532,
+        'top10': ['3B-LB1', '1B-LB1', '3B-DUG', 'HOME-B', '1B-UB', '3B-UB', 'HOME-U'],
         'netted': ['1B-DUG', '1B-FB1', '3B-FB1', 'HOME-F'],
-        'mean_dist': 128.5,
-        'mean_angle': 70.4,
-        'n_1b': 1203,
-        'n_3b': 1272,
-        'no_section': 983,
+        'mean_dist': 136.3,
+        'mean_angle': 69.6,
+        'n_1b': 1250,
+        'n_3b': 1282,
+        'no_section': 1070,
     },
     'yanks_vs_houck_fenway': {
-        'total': 2485,
-        'top10': ['3B-LB1', '1B-LB1', 'HOME-B', '3B-DUG', 'HOME-U', '1B-UB', '3B-UB'],
+        'total': 2497,
+        'top10': ['1B-LB1', '3B-LB1', '3B-DUG', 'HOME-B', '3B-UB', '1B-UB', 'HOME-U'],
         'netted': ['1B-DUG', '1B-FB1', '3B-FB1', 'HOME-F'],
-        'mean_dist': 133.3,
-        'mean_angle': 72.7,
-        'n_1b': 1278,
-        'n_3b': 1207,
-        'no_section': 1038,
+        'mean_dist': 144.2,
+        'mean_angle': 71.9,
+        'n_1b': 1303,
+        'n_3b': 1194,
+        'no_section': 1023,
     },
     'sox_vs_cortes_yankee': {
-        'total': 2500,
-        'top10': ['HOME-F', 'HOME-B', '1B-FB1', '3B-LR', '3B-DUG', '1B-DUG', '3B-FB1', '1B-LB1', '1B-LR', '3B-LB1'],
+        'total': 2476,
+        'top10': ['HOME-F', '3B-DUG', '1B-LB1', 'HOME-B', '3B-LR', '3B-LB1', '1B-DUG', '1B-LR', '1B-FB1', '3B-FB1'],
         'netted': [],
-        'mean_dist': 128.0,
-        'mean_angle': 71.6,
-        'n_1b': 1206,
-        'n_3b': 1294,
-        'no_section': 975,
+        'mean_dist': 137.5,
+        'mean_angle': 70.1,
+        'n_1b': 1202,
+        'n_3b': 1274,
+        'no_section': 1005,
     },
     'yanks_vs_bello_dodger': {
-        'total': 2476,
-        'top10': ['HOME-DC', 'HOME-B', '1B-DUG', '3B-DUG', '1B-LB1', '1B-UB', '3B-UB', '3B-LB1', 'HOME-U'],
+        'total': 2524,
+        'top10': ['HOME-DC', 'HOME-B', '3B-DUG', '1B-DUG', '1B-UB', '3B-LB1', '1B-LB1', '3B-UB', 'HOME-U'],
         'netted': ['1B-FB1', '3B-FB1', 'HOME-F'],
-        'mean_dist': 136.4,
-        'mean_angle': 74.5,
-        'n_1b': 1253,
-        'n_3b': 1223,
-        'no_section': 973,
+        'mean_dist': 144.9,
+        'mean_angle': 73.3,
+        'n_1b': 1309,
+        'n_3b': 1215,
+        'no_section': 1009,
     },
 }
 

@@ -2,9 +2,71 @@
 
 *Step 28, 2026-10-21, branch `step-28`. The method was fixed in
 `VALIDATION_PLAN.md` and committed before the model was run; nothing in the
-method was changed afterwards, and nothing in the model was changed at all.
-The run is reproducible with `python validate_538.py`, and its output is in
-`.cache/validation_538.json`.*
+method was changed afterwards, and nothing in the model was changed in Step
+28. The run's output is in `.cache/validation_538.json`; it is the record of
+the model as it stood at `BACK_FOUL_BASE_RATE = 0.28`, and running
+`python validate_538.py` today gives the fitted model's in-sample figures
+instead (see the Step 29 note directly below).*
+
+## Step 29 note: the back-foul rate is now calibrated to this data
+
+*Added 2026-10-21 on branch `step-29`. Everything below this section
+describes the model as it was tested in Step 28, before the change. It is
+left as written because it is the record of the one test this model has had
+that was not also a fit.*
+
+**What changed.** Step 29 (`CALIBRATION_PLAN.md`, `CALIBRATION.md`) fitted
+`BACK_FOUL_BASE_RATE`, the share of fouls that leave the bat travelling
+backward, to the 710 fouls at the eight compared parks in this data. It was
+0.28, a tuned constant with no source. It is now **0.17**, the
+maximum-likelihood value for the four-band distribution of those 710 fouls.
+Nothing else in the model was changed.
+
+**What that means for this document.** The rate is now calibrated to the
+same data this document tests the model against. The figures the current
+model produces at these eight parks are therefore in-sample: they measure
+how well one parameter can be bent to this sample, not how well the model
+predicts, and they must not be quoted as validation. For the record, they
+are: pooled shares 29.2 / 24.7 / 45.0 / 1.0 against 31.0 / 18.6 / 49.2 / 1.3
+observed, distance 0.061, where the old model's was 0.113.
+
+**The honest measure of fit is the leave-one-park-out result.** With the
+rate fitted on seven parks and the eighth predicted blind, repeated for each
+park:
+
+| Held-out model, full set, pooled over eight parks | Distance | Log-likelihood | Parks where the held-out model is closer |
+|---|---|---|---|
+| Held-out model (fitted on the other seven each time) | 0.056 | −1.091 | |
+| The old model (0.28), i.e. the tables below | 0.113 | −1.108 | 7 of 8 |
+| Even split (B1) | 0.301 | −1.386 | 8 of 8 |
+| League average of the other seven parks (B3) | 0.000 | −1.080 | 2 of 8 |
+
+The held-out model beats the old one by the pre-registered rule (pooled
+distance lower, pooled log-likelihood higher, closer at seven of eight parks)
+and, like the old one, beats the even split everywhere and loses to the
+league average, so **the verdict word is unchanged: mixed, better than
+guessing and no better than a constant.** The model still does not tell the
+parks apart (its behind-plate share is 29% at every park; the observed runs
+24% to 51%). On the camera-confirmed set the fitted model is worse than the
+old one at all eight parks (distance 0.332 against 0.241), as the plan said a
+rate fitted to the full set would be against a subset that is 62% behind the
+plate; the reasons that set was fixed as the secondary one are in
+`VALIDATION_PLAN.md` and were written before any result.
+
+**What the fit did not fix.** The model's forward fouls still come down too
+near the plate: the dugout strip is 6 points too full and the stretch from
+the dugout to the pole 4 points too empty, at the new rate as at the old,
+and the back-foul rate cannot move that ratio. `CALIBRATION.md` names the
+parameters it points at (the forward spray angle, forward carry, or the
+dugout estimate itself) and changes none of them.
+
+**What this licenses.** No more than before: no accuracy percentage, no claim
+about a park or a seating area, and now also no claim that the behind-plate
+figures are validated, because they are fitted. The site's copy, which says
+the model has never been checked against a real foul and that the back-foul
+rate is a guess, is wrong on both counts after Steps 28 and 29 and should
+change; the suggested wording at the end of this document is updated for
+that.
 
 ## The short version
 
@@ -169,7 +231,9 @@ records that the share of balls sent straight back is a tuned constant
 would come out busiest; this is the first external evidence that it is set
 too high, or that the forward fouls do not carry far enough down the lines,
 or both. Which of those it is cannot be told from four bands. Nothing was
-changed in response: this is a test.
+changed in response in Step 28: this was a test. (Step 29 then fitted the rate
+to this data: it is now 0.17, and the forward fouls are still short. See the
+note at the top.)
 
 **Absent.** Park-to-park variation. The observed behind-plate share runs
 from 24% (T-Mobile, Dodger, Citizens Bank) to 51% (Miller Park); the model's
@@ -284,6 +348,24 @@ place, in the same position and at the same size:
 > each park better than the model does. Nothing finer than four bands has
 > been checked, so no seating-area figure on this page has been.
 
+*(That was Step 28's wording, for the model at 0.28. After Step 29 the
+honest version is:)*
+
+> **Checked once, coarsely, then fitted to the check.** Against the only
+> public record of where real fouls land (FiveThirtyEight's 906 fouls, one
+> day at each of ten parks in 2019, placed by eye into four broad bands), the
+> model was closer than an even split at all eight parks it could be compared
+> with and put too many balls behind the plate. The one number that decides
+> that, the share of fouls hit straight back, has since been fitted to those
+> same fouls, so the behind-plate figures on this page agree with that data
+> because they were made to. With the rate fitted on seven parks and the
+> eighth predicted blind, the model is nearer the observed distribution than
+> before at seven of eight parks, still puts too many balls just past the
+> dugouts and too few further down the lines, and still does not tell the
+> parks apart: the average of the other parks predicts each park better than
+> the model does. Nothing finer than four bands has been checked, so no
+> seating-area figure on this page has been.
+
 Good, bad or mixed: **mixed**, and the word was fixed before the numbers. If
 the site has to pick one sentence, it is the second half of the quote above,
 not the first: "better than guessing" is true but is the kind of true that
@@ -304,3 +386,10 @@ python validate_538.py --seeds 42 1 2 3 4 5 --out seedband.json
 
 About 40 seconds a park and seed. `VALIDATION_PLAN.md` is the method;
 `data/FIVETHIRTYEIGHT_README.md` is the data's provenance and license.
+
+Since Step 29 these commands run the fitted model (rate 0.17) and give its
+in-sample figures, not the tables above. The committed
+`.cache/validation_538.json` and `.cache/validation_538_seedband.json` are
+the Step 28 run at 0.28 and are kept as its record; the fitted model's runs
+at every rate, including 0.28 (which reproduced these files exactly) and
+0.17, are in `.cache/calibration_back_rate.json`.
