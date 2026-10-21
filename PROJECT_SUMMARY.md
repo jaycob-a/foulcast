@@ -49,6 +49,29 @@ There is no login, no ticket search, no live game data. It is 33 pages of
 plain text, one drawing apiece, and a little styling — no images, no scripts.
 A page loads in one request and works on a phone.
 
+Until 20 October 2026 that was not the whole of what a visitor got. The same
+server also answered at its root URL with the project's first incarnation: an
+interactive demo that took two teams and replied with a side of the ballpark
+to sit on, a named best section, a "high confidence" rating and a claimed
+correlation of 0.986 — every one of which this project has since established
+it cannot support, and three of which the 33 pages now contradict in writing.
+The demo sat in front of the site saying the opposite of it. It is gone: the
+root URL goes to the site, the five prediction endpoints that fed the demo
+return 404, and a test holds the server's public URL list to exactly five
+rules — the home page, a park page, the explanatory page, robots and the
+sitemap. Nothing was deleted from the model itself: it is the same simulation
+these pages are built from, and the command-line tools still run it. What was
+retired is the publishing of a claim, not the arithmetic behind it.
+
+The foul-observation form went the same way on the same day, for an unrelated
+reason. It was the phone page somebody used at a game to record where a foul
+ball actually came down — the one thing here that was ever going to be
+evidence — and the season it was built for ended on 27 September with the
+dataset still too small to calibrate anything. It is shelved rather than
+retired: every one of its endpoints is still in the file, on a blueprint the
+server never registers, so none of them answers on any URL and one line brings
+all of them back.
+
 The drawing is a schematic plan of the ballpark's foul ground: home plate at
 the bottom, the two foul lines running out, and the seating areas as segments
 of an arc behind them, shaded in five steps by how busy the model thinks each

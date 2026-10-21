@@ -61,6 +61,10 @@ from site_data import (
     PARK_SOURCES, ZONE_WORDS, MAP_READS, NO_MAP_READ, SIDE_STATE_WORDS,
     MODEL_LIMITS,
 )
+# Constraints 3 and 4 as patterns. They are in `tests/conftest.py` because
+# `tests/test_endpoints.py` holds every public URL to the same two, and one
+# rule with two definitions is two rules.
+from tests.conftest import ACCURACY_CLAIM, SAFE_WORD
 
 # Low enough to keep the suite quick; the constraints under test are properties
 # of the copy and the layout, not of the simulation count.
@@ -712,12 +716,6 @@ def test_the_fleet_wide_side_count_is_computed_not_written_out(built):
 # Constraint 3 — the word "safe" never appears
 # ============================================================
 
-# Word-bounded, so it catches safe/safer/safest/safety and does not fire on
-# "SafecoField.html" — the filename of Clem's T-Mobile Park page, which is a
-# real source URL and stays.
-SAFE_WORD = re.compile(r'(?i)\bsafe(?:r|st|ty|ly|guard(?:ed|s)?)?\b')
-
-
 @pytest.mark.parametrize('slug', ALL_PAGES)
 def test_the_word_safe_never_appears(built, slug):
     hit = SAFE_WORD.search(built['pages'][slug])
@@ -734,14 +732,6 @@ def test_risk_is_described_in_relative_terms(built, slug):
 # ============================================================
 # Constraint 4 — no accuracy claims
 # ============================================================
-
-# "precise" is deliberately absent: one club's own statement, quoted on the
-# Kauffman page, is that its map cannot show "the precise location of the
-# netting" — which is the opposite of an accuracy claim.
-ACCURACY_CLAIM = re.compile(
-    r'(?i)\b(accurate|accuracy|proven|guaranteed|reliable|'
-    r'correlation|r\s*=\s*0\.\d)\b')
-
 
 @pytest.mark.parametrize('slug', ALL_PAGES)
 def test_no_accuracy_claim_anywhere(built, slug):

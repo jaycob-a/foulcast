@@ -3,5 +3,8 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "gunicorn webapp_v2:app --bind 0.0.0.0:8080 --workers 2 --timeout 120"
-healthcheckPath = "/api/teams"
+# The site itself: a deploy that shipped without ./site serves a 404 at
+# its own front door, and that is a failed deploy rather than a healthy
+# one. /api/teams, which this used to probe, no longer exists.
+healthcheckPath = "/parks/"
 healthcheckTimeout = 30

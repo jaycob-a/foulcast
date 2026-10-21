@@ -1,4 +1,15 @@
-"""Shared test fixtures."""
+"""Shared test fixtures, and the two claim patterns more than one module
+reads for.
+
+`SAFE_WORD` and `ACCURACY_CLAIM` live here rather than beside the tests that
+grep with them because the rules they carry are not about the built pages in
+particular — they are about anything this project puts in front of a visitor.
+`tests/test_site.py` applies them to the 33 built pages and
+`tests/test_endpoints.py` applies them to every public URL the server answers
+on. Two copies of either pattern would be two definitions of the constraint.
+"""
+import re
+
 import numpy as np
 import pytest
 
@@ -9,6 +20,18 @@ from foulball.batter_profiles import (
     PITCHER_PROFILES,
 )
 from foulball.stadium import STADIUMS
+
+# Word-bounded, so it catches safe/safer/safest/safety and does not fire on
+# "SafecoField.html" — the filename of Clem's T-Mobile Park page, which is a
+# real source URL and stays.
+SAFE_WORD = re.compile(r'(?i)\bsafe(?:r|st|ty|ly|guard(?:ed|s)?)?\b')
+
+# "precise" is deliberately absent: one club's own statement, quoted on the
+# Kauffman page, is that its map cannot show "the precise location of the
+# netting" — which is the opposite of an accuracy claim.
+ACCURACY_CLAIM = re.compile(
+    r'(?i)\b(accurate|accuracy|proven|guaranteed|reliable|'
+    r'correlation|r\s*=\s*0\.\d)\b')
 
 
 @pytest.fixture

@@ -1,19 +1,41 @@
 """
-Flask API endpoint tests.
+What the server answers on, and what it is allowed to say there.
 
-Tests /api/predict, /api/teams, /api/stadiums, and error handling.
-Uses Flask test client (no network, no real MLB API calls for predict).
+Step 25 retired the interactive demo and the prediction endpoints it called.
+The tests that were here tested those endpoints — that `/api/predict` rejected
+a missing team id, that `/` returned HTML, that the rate limiter fired after
+ten predictions. They tested a surface the project has decided not to publish,
+so they are replaced rather than kept:
+
+1. **The public route list is exactly the routes below.** Not "contains" —
+   equals. The demo was not wrong because of what it computed; it was wrong
+   because it was reachable, and a list that only checks for absences cannot
+   catch the next thing that becomes reachable. Adding a public URL now means
+   editing this list, which is a decision somebody makes on purpose.
+2. **The retired URLs are gone**, and gone means 404 rather than a redirect to
+   somewhere polite — there is nothing at the other end to redirect to.
+3. **Nothing a visitor can reach makes a claim this project cannot support.**
+   The same two patterns `tests/test_site.py` holds the 33 built pages to, run
+   against every public page the server serves.
+
+The foul log joined the list on 20 October 2026, shelved rather than retired —
+its season ended on 27 September and it made no claims, so what it gets is the
+same treatment for a different reason: the views are all still in the file, on
+a blueprint nobody registers, and a test below says so in both directions.
+
+The model is untouched; `foulball/` is where it lives and the rest of the
+suite still exercises it. What is retired is the publishing of it.
 """
-import pytest
-import json
-from unittest.mock import patch
-
-import sys
 import os
+import re
+import sys
+
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from webapp_v2 import app
-from foulball.stadium import STADIUMS
+from tests.conftest import ACCURACY_CLAIM, SAFE_WORD
 
 
 @pytest.fixture
@@ -24,133 +46,195 @@ def client():
         yield c
 
 
-class TestPredictEndpoint:
-    """Tests for /api/predict."""
+# Every URL rule the app registers, with what it is for. The whole list.
+#
+# Flask's own `/static/<path>` is absent deliberately: the app is constructed
+# with `static_folder=None`, because there is no static directory and a public
+# URL that exists only to return 404 is still a public URL.
+PUBLIC_ROUTES = {
+    '/',                                  # redirect to the site
+    '/parks/',                            # the site's home page
+    '/parks/<slug>/',                     # the 31 park pages and /about/
+    '/robots.txt',
+    '/sitemap.xml',
+}
 
-    def test_missing_team_ids(self, client):
-        resp = client.get('/api/predict')
-        assert resp.status_code == 400
-        data = resp.get_json()
-        assert 'error' in data
+# What Step 25 took down. The first six answered with section-level
+# predictions, a recommended side to sit on, a named best section and a
+# confidence rating, or fed the page that displayed them. The rest are the
+# foul log, shelved on 20 October 2026 — a different reason for the same
+# treatment: its views are all still in the file, on a blueprint nobody
+# registers.
+RETIRED = [
+    '/api/predict',
+    '/api/predict?away=147&home=111',
+    '/api/live/747123',
+    '/api/today',
+    '/api/teams',
+    '/api/stadiums',
+    '/log',
+    '/api/log/games',
+    '/api/log/entries',
+    '/api/log/context/747123',
+    '/api/log/export.csv',
+    '/api/log/export.jsonl',
+]
 
-    def test_invalid_team_ids(self, client):
-        resp = client.get('/api/predict?away=abc&home=def')
-        assert resp.status_code == 400
-        data = resp.get_json()
-        assert 'error' in data
-
-    def test_unknown_team_ids(self, client):
-        resp = client.get('/api/predict?away=99999&home=88888')
-        assert resp.status_code == 400
-        data = resp.get_json()
-        assert 'Unknown team' in data['error']
-
-    def test_same_team(self, client):
-        resp = client.get('/api/predict?away=147&home=147')
-        assert resp.status_code == 400
-        data = resp.get_json()
-        assert 'different' in data['error'].lower()
-
-    def test_post_method_works(self, client):
-        """POST with JSON body should be accepted."""
-        resp = client.post(
-            '/api/predict',
-            data=json.dumps({'away': 99999, 'home': 88888}),
-            content_type='application/json',
-        )
-        assert resp.status_code == 400
-        data = resp.get_json()
-        assert 'error' in data
-
-    def test_post_same_team(self, client):
-        resp = client.post(
-            '/api/predict',
-            data=json.dumps({'away': 147, 'home': 147}),
-            content_type='application/json',
-        )
-        assert resp.status_code == 400
-        data = resp.get_json()
-        assert 'different' in data['error'].lower()
+# Every page a visitor can read. It is the site, and that is the point.
+VISITOR_PAGES = ['/parks/', '/parks/about/', '/parks/fenway-park/']
 
 
-class TestStadiumsEndpoint:
-    """Tests for /api/stadiums."""
-
-    def test_returns_every_registered_park(self, client):
-        """One park per club, plus any second home park.
-
-        The Athletics play six 2026 dates at Las Vegas Ballpark, so the
-        registry is 30 clubs + alternates and a hardcoded 30 would fail for
-        the right reason.
-        """
-        resp = client.get('/api/stadiums')
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert len(data) == len(STADIUMS)
-        assert len(data) >= 30
-        assert {s['key'] for s in data} == set(STADIUMS)
-
-    def test_stadium_has_required_fields(self, client):
-        resp = client.get('/api/stadiums')
-        data = resp.get_json()
-        for s in data:
-            assert 'key' in s
-            assert 'name' in s
-            assert 'team' in s
-            assert 'sections' in s
-            assert s['sections'] > 0
-
-    def test_stadiums_cached_on_second_call(self, client):
-        """Second call should return same data (from cache)."""
-        resp1 = client.get('/api/stadiums')
-        resp2 = client.get('/api/stadiums')
-        assert resp1.get_json() == resp2.get_json()
+def test_the_public_route_list_is_exactly_this():
+    """A new public URL cannot appear without somebody deciding it should."""
+    rules = {r.rule for r in app.url_map.iter_rules()}
+    assert rules == PUBLIC_ROUTES, (
+        f'unlisted public route(s): {sorted(rules - PUBLIC_ROUTES)}; '
+        f'missing: {sorted(PUBLIC_ROUTES - rules)}')
 
 
-class TestIndexEndpoint:
-    """Test the main page loads."""
+def test_the_root_url_goes_to_the_site(client):
+    """It used to be the demo. It is the front door to the site now."""
+    resp = client.get('/')
+    assert resp.status_code in (301, 302, 307, 308)
+    assert resp.headers['Location'].endswith('/parks/')
 
-    def test_index_returns_html(self, client):
-        resp = client.get('/')
-        assert resp.status_code == 200
-        assert b'FoulCast' in resp.data or b'Template not found' in resp.data
+    landed = client.get('/parks/')
+    assert landed.status_code == 200
+    assert b'Where foul balls land, ballpark by ballpark' in landed.data
+    assert b'<ul class="grid">' in landed.data
 
 
-class TestLiveEndpoint:
-    """Tests for /api/live/<game_id>."""
+@pytest.mark.parametrize('url', RETIRED)
+def test_the_demo_and_its_prediction_endpoints_are_gone(client, url):
+    resp = client.get(url)
+    assert resp.status_code == 404, \
+        f'{url} still answers with {resp.status_code}'
 
-    def test_invalid_game_id_returns_error(self, client):
-        """Non-existent game should return an error, not 500."""
-        resp = client.get('/api/live/0')
-        # 400 (no teams resolved), 404 (game not found), or 503 are all acceptable
-        assert resp.status_code in (400, 404, 503, 200)
+
+def test_the_shelved_foul_log_is_kept_but_unregistered(client):
+    """Shelved is not deleted, and not reachable either.
+
+    The eight views are on `log_api`, which nothing registers, so the URLs
+    404 — that part is covered by `RETIRED` above. What this checks is the
+    other half of the bargain: the code is still there, still carrying all
+    eight views, and still importable, so the day somebody registers the
+    blueprint they get the tool back rather than a rewrite. POST routes are
+    checked here rather than in `RETIRED` because a POST to a missing rule and
+    a POST to a rule that refuses POSTs are different failures.
+    """
+    import webapp_v2
+    assert len(webapp_v2.log_api.deferred_functions) == 8, \
+        'the shelved log blueprint has lost views'
+    assert webapp_v2.log_api.name not in app.blueprints, \
+        'the shelved log blueprint is registered after all'
+    assert callable(webapp_v2._resolve_zone)
+    assert webapp_v2.LOG_TEMPLATE
+
+    for url in ('/api/log/session', '/api/log/foul', '/api/log/void'):
+        assert client.post(url, json={}).status_code == 404, \
+            f'{url} still accepts a write'
+
+
+def test_the_demo_template_is_gone():
+    """The page itself, not just the route to it."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    demo = os.path.join(here, '..', 'templates', 'demo.html')
+    assert not os.path.exists(demo), 'templates/demo.html is still on disk'
+    import webapp_v2
+    assert not hasattr(webapp_v2, 'HTML_TEMPLATE')
+    assert not hasattr(webapp_v2, '_run_prediction'), \
+        'the prediction the demo displayed is still wired into the server'
+
+
+# Script and style bodies are not read by a visitor. The distinction mattered
+# while the foul log was served — its form state carries a field called
+# `confidence`, the observer's own confidence in where they saw the ball land,
+# which is the opposite of a model claim — and it is kept because the next page
+# that gets served here will have scripts in it too.
+SCRIPTS = re.compile(r'(?is)<(script|style)\b.*?</\1>')
+TAGS = re.compile(r'<[^>]+>')
+
+
+def visible(body: bytes) -> str:
+    return TAGS.sub(' ', SCRIPTS.sub(' ', body.decode('utf-8')))
+
+
+@pytest.mark.parametrize('url', VISITOR_PAGES)
+def test_no_public_page_claims_accuracy(client, url):
+    resp = client.get(url)
+    assert resp.status_code == 200, f'{url} returned {resp.status_code}'
+    hit = ACCURACY_CLAIM.search(visible(resp.data))
+    assert hit is None, f'{url}: accuracy language "{hit.group(0)}"'
+
+
+@pytest.mark.parametrize('url', VISITOR_PAGES)
+def test_no_public_page_uses_the_word_safe(client, url):
+    resp = client.get(url)
+    hit = SAFE_WORD.search(visible(resp.data))
+    assert hit is None, f'{url}: "{hit.group(0)}"'
+
+
+@pytest.mark.parametrize('url', VISITOR_PAGES)
+def test_no_public_page_recommends_a_seat(client, url):
+    """The demo's actual output: a side to sit on and a best section.
+
+    The site describes where the model puts fouls and what the clubs publish
+    about netting, and leaves the reader to decide what to do about it. It
+    cannot recommend a seat without claiming the figures are good enough to
+    pick one, and nothing here has ever been checked against a foul ball.
+    """
+    text = re.sub(r'\s+', ' ', visible(client.get(url).data))
+    for phrase in ('best section', 'sit on the', 'recommend', 'where to sit',
+                   'confidence'):
+        assert phrase not in text.lower(), f'{url}: "{phrase}"'
+
+
+def test_the_sitemap_names_only_the_site(client):
+    """Whatever is reachable, this is what is advertised."""
+    body = client.get('/sitemap.xml').data.decode('utf-8')
+    locs = re.findall(r'<loc>([^<]+)</loc>', body)
+    assert locs, 'empty sitemap'
+    for loc in locs:
+        assert '/parks/' in loc, f'sitemap advertises {loc}'
+    assert len(locs) == 33, f'{len(locs)} urls in the sitemap, expected 33'
+
+
+def test_robots_does_not_point_at_anything_retired(client):
+    body = client.get('/robots.txt').data.decode('utf-8')
+    assert 'sitemap.xml' in body.lower()
+    for url in RETIRED:
+        assert url.split('?')[0] not in body
 
 
 class TestRateLimiting:
-    """Test the rate limiter."""
+    """The limiter outlived the endpoints it was written for.
 
-    def _reset_rate_limits(self):
-        """Clear rate limit state between tests."""
+    It still guards the foul-log writes, which is now the only thing it
+    guards, so it is tested there — on the `log` bucket's own budget, which is
+    120 a minute rather than the 10 the predictions had.
+    """
+
+    def _reset(self):
         import webapp_v2
         webapp_v2._rate_limits.clear()
 
-    def test_rate_limit_allows_initial_requests(self, client):
-        """First few requests should not be rate-limited."""
-        self._reset_rate_limits()
-        for _ in range(5):
-            resp = client.get('/api/predict?away=147&home=147')
-            assert resp.status_code == 400  # validation error, not 429
+    def test_requests_under_the_limit_are_allowed(self):
+        import webapp_v2
+        self._reset()
+        for _ in range(10):
+            assert webapp_v2._check_rate_limit('203.0.113.7', bucket='log',
+                                               max_requests=120)
 
-    def test_rate_limit_enforced(self, client):
-        """After 10 requests in a minute, should get 429."""
-        self._reset_rate_limits()
-        got_429 = False
-        for i in range(12):
-            # Use same-team error to avoid triggering expensive predictions
-            resp = client.get('/api/predict?away=147&home=147')
-            if resp.status_code == 429:
-                data = resp.get_json()
-                assert 'Rate limited' in data['error']
-                got_429 = True
-                break
-        assert got_429, "Rate limit was not enforced after 12 requests"
+    def test_the_limit_is_enforced_per_bucket(self):
+        import webapp_v2
+        self._reset()
+        ip = '203.0.113.8'
+        for _ in range(3):
+            assert webapp_v2._check_rate_limit(ip, bucket='log',
+                                               max_requests=3)
+        assert not webapp_v2._check_rate_limit(ip, bucket='log',
+                                               max_requests=3)
+        # A different bucket under the same IP keeps its own counter: a fan
+        # clearing a backed-up offline queue must not be throttled by whatever
+        # else that address did.
+        assert webapp_v2._check_rate_limit(ip, bucket='other', max_requests=3)
