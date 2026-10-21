@@ -1,6 +1,7 @@
 # FoulCast, in plain English
 
-*Written 2026-09-08, updated 2026-09-22, for a reader who does not work on this code.*
+*Written 2026-09-08, updated 2026-09-22 and 2026-10-20, for a reader who does
+not work on this code.*
 
 ---
 
@@ -24,23 +25,26 @@ The site is built around its drawings, and the words on it are rationed.
 The home page is a gallery: one headline, one sentence, and a grid of all 31
 ballparks, each tile the park's own drawing, small, with its name and its
 team. A ballpark page is the drawing, large, directly under the park's name
-and team; then one plain sentence saying where the netting runs — "netting
-covers the seats at field level behind home plate and runs out along both foul
-lines past the dugouts"; then the table of figures, each row of it three
-things and no more — which seating area, how many fouls a game, and what the
-club says about netting in front of it, carried by a small coloured dot and
-two or three lowercase words; then one line, "Model estimate, not observed
-data", linking to the page that explains everything; then a one-line footer
-back to the 31. That is the whole visible page, and a test holds it to sixty
-words (forty on the home page), not counting the table and the drawing's own
-labels.
+and team; then one sentence quoting what the club itself says about where its
+netting runs — at Fenway, "The protective netting at Fenway Park extends from
+Field Box Section 79 to Field Box Section 9." — with a link to the club's page;
+then the table, each row of it two things and no more: which seating area, and
+whether the model puts the most, more, fewer or the fewest foul balls there,
+compared with the busiest area at that ballpark. At the 27 ballparks whose own
+seating map disagrees with the model, one line under the table says some areas
+may be mislabelled. Then one line, "Model estimate, not observed data",
+linking to the page that explains everything, and a one-line footer back to the
+31. That is the whole visible page, and a test holds it to sixty words (forty
+on the home page), not counting the table, the drawing's own labels and the
+club's own quoted words.
 
-Everything else about a ballpark — where the netting statement came from,
-how the figures were produced, what the ballpark's own seating map says, the
-two readings, the sourced figures — is behind one closed "Details" heading at
-the foot of its page. Everything general — what is sourced and what is a
-guess, whose the netting gaps are, why most pages will not name a foul line,
-why no section number is printed, how to read the drawing, what the model
+Everything else about a ballpark — the club's netting statement at length
+and when it was read, the model's figures themselves, how they were produced,
+what the ballpark's own seating map says, the sourced measurements — is behind
+one closed "Details" heading at the foot of its page. Everything general —
+what is sourced and what is a guess, what each club says about its netting,
+why most pages will not name a foul line, why no section number is printed
+outside a quotation, how to read the drawing and its bands, what the model
 cannot do, the never-validated caveat in full — is on the "How this works"
 page, once. None of it has been removed; none of it stands in front of the
 answer.
@@ -74,8 +78,9 @@ all of them back.
 
 The drawing is a schematic plan of the ballpark's foul ground: home plate at
 the bottom, the two foul lines running out, and the seating areas as segments
-of an arc behind them, shaded in five steps by how busy the model thinks each
-one is. Every park is drawn in the same feet, so on the home page — the one
+of an arc behind them, shaded in four bands — most, more, fewer, fewest — by
+how busy the model thinks each one is compared with the busiest area at the
+same ballpark. The table under it uses the same four words. Every park is drawn in the same feet, so on the home page — the one
 place all 31 are side by side — a park with more foul ground really does draw
 larger. A ballpark's own page compares it with nothing, so there the same
 drawing is cropped to that ballpark and fills its frame. It is drawn as
@@ -87,11 +92,12 @@ any screen, and can be read aloud.
 
 ## What it knows
 
-### It knows what the clubs published on one day
+### It knows what the clubs publish, in their own words
 
-Every club's own netting or seating page was opened in a browser on
-**9 August 2026** and read. That date is printed on every page, and each
-ballpark page links to the exact club page it was read from. Nothing is
+Every club's own netting or seating page was read on **9 August 2026**, and
+read again on **20 October 2026**, when each ballpark page began quoting it
+word for word. No club's extent had changed in between. Each ballpark page
+links to the exact club page it quotes and says when it was read. Nothing is
 scraped on a schedule; if a club moves its netting next spring, this site will
 not notice until somebody re-reads the pages.
 
@@ -118,8 +124,10 @@ quietly filling in an average.
 Each page's distribution comes from one simulated game: the same 18 batters,
 the same pitcher, the same random seed, at every ballpark — so the only thing
 that changes from page to page is the ballpark itself. Four hundred simulated
-swings per batter. The result is stated as foul balls per game reaching each
-seating area, largest first.
+swings per batter. The table on each page gives every seating area's band;
+the figures behind the bands, as foul balls a game, are under "Details". Every
+page says when the simulation was run — 20 October 2026 for the current
+figures — not when the page was last generated.
 
 ### It knows where its own seat labels are wrong
 
@@ -135,9 +143,14 @@ else entirely. Some named whole decks that are not in the building.
 None of that has been fixed in the model. What was done instead was to stop
 the site from printing anything that depends on it:
 
-- **No seat or section number appears anywhere on the site.** Areas are
-  described by where they are — "the lower bowl behind home plate", "the dugout
-  boxes down the first-base line" — never by number.
+- **None of the model's section numbers appears anywhere on the site.** Areas
+  are described by where they are — "the lower bowl behind home plate", "the
+  dugout boxes down the first-base line" — never by number. The only section
+  numbers on the site are inside a quotation from a club: the club's own
+  numbers for its own seats, which carry none of the model's errors.
+- **At the 27 ballparks whose map disagrees, a line under the table says so**,
+  so a visitor who reads the table and leaves is not taking the model's labels
+  on trust.
 - **At 15 of the 31 ballparks the site will not say which foul line is which.**
   Every ballpark in the model is a perfect left-right mirror, so a ballpark
   written down backwards produces figures identical to one written down
@@ -171,7 +184,7 @@ So the site puts no percentage on how often it is right, because there is
 nothing to compute one from. Every page says this at the top and again at the
 bottom. No page claims accuracy of any kind, and the word "safe" — in any
 form, including "safety" and "safer" — appears nowhere on the site. Netting is
-described as netting, and risk as higher or lower, never as absent.
+described in the club's own words, and no seat is called protected.
 
 ### Where roughly a third of the fouls go
 
@@ -191,21 +204,22 @@ Every ballpark is modelled as an exact left-right mirror, which is certainly
 wrong — one ballpark has a published statement that its foul ground is
 lopsided, and nobody has measured the rest.
 
-### What the netting covers at most ballparks
+### Which of its own seating areas the netting covers
 
-Only **7 of the 31** ballparks have netting information the model can actually
-attach to specific seats. At the other 24 it is a gap, and the site splits
-those gaps into two honest groups:
+The clubs say where their netting runs in their own section numbers, and the
+site quotes them. It does not say which of the model's seating areas that
+netting stands in front of. Until 20 October 2026 it did, at 7 ballparks, by
+reading the club's numbers onto the model's seat labels — the labels the
+seating maps show are wrong at 27 of 30 — and it marked areas "behind netting",
+"partly netted" and, in red, "not behind netting", which no club had said. All
+of that came off. A visitor holding a ticket can find their own section in the
+club's sentence; the site is not in a position to make that join for them.
 
-- **8 ballparks** where nothing usable is published at all.
-- **16 ballparks** where the club publishes perfectly good netting information
-  and *this project's own seat labels cannot be reconciled with it.*
+**25 clubs** say where their netting runs. One club's page says two things that
+cannot both be true, and both are quoted. At **five ballparks** nothing the
+club publishes says where it runs, and the page says so in the same place.
 
-The larger group is the project's own fault, and the "How this works" page
-says so in those words rather than leaving the reader to think 16 clubs were
-negligent.
-
-Even at the 7 that do match, "behind netting" is not "protected". The clubs'
+"Behind netting" is not "protected". The clubs'
 own wording, quoted on the pages, is that fans behind netting "are still
 exposed to objects leaving the field of play".
 
@@ -215,18 +229,20 @@ exposed to objects leaving the field of play".
 
 A fair summary for a visitor:
 
-- **The netting facts are as good as the club's own page was on 9 August 2026**,
-  and every one of them links back to it.
+- **The netting facts are the club's own words as its page read on
+  20 October 2026**, and every one of them links back to it.
 - **The two ballpark measurements are as good as one estimator's published
   figures** — Clem estimates foul territory from his own scale drawings and
   says so. Good to roughly ±1,000 square feet, not to the ±100 the printed
   number implies.
 - **The foul-ball distribution is an unvalidated physics estimate**, built on a
   generic bowl shape, with a third or more of its output discarded, attached in
-  most cases to seat groupings the ballpark's own map contradicts.
+  most cases to seat groupings the ballpark's own map contradicts — which is
+  why the table gives bands rather than figures, and says so under it where
+  the map disagrees.
 
 The site is built to make all three of those legible at a glance, and there are
-2,230 automated tests whose main job is to stop a future change from quietly
+2,349 automated tests whose main job is to stop a future change from quietly
 making a claim the project cannot support.
 
 ---
@@ -236,7 +252,7 @@ making a claim the project cannot support.
 Four rules are enforced by tests rather than by care, on every page, every
 build:
 
-1. No section or seat numbers, anywhere.
+1. No section or seat numbers, except inside a quotation from a club.
 2. Netting appears above the model on every page — sourced before estimated.
 3. The word "safe" never appears.
 4. No accuracy claim ever appears, and the absence of validation is stated on
@@ -254,19 +270,20 @@ visitors stale counts with nothing catching it:
    simulation code as it stands today.
 
 The first half rebuilds every page from the stored run and fails if a single
-committed page differs by so much as a character. The second half fingerprints
+committed page differs by so much as a character. Since 20 October 2026
+nothing is set aside before that comparison: the pages used to carry the date
+they were rendered, which changed on every rebuild and so had to be ignored,
+and they now carry the date the simulation ran. The second half fingerprints
 the files the simulation actually reads, so editing a ballpark's dimensions
 now discards the stored run instead of silently reusing it. Rebuilding after a
 change is still a human step. Noticing that nobody did it is not.
 
 The drawing added on 8 September 2026 is checked the same way, because a
 picture can make a claim quietly in a way a sentence cannot. Its shading has
-to come from exactly the figures printed in the table underneath it; it may
-not name a foul line at any of the fifteen ballparks whose sides are
-unestablished; it marks netting in front of every area the table beneath it
-calls behind netting and in front of nothing else, and where it marks nothing
-it says so in words rather than leaving a blank arc to be read as an open one;
-nothing it draws may fall outside the frame it is cropped to; and two
+to be exactly the bands printed in the table underneath it; it may not name a
+foul line at any of the fifteen ballparks whose sides are unestablished; it
+marks no netting; nothing it draws may fall outside the frame it is cropped
+to; and two
 ballparks with different published foul territory may not produce the same
 drawing.
 
@@ -274,18 +291,13 @@ One judgement in that group is worth stating rather than burying. The two foul
 lines are shaded identically at every ballpark, including the sixteen that may
 name their sides. The model builds every ballpark as an exact left-right
 mirror, so the small difference between a ballpark's two foul-line rows is
-simulation noise; the table prints both because it prints what the run
-produced, but a *map* that shaded them differently would be asserting a
+simulation noise; both rows of a pair get the same band in the table
+for the same reason, and a *map* that shaded them differently would be asserting a
 lopsidedness the model does not contain.
 
-The netting mark is the one exception, and it was got wrong first. A netting
-extent is not model output — it is a sentence a club published, and a club may
-net further down one foul line than the other. Fenway does. The drawing
-originally folded a ballpark's two foul lines into one for the netting mark as
-well as for the shade, so Fenway's page listed its first-base dugout boxes as
-behind netting in the table and drew no net there, which is a sourced fact
-dropped to protect a rule that exists for an unsourced one. The mark now
-follows the table, area by area, on both sides of the plate, and a test holds
-the two lists equal at all 31 ballparks. At the fifteen ballparks whose sides
-are unestablished the two lines are still a single row carrying a single
-status, so both sides are marked or neither is and no side can leak.
+The drawing used to carry one more thing: a heavy dashed line along the front
+of every area the table called behind netting. It was drawn at the position of
+the model's own seat labels, which the seating maps put in the wrong place at
+most of the ballparks it appeared on, and it came off on 20 October 2026 with
+the rest of the per-area netting marks. The club's own sentence, directly under
+the drawing, is where the netting is now.

@@ -31,6 +31,18 @@ counting the table and the drawing's own labels. Every explanation the site
 has moved to `/about/`, and the tests that used to read those explanations
 off the home page or off every park page now read them there.
 
+Step 26 replaced the per-area netting marks with the club's own sentence,
+quoted, and made the one exception constraint 1 has: a section number may
+appear inside a quotation from the club (`<q class="quote">`,
+`<blockquote class="quote">`) and nowhere else. The section-number checks
+strip exactly those elements first, and `test_club_quotes_are_the_clubs_words`
+holds everything inside them to the club's text, so the exception cannot be
+used to carry anything of this site's own. The same step put bands in the
+table where figures to a tenth of a ball used to be, added a line under the
+table at the 27 parks whose own map disagrees with the model, dated the pages
+by when the model ran rather than when they were rendered, and fixed three
+factual errors, each with its own test below.
+
 Known limit of the section-number test, stated rather than hidden: the
 substring check only runs on printed labels of three characters or more.
 Labels like "9" or "26" — real at Fenway, Globe Life and Truist — cannot be
@@ -52,14 +64,13 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from foulball.stadium import STADIUMS
-from foulball.netting import join_park
+from foulball.stadium import STADIUMS, PARK_PARAMS, exposed_bands
 from foulball.seat_map import build_printed_index, printed_range_display
 import site_build
 import site_diagram
 from site_data import (
     PARK_SOURCES, ZONE_WORDS, MAP_READS, NO_MAP_READ, SIDE_STATE_WORDS,
-    MODEL_LIMITS,
+    MODEL_LIMITS, CLUB_NETTING,
 )
 # Constraints 3 and 4 as patterns. They are in `tests/conftest.py` because
 # `tests/test_endpoints.py` holds every public URL to the same two, and one
@@ -211,7 +222,8 @@ def _fake_cache(path, fingerprint, sims):
     """A complete, plausible cache stamped with a given fingerprint."""
     entries = {k: {'park': k, 'sims': sims, 'seed': site_build.SEED,
                    'model': fingerprint, 'zone_fouls': {}, 'zone_ev': {},
-                   'into_seats': 1.0, 'total_fouls': 2.0, 'unmatched': 1.0}
+                   'into_seats': 1.0, 'total_fouls': 2.0, 'unmatched': 1.0,
+                   'run_on': '2026-01-01'}
                for k in STADIUMS}
     with open(path, 'w', encoding='utf-8') as fh:
         json.dump(entries, fh)
@@ -259,10 +271,8 @@ def test_the_committed_cache_came_from_the_current_model():
     behind = sorted(k for k, e in cache.items() if e.get('model') != fingerprint)
     assert not behind, f'the cached model run is behind the model at: {behind}'
     assert all(e['sims'] == site_build.SIMS for e in cache.values())
-
-
-# The one thing on a page that moves without anyone editing anything.
-_BUILD_DATE = re.compile(r'rebuilt \d{4}-\d{2}-\d{2}')
+    undated = sorted(k for k, e in cache.items() if not e.get('run_on'))
+    assert not undated, f'cached runs that do not say when they ran: {undated}'
 
 
 def test_the_committed_site_matches_a_fresh_render(tmp_path):
@@ -271,9 +281,14 @@ def test_the_committed_site_matches_a_fresh_render(tmp_path):
     Rendered from the committed cache rather than simulated, so this takes a
     second rather than eight minutes: the cache is checked against the model by
     `test_the_committed_cache_came_from_the_current_model`, and the pages are
-    checked against the cache here. The build date in the footer is normalised
-    out — it is the only part of a page that changes on its own — and
-    everything else has to match byte for byte.
+    checked against the cache here, byte for byte.
+
+    Byte for byte with nothing normalised out, since Step 26. This used to
+    blank a "rebuilt <date>" line first, because the pages printed the day
+    they were rendered and so changed every time anyone rendered them — which
+    meant the date could drift forever without this test noticing. The pages
+    now print the date the model run itself carries, and a render reproduces
+    them exactly.
     """
     if not os.path.isdir(COMMITTED_SITE):
         pytest.skip('site/ not built in this checkout')
@@ -297,14 +312,82 @@ def test_the_committed_site_matches_a_fresh_render(tmp_path):
     stale = []
     for rel in sorted(fresh):
         with open(out / rel, encoding='utf-8') as fh:
-            new = _BUILD_DATE.sub('rebuilt <date>', fh.read())
+            new = fh.read()
         with open(os.path.join(COMMITTED_SITE, rel), encoding='utf-8') as fh:
-            old = _BUILD_DATE.sub('rebuilt <date>', fh.read())
+            old = fh.read()
         if new != old:
             stale.append(rel)
     assert not stale, (f'{len(stale)} committed page(s) differ from a fresh '
                        f'render, starting with {stale[0]}; rebuild with '
                        f'`python site_build.py` and commit site/')
+
+
+ISO_DATE = re.compile(r'\b\d{4}-\d{2}-\d{2}\b')
+
+
+def test_the_pages_are_dated_by_the_model_run_not_the_render(tmp_path):
+    """Step 26: "Model figures rebuilt <today>" said the figures were made the
+    day the HTML was rendered. They were made when the simulation ran, which
+    the audit found had been six weeks earlier.
+
+    So the committed cache is rendered here with every entry's `run_on`
+    rewritten to a date nobody could mistake for today, and the pages have to
+    print that date — and no date at all that is not one of the dated sources
+    this site names.
+    """
+    if not os.path.exists(COMMITTED_CACHE):
+        pytest.skip('no committed model cache in this checkout')
+    with open(COMMITTED_CACHE, encoding='utf-8') as fh:
+        cache = json.load(fh)
+    for entry in cache.values():
+        entry['run_on'] = '2001-02-03'
+    fake = tmp_path / 'park_stats.json'
+    with open(fake, 'w', encoding='utf-8') as fh:
+        json.dump(cache, fh)
+
+    out = tmp_path / 'site'
+    site_build.build(str(out), base_url='', sims=site_build.SIMS,
+                     no_model=True, cache_path=str(fake))
+
+    from site_data import (CLUB_NETTING_READ, RESEARCH_DATE, MAP_READ_DATE,
+                           LATER_READ_DATE)
+    named = {'2001-02-03', CLUB_NETTING_READ, RESEARCH_DATE, MAP_READ_DATE,
+             LATER_READ_DATE} | {mr.get('read_on', MAP_READ_DATE)
+                                 for mr in MAP_READS.values()}
+    for rel in ('fenway-park', 'wrigley-field', 'about'):
+        with open(out / rel / 'index.html', encoding='utf-8') as fh:
+            text = flat(fh.read())
+        assert 'Model run on 2001-02-03' in text, \
+            f'{rel}: the page does not carry the date the model ran'
+        assert 'rebuilt' not in text, f'{rel}: still dated by its render'
+        stray = set(ISO_DATE.findall(text)) - named
+        assert not stray, f'{rel}: dates no source accounts for: {stray}'
+
+
+def test_a_cache_entry_that_cannot_say_when_it_ran_is_re_simulated(
+        tmp_path, monkeypatch):
+    """The date on the page comes from the entry, so an entry without one is
+    not reused — it would have to be dated by guesswork."""
+    cache = tmp_path / 'park_stats.json'
+    _fake_cache(cache, site_build.model_fingerprint(), TEST_SIMS)
+    with open(cache, encoding='utf-8') as fh:
+        entries = json.load(fh)
+    for entry in entries.values():
+        entry['run_on'] = '2026-01-01'
+    del entries['fenway_park']['run_on']
+    with open(cache, 'w', encoding='utf-8') as fh:
+        json.dump(entries, fh)
+
+    ran = []
+
+    def fake_run(key, sims, fingerprint=None):
+        ran.append(key)
+        return {'park': key, 'sims': sims, 'model': fingerprint,
+                'run_on': '2026-01-02'}
+
+    monkeypatch.setattr(site_build, 'run_park', fake_run)
+    site_build.load_stats(refresh=False, sims=TEST_SIMS, cache_path=str(cache))
+    assert ran == ['fenway_park']
 
 
 # ============================================================
@@ -323,6 +406,15 @@ PREFIXED_LABEL = re.compile(r'\b(?:FB|LB|RS|FD|DG|GS|HPPC|EMCC|PB|RFB|COR|HRP)'
 # carry drawing coordinates rather than words. See `_strip_numeric_prose`.
 SCHEMATIC = re.compile(r'<figure class="dia[^"]*">.*?</figure>', re.S)
 SVG_GEOMETRY = re.compile(r'\s(?:d|x|y|transform|viewBox)="[^"]*"')
+# A quotation from the club: the one place a section number may appear.
+# `test_club_quotes_are_the_clubs_words` holds what is inside to the club's
+# text, which is what makes stripping it here safe.
+CLUB_QUOTE = re.compile(r'<q class="quote">(.*?)</q>'
+                        r'|<blockquote class="quote">(.*?)</blockquote>', re.S)
+
+
+def _without_club_quotes(text: str) -> str:
+    return CLUB_QUOTE.sub(' ', text)
 
 
 def _strip_numeric_prose(text: str) -> str:
@@ -355,7 +447,7 @@ def _strip_numeric_prose(text: str) -> str:
 
 @pytest.mark.parametrize('slug', sorted(s['slug'] for s in PARK_SOURCES.values()))
 def test_no_section_numbers_on_any_park_page(built, slug):
-    text = built['pages'][slug]
+    text = _without_club_quotes(built['pages'][slug])
     assert not SECTION_NUMBER.search(text), \
         f'{slug}: page names a section by number'
     assert not PRINTED_RANGE.search(_strip_numeric_prose(text)), \
@@ -377,7 +469,7 @@ def test_no_raw_zone_name_reaches_the_page(built, key):
     """The mechanism a number would actually leak by: printing the model's own
     section name, which carries its printed range in parentheses."""
     slug = PARK_SOURCES[key]['slug']
-    text = built['pages'][slug]
+    text = _without_club_quotes(built['pages'][slug])
     stadium = STADIUMS[key]()
     for sec in stadium.sections:
         assert sec.name not in text, f'{slug}: raw zone name "{sec.name}"'
@@ -390,7 +482,7 @@ def test_no_raw_zone_name_reaches_the_page(built, key):
 def test_no_printed_label_appears_on_the_page(built, key):
     """Every printed label of three characters or more, checked as a word."""
     slug = PARK_SOURCES[key]['slug']
-    text = _strip_numeric_prose(built['pages'][slug])
+    text = _strip_numeric_prose(_without_club_quotes(built['pages'][slug]))
     stadium = STADIUMS[key]()
     for label in build_printed_index(stadium):
         if len(label) < 3:
@@ -408,20 +500,20 @@ def test_netting_section_precedes_the_model_section(built, slug):
     text = built['pages'][slug]
     net = text.index('id="netting"')
     zones = text.index('id="zones"')
-    readings = text.index('id="readings"')
-    assert net < zones < readings, f'{slug}: model output is above the netting'
+    model = text.index('id="model"')
+    assert net < zones < model, f'{slug}: model output is above the netting'
 
 
 def netting_sentence(text: str) -> str:
     """The one sentence above the fold that says where the net is."""
     assert 'id="netting"' in text, 'no netting statement on this page'
-    return text.split('id="netting"')[1].split('</p>')[0]
+    return text.split('id="netting">')[1].split('</p>')[0]
 
 
 @pytest.mark.parametrize('slug', sorted(s['slug'] for s in PARK_SOURCES.values()))
 def test_the_answer_stands_above_everything_that_qualifies_it(built, slug):
-    """Step 22, tightened by Step 23. Five things on the visible page, in
-    this order, and nothing else.
+    """Step 22, tightened by Steps 23 and 26. The things on the visible page,
+    in this order, and nothing else.
 
     Two passes before Step 22 shortened the copy at the top of a park page
     and it still opened with three paragraphs of caveats, because the problem
@@ -431,17 +523,20 @@ def test_the_answer_stands_above_everything_that_qualifies_it(built, slug):
     slide back up first — a panel of working above the table, and the standing
     caveat above the drawing it does not qualify. Step 23 put every panel of
     working behind one closed Details disclosure under the caveat, and that
-    is enforced here too.
+    is enforced here too. Step 26 added one line between the table and the
+    caveat at the parks whose own map disagrees with the model.
     """
     text = built['pages'][slug]
     order = [('the ballpark', text.index('<h1')),
              ('the schematic', text.index('<figure class="dia">')),
              ('where the netting runs', text.index('id="netting"')),
-             ('the distribution table', text.index('<table>')),
-             ('the standing caveat',
-              text.index('Model estimate, not observed data')),
-             ('the Details disclosure',
-              text.index('<details class="more"><summary>Details</summary>'))]
+             ('the distribution table', text.index('<table>'))]
+    if 'id="mislabel"' in text:
+        order.append(('the mislabelled-areas line', text.index('id="mislabel"')))
+    order += [('the standing caveat',
+               text.index('Model estimate, not observed data')),
+              ('the Details disclosure',
+               text.index('<details class="more"><summary>Details</summary>'))]
     for (before, a), (after, b) in zip(order, order[1:]):
         assert a < b, f'{slug}: {after} is above {before}'
     assert text.index('<section class="panel') > order[-1][1], \
@@ -450,113 +545,149 @@ def test_the_answer_stands_above_everything_that_qualifies_it(built, slug):
         f'{slug}: more than one disclosure on the page'
     assert text.index('id="netting"') < text.index('id="netting-source"'), \
         f'{slug}: the netting sourcing is above the netting statement'
-    # The caveat line is also the one link off the page, to where the caveat
-    # is stated in full.
+    # The caveat line is also the link to where the caveat is stated in full.
     assert re.search(r'Model estimate, not observed data\.</b> '
                      r'<a href="\.\./about/">How this works', text), \
         f'{slug}: the caveat line does not link to the explanatory page'
 
 
-@pytest.mark.parametrize('key', sorted(STADIUMS))
-def test_netting_state_is_stated_either_way(built, key):
-    """A gap is stated as a gap, not left blank; a sourced extent names its
-    source and the date it was read.
+# ------------------------------------------------------------
+# Step 26: the club's own words, instead of marks on this model's seats
+# ------------------------------------------------------------
 
-    Both halves are read off the sentence at the top of the page rather than
-    off the page as a whole. Step 22 moved the netting statement above the
-    fold and its sourcing below, and a gap stated only four screens down would
-    satisfy a whole-page substring check while the top of the page still read
-    as though the netting were known.
+SOURCED_DATA = os.path.join(REPO, 'SOURCED_DATA.md')
+
+
+def _record_text() -> str:
+    """`SOURCED_DATA.md` as running text: quote markers and wrapping gone."""
+    with open(SOURCED_DATA, encoding='utf-8') as fh:
+        lines = [re.sub(r'^>\s?', '', ln) for ln in fh.read().splitlines()]
+    return re.sub(r'\s+', ' ', ' '.join(lines))
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_the_netting_sentence_quotes_the_club_and_links_to_it(built, key):
+    """One sentence per park: the club's own words, and the club's page.
+
+    The sentence is this park's `CLUB_NETTING` line with its quotations in
+    place, and nothing else — so a reader sees what the club said rather than
+    this site's reading of it onto seat labels the parks' own maps say are in
+    the wrong place. Every park links to the page it quotes, including the
+    parks where that page says nothing usable, so a reader can check that too.
     """
     slug = PARK_SOURCES[key]['slug']
+    club = CLUB_NETTING[key]
+    said = netting_sentence(built['pages'][slug])
+    quoted = [html.unescape(q) for q in
+              re.findall(r'<q class="quote">(.*?)</q>', said, re.S)]
+    assert quoted == list(club['quotes']), \
+        f'{slug}: the sentence does not quote the club as recorded'
+    assert f'href="{html.escape(club["page"], quote=True)}"' in said, \
+        f'{slug}: the sentence does not link to the club page it quotes'
+    if club['kind'] in ('states', 'conflicts', 'declines'):
+        assert quoted, f'{slug}: the club published words and none are quoted'
+    words = html.unescape(re.sub(r'<[^>]+>', '', CLUB_QUOTE.sub('', said)))
+    assert 'behind netting' not in words and 'not verified' not in words, \
+        f'{slug}: the sentence still reads the netting onto seats'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_club_quotes_are_the_clubs_words(built, key):
+    """The exception to constraint 1 cannot carry anything of this site's.
+
+    Inside a quotation element a section number is allowed, so everything
+    inside one has to be the club's: each inline quotation is one of this
+    park's recorded quotations, each paragraph of the long quotation under
+    Details is one of its recorded paragraphs, every quotation is part of the
+    club's recorded statement, and every recorded paragraph is written out in
+    `SOURCED_DATA.md` Part 2b, which is the dated record of the read.
+    """
+    slug = PARK_SOURCES[key]['slug']
+    club = CLUB_NETTING[key]
     text = built['pages'][slug]
-    said = netting_sentence(text)
-    stadium = STADIUMS[key]()
-    join = join_park(stadium, key)
-    if join.status == 'mapped':
-        assert said.startswith(">Netting "), \
-            f'{slug}: the sentence above the fold does not say where the net is'
-        # Lead with the fact. Who published it, how many parks match and what
-        # the club's coverage hedge says are all true, all on this page, and
-        # none of them belongs in the sentence that answers the question.
-        for word in ('publish', 'source', 'club', 'of the 31', 'matches'):
-            assert word not in said.lower(), \
-                f'{slug}: the netting sentence leads with "{word}", not the net'
-        assert 'behind netting' in text
-        assert join.park.source in text
-        assert join.park.retrieved in text
-    else:
-        assert 'no area below is marked as behind netting' in said, \
-            f'{slug}: gap not stated above the fold'
-        assert 'gap' in text.lower()
-
-
-def test_side_specific_netting_claims_are_hedged(built):
-    """Where the published extent lands differently on the two foul lines, the
-    page is asserting which line is which. That is only allowed at a park whose
-    sides are established, and even there it has to carry its own warning: the
-    anchors settle the mirror and nothing else, and at all four of these parks
-    the club's own map puts the plate somewhere the model does not.
-    """
-    hedged = 0
-    for slug, p in built['parks'].items():
-        text = flat(built['pages'][slug])
-        asserting = (p['net']['state'] == 'mapped'
-                     and p['sides']['named'] and p['net']['sides_differ'])
-        if asserting:
-            hedged += 1
-            assert 'so the two lines are named separately above' in text, \
-                f'{slug}: side-specific netting claim is not hedged'
+    for inline, block in CLUB_QUOTE.findall(text):
+        if inline:
+            assert html.unescape(inline) in club['quotes'], \
+                f'{slug}: a quotation the club did not make: {inline[:60]!r}'
         else:
-            assert 'so the two lines are named separately above' not in text, \
-                f'{slug}: side hedge shown where no side claim is made'
-    assert hedged == 4, f'expected 4 side-asymmetric mapped parks, {hedged}'
+            paras = [html.unescape(x) for x in
+                     re.findall(r'<p>(.*?)</p>', block, re.S)]
+            assert paras == list(club['full']), \
+                f'{slug}: the long quotation is not the club\'s statement'
+            assert re.sub(r'<p>.*?</p>', '', block, flags=re.S) == '', \
+                f'{slug}: something other than the club\'s words is inside it'
+    whole = ' '.join(club['full'])
+    for q in club['quotes']:
+        assert q in whole, f'{slug}: {q[:60]!r} is not in the club\'s statement'
+    record = _record_text()
+    for para in club['full']:
+        assert re.sub(r'\s+', ' ', para) in record, \
+            f'{slug}: {para[:60]!r} is not in SOURCED_DATA.md Part 2b'
 
 
-def test_twenty_four_parks_are_netting_gaps(built):
-    """The counts on the home page have to be the counts in the data.
+def test_wrigley_and_comerica_quote_the_club(built):
+    """Both were filed under "nothing usable is published" (`LIMITATIONS.md`
+    3.5). The Cubs say where their netting runs, in words; the Tigers give
+    both ends of it. Both pages now quote them, and both parks are in the
+    group of clubs that say where their netting runs."""
+    for key, words in (('wrigley_field', 'outfield edge of each dugout'),
+                       ('comerica_park', 'through section 116')):
+        slug = PARK_SOURCES[key]['slug']
+        said = netting_sentence(built['pages'][slug])
+        assert '<q class="quote">' in said and words in said, \
+            f'{slug}: the club\'s own words are not above the table'
+        assert 'Nothing published' not in said
+        assert CLUB_NETTING[key]['kind'] == 'states'
+    about = flat(built['pages']['about'])
+    states = about.split('The club says where its netting runs')[1] \
+                  .split('</ul>')[0]
+    for slug in ('wrigley-field', 'comerica-park'):
+        assert f'href="../{slug}/"' in states, \
+            f'{slug} is not listed among the clubs that say where it runs'
 
-    Went from 20 to 21 when the side-anchor check (netting G5) rejected
-    Oriole Park: its seating map has the lower bowl numbered the opposite way
-    round from the zone table. Went from 21 to 24 when the second map read
-    (Step 12) did the same to Coors, Progressive and Oracle. See
-    MAP_FINDINGS.md.
+
+@pytest.mark.parametrize('slug', PARK_SLUGS)
+def test_no_page_marks_an_area_behind_or_outside_netting(built, slug):
+    """The per-area netting marks are gone, and so is everything built on them.
+
+    They were this model's seat labels read against the club's numbers, and
+    the parks' own seating maps put those labels in the wrong place at 27 of
+    30 parks. The red "not behind netting" was worse — an inference from
+    silence, printed in the site's loudest colour. None of the words, tags or
+    drawing marks that carried them may come back, and every page still
+    carries the clubs' own warning that netting is not protection.
     """
-    gaps = [p for p in built['parks'].values() if p['net']['state'] != 'mapped']
-    assert len(gaps) == 24
-    assert 'At the other 24 it is a gap' in flat(built['pages']['about'])
+    text = built['pages'][slug]
+    for gone in ('not behind netting', 'partly netted', 'netting not verified',
+                 'differs by foul line', 'tag-open', 'tag-part', 'class="nm"',
+                 'If you want to catch a ball', 'id="readings"'):
+        assert gone not in text, f'{slug}: "{gone}" is back on the page'
+    assert flat(site_build.NETTING_CLUB_CAVEAT) in flat(text), \
+        f'{slug}: the clubs\' own warning is missing'
 
 
-def test_the_about_page_splits_gaps_by_whose_they_are(built):
-    """The larger group of gaps is this project's own defects, and the page has
-    to be built so that a reader sees that without reading the copy.
-
-    `join.status` already draws the line — `join_gap` is a park whose club
-    published something usable and whose *model* could not use it — and this
-    test holds the page to it, including the claim that it is the larger of
-    the two, which is the whole reason the split is worth making.
-
-    The grouped listing was the home page's until Step 23 made the home page
-    a gallery; it is on the explanatory page now, unchanged.
-    """
-    home = flat(built['pages']['about'])
-    groups = {}
-    for p in built['parks'].values():
-        groups.setdefault(p['join'].status, []).append(p)
-    assert set(groups) == {'mapped', 'join_gap', 'source_gap'}
-    assert len(groups['join_gap']) > len(groups['source_gap']), \
-        'the copy calls the model-fault group the largest'
-    assert len(groups['join_gap']) > len(groups['mapped'])
-
-    for key, heading, _ in site_build.GROUPS:
-        marked = f'{heading} <span class="sub">({len(groups[key])})</span>'
-        assert marked in home, f'home page is missing the {key} group'
-        # Each group's own parks link from it, and only those — a park quietly
-        # dropped from all three, or listed twice, would otherwise pass.
+def test_the_about_page_groups_parks_by_what_the_club_says(built):
+    """Three groups, read off `CLUB_NETTING`, each listing exactly its own
+    parks: the clubs that say where their netting runs, the one whose page
+    contradicts itself, and the ones whose pages say nothing usable."""
+    about = flat(built['pages']['about'])
+    seen = []
+    for kinds, heading, _ in site_build.NETTING_GROUPS:
+        members = {p['slug'] for p in built['parks'].values()
+                   if p['club']['kind'] in kinds}
+        marked = (f'{flat(heading.replace(chr(39), "&#x27;"))} '
+                  f'<span class="sub">({len(members)})</span>')
+        if marked not in about:
+            marked = f'{heading} <span class="sub">({len(members)})</span>'
+        assert marked in about, f'about page is missing the {kinds} group'
         listed = set(re.findall(r'href="\.\./([^"]+)/"',
-                                home.split(marked)[1].split('</ul>')[0]))
-        assert listed == {p['slug'] for p in groups[key]}, \
-            f'{key} group does not list exactly its own parks'
+                                about.split(marked)[1].split('</ul>')[0]))
+        assert listed == members, f'{kinds} group does not list its own parks'
+        seen += sorted(members)
+    assert sorted(seen) == PARK_SLUGS, 'a park is in no group, or in two'
+    counts = {k: sum(1 for c in CLUB_NETTING.values() if c['kind'] == k)
+              for k in ('states', 'conflicts', 'declines', 'silent')}
+    assert counts == {'states': 25, 'conflicts': 1, 'declines': 1, 'silent': 4}
 
 
 # ============================================================
@@ -722,13 +853,6 @@ def test_the_word_safe_never_appears(built, slug):
     assert hit is None, f'{slug or "home"}: "{hit.group(0)}" at {hit.start()}'
 
 
-@pytest.mark.parametrize('slug', sorted(s['slug'] for s in PARK_SOURCES.values()))
-def test_risk_is_described_in_relative_terms(built, slug):
-    text = built['pages'][slug]
-    assert 'not behind netting' in text or 'netting not verified' in text
-    assert 'higher risk' in text or 'lower risk' in text or 'no risk' in text
-
-
 # ============================================================
 # Constraint 4 — no accuracy claims
 # ============================================================
@@ -769,42 +893,6 @@ def test_every_park_page_states_its_unmatched_share(built, slug):
     """The share of fouls the model drops is on the page, not hidden."""
     assert 'land where it has no seating area' in flat(built['pages'][slug])
 
-
-# ============================================================
-# The two readings
-# ============================================================
-
-def test_souvenir_reading_excludes_netted_zones(built):
-    """A netted zone is out of the catching list and in the risk list."""
-    checked = 0
-    for slug, p in built['parks'].items():
-        netted = [z for z in p['zones'] if z['blocks_catch']]
-        if not netted:
-            continue
-        checked += 1
-        text = built['pages'][slug]
-        catch = text.split('If you want to catch a ball')[1]
-        catch_list = catch.split('</ol>')[0]
-        risk = text.split('If you want to know what is coming at you')[1]
-        risk_list = risk.split('</ol>')[0]
-        for z in netted:
-            assert z['heading'] not in catch_list, \
-                f'{slug}: netted zone in the catching list'
-        # The busiest netted zone is still shown under the risk reading.
-        busiest = max(netted, key=lambda z: z['fouls'])
-        if busiest['fouls'] >= 0.05 and busiest is p['zones'][0]:
-            assert busiest['heading'] in risk_list
-    # Seven parks are mapped after Step 12 (three lost to the second map read).
-    assert checked >= 7, 'expected every mapped park to have a netted zone'
-
-
-def test_gap_parks_exclude_nothing_and_say_so(built):
-    for slug, p in built['parks'].items():
-        if p['net']['state'] == 'mapped':
-            continue
-        text = built['pages'][slug]
-        assert 'Nothing is excluded from this list' in text
-        assert all(not z['blocks_catch'] for z in p['zones'])
 
 # ============================================================
 # The schematic
@@ -858,31 +946,58 @@ def test_the_schematic_draws_every_area_the_table_lists(built, key):
     slug = PARK_SOURCES[key]['slug']
     p = built['parks'][slug]
     rows = zone_rows(p)
-    covered = set()
+    drawn = set()
     for sid, row in drawn_rows(p):
         assert row is not None, f'{slug}: {sid} is drawn with no row behind it'
         # Only the first-base half is computed; the third-base half is that
         # half mirrored, so a first-base wedge covers its counterpart row and
         # the folded row a pair may have become.
-        covered |= {i for i in (sid, '3B-' + sid[3:], 'LINES-' + sid[3:])
-                    if i in rows} if sid[:3] == '1B-' else {sid}
-    assert covered == set(rows), \
+        drawn |= {i for i in (sid, '3B-' + sid[3:], 'LINES-' + sid[3:])
+                  if i in rows} if sid[:3] == '1B-' else {sid}
+    # The one exception is a deck entirely under a blocking cover: no ball is
+    # credited to it, so it is not ground, and the table says "none" for it.
+    covered = {z['id'] for z in p['zones'] if z['covered']}
+    assert drawn == set(rows) - covered, \
         f'{slug}: the drawing and the table list different areas'
+    for i in covered:
+        assert rows[i]['fouls'] == 0.0, f'{slug}: {i} is covered and receives balls'
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
-def test_the_schematic_shades_from_the_figures_the_table_prints(built, key):
-    """The invariant the whole drawing rests on.
+def test_the_schematic_shades_by_the_bands_the_table_prints(built, key):
+    """The invariant the whole drawing rests on, and since Step 26 the table
+    too: the shade on the drawing and the word in the table are one band.
 
     A shade that disagreed with the row under it would be worse than no
-    drawing at all, because a reader has no way to check it. The steps the
-    page emits have to be exactly the steps its own printed figures fall in.
+    drawing at all, because a reader has no way to check it. Every row's band
+    is where its shading figure falls against the busiest at the park; the
+    drawing uses exactly the bands of the rows it draws; and the table prints
+    each row's band as the word and the swatch of that band — or "none", with
+    no swatch, for an area the model sends no ball to.
     """
     slug = PARK_SOURCES[key]['slug']
-    expected = {site_diagram.step_of(row['fouls'])
-                for _, row in drawn_rows(built['parks'][slug])}
-    assert drawn_steps(built['pages'][slug]) == expected, \
-        f'{slug}: shaded from figures the table beneath it does not print'
+    p = built['parks'][slug]
+    rows = zone_rows(p)
+    shade = {i: site_diagram.shade_figure(i, rows) for i in rows}
+    top = max(shade.values())
+    for z in p['zones']:
+        assert z['band'] == site_diagram.band_of(shade[z['id']], top)
+
+    assert drawn_steps(built['pages'][slug]) \
+        == {row['band'] for _, row in drawn_rows(p)}, \
+        f'{slug}: shaded in bands the table beneath it does not print'
+
+    table = TABLE.search(built['pages'][slug]).group(0)
+    cells = re.findall(r'<tr><td class="k">.*?</td><td class="n">(.*?)</td>'
+                       r'</tr>', table, re.S)
+    assert len(cells) == len(p['zones'])
+    for z, cell in zip(p['zones'], cells):
+        if z['fouls'] > 0:
+            assert f'<i class="z{z["band"]}"></i>' \
+                f'{site_diagram.BAND_WORDS[z["band"]]}' in cell, \
+                f'{slug}: {z["id"]} prints a band its shade does not have'
+        else:
+            assert site_diagram.NONE_WORD in cell and '<i' not in cell
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
@@ -895,10 +1010,8 @@ def test_the_schematic_shades_the_two_foul_lines_alike(built, key):
     for z in p['zones']:
         if z['id'][:3] not in ('1B-', '3B-'):
             continue
-        a = site_diagram._row_for('1B-' + z['id'][3:], rows)
-        b = site_diagram._row_for('3B-' + z['id'][3:], rows)
-        assert site_diagram.step_of(a['fouls']) \
-            == site_diagram.step_of(b['fouls']), \
+        other = {'1B-': '3B-', '3B-': '1B-'}[z['id'][:3]] + z['id'][3:]
+        assert rows[other]['band'] == z['band'], \
             f'{key}: the two foul lines would draw in different shades'
 
 
@@ -915,61 +1028,18 @@ def test_the_schematic_names_no_foul_line_where_nothing_establishes_one(
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
-def test_the_schematic_marks_netting_only_where_it_is_sourced(built, key):
-    """A mark means a club places those seats fully behind netting.
+def test_the_schematic_marks_no_netting(built, key):
+    """Step 26 took the netting mark off the drawing.
 
-    No mark means no source, and the drawing has to say which of the two a
-    reader is looking at rather than leaving an unmarked arc to be read as an
-    open one.
+    It ran along the front of the areas the table called behind netting, so
+    it was drawn on this model's template at the position of this model's
+    seat labels — which the parks' own maps put in the wrong place at most of
+    the parks it appeared on. The club's own sentence, directly under the
+    drawing, is where the netting is now, and the drawing says nothing about
+    it either way.
     """
-    slug = PARK_SOURCES[key]['slug']
-    p = built['parks'][slug]
-    fig = diagram(built['pages'][slug])
-    marked = 'class="nm" d=' in fig
-    netted = any(z['status'] == 'netted' for z in p['zones'])
-    assert marked == netted, f'{slug}: netting mark does not match the sources'
-    if p['net']['state'] != 'mapped':
-        assert not marked, f'{slug}: netting marked at a park with no join'
-    if not marked:
-        assert 'No netting is marked here' in flat(fig)
-        assert 'a missing source, not a missing net' in flat(fig)
-
-
-@pytest.mark.parametrize('key', sorted(STADIUMS))
-def test_the_schematic_marks_every_area_the_table_calls_netted(built, key):
-    """The drawing and the table have to agree, area by area, on netting.
-
-    The test that was here before asked only whether a mark existed at a park
-    where something was netted, and Fenway passed it while telling a reader
-    two different things: the table listed the first-base dugout boxes and
-    both infield-box areas as behind netting, and the only mark on the drawing
-    ran behind the plate. The dugout boxes went unmarked because the drawing
-    read a foul-line pair as one thing and the club nets further down one line
-    than the other — so a sourced fact was dropped to keep a rule that exists
-    to protect an *unsourced* one, the left-right mirror the model is built
-    on.
-
-    What replaces it is an equality, both ways round, over the rows the table
-    actually prints. Every area the table calls behind netting carries a mark;
-    nothing else does. `marked_rows` walks the same wedges `park_svg` marks
-    from, so this compares the drawing with the table rather than one reading
-    of the table with another.
-    """
-    slug = PARK_SOURCES[key]['slug']
-    p = built['parks'][slug]
-    printed = {z['id'] for z in p['zones'] if z['status'] == 'netted'}
-    drawn = site_diagram.marked_rows(p)
-    assert drawn == printed, (
-        f'{slug}: the drawing marks {sorted(drawn)} and the table calls '
-        f'{sorted(printed)} behind netting')
-
-    # And the same count, in the finished markup: one subpath per marked
-    # wedge, so a mark that was computed and then not emitted cannot pass.
-    fig = diagram(built['pages'][slug])
-    subpaths = sum(d.count('M') for cls, d in DIA_PATH.findall(fig)
-                   if cls == 'nm')
-    assert bool(subpaths) == bool(printed), \
-        f'{slug}: {subpaths} marks drawn for {len(printed)} netted areas'
+    fig = diagram(built['pages'][PARK_SOURCES[key]['slug']])
+    assert 'class="nm"' not in fig and 'netting' not in flat(fig).lower()
 
 
 @pytest.mark.parametrize('key', sorted(STADIUMS))
@@ -1153,25 +1223,27 @@ def test_the_home_plate_label_stands_clear_of_both_foul_lines(built, key):
                  f'{off:.1f} ft of a foul line')
 
 
-def test_the_step_legend_matches_the_step_boundaries(built):
-    """The legend is the only thing telling a reader what a shade is worth, so
-    it is generated from `STEPS` rather than written out beside them."""
-    assert len(site_diagram.STEP_WORDS) == len(site_diagram.STEPS) + 1
+def test_the_band_legend_matches_the_band_boundaries(built):
+    """The legend is the only thing on the page telling a reader what a shade
+    is worth, so it is generated from `BAND_WORDS` rather than written out
+    beside them, and the boundaries are quarters of the busiest area."""
+    assert len(site_diagram.BAND_WORDS) == len(site_diagram.BAND_EDGES) + 1
     fig = flat(diagram(built['pages']['fenway-park']))
-    for word in site_diagram.STEP_WORDS:
+    for word in site_diagram.BAND_WORDS:
         assert word in fig
-    assert site_diagram.step_of(0.9) == 0 and site_diagram.step_of(1.0) == 1
-    assert site_diagram.step_of(3.99) == 3 and site_diagram.step_of(4.0) == 4
+    band = site_diagram.band_of
+    assert band(0.249, 1) == 0 and band(0.25, 1) == 1
+    assert band(0.749, 1) == 2 and band(0.75, 1) == 3 and band(1, 1) == 3
 
 
 def test_the_shading_uses_every_step_somewhere_and_none_at_only_one_park(built):
-    """Five steps that only ever resolve to two would be four steps of
-    decoration and one of meaning. Each has to earn its place on the ramp."""
+    """Four bands that only ever resolve to two would be two bands of
+    decoration. Each has to earn its place on the ramp."""
     used = {}
     for key in STADIUMS:
         for step in drawn_steps(built['pages'][PARK_SOURCES[key]['slug']]):
             used[step] = used.get(step, 0) + 1
-    assert sorted(used) == [0, 1, 2, 3, 4], f'unused shading step: {used}'
+    assert sorted(used) == [0, 1, 2, 3], f'unused shading band: {used}'
     assert min(used.values()) > 1, f'a step reached by one park only: {used}'
 
 # ============================================================
@@ -1188,7 +1260,13 @@ def test_the_shading_uses_every_step_somewhere_and_none_at_only_one_park(built):
 
 HOME_BUDGET = 40      # words of prose outside the tiles
 PARK_BUDGET = 60      # words visible without opening anything, less the
-                      # table and the drawing's own labels
+                      # table, the drawing's own labels and the club's own
+                      # words (Step 26): the budget is on this site's prose,
+                      # and a quotation is the source, not the prose. What a
+                      # quotation may contain is held to the club's text by
+                      # `test_club_quotes_are_the_clubs_words`.
+CLUB_QUOTES = re.compile(r'<q class="quote">.*?</q>'
+                         r'|<blockquote class="quote">.*?</blockquote>', re.S)
 
 # A word is a run of characters that starts with a letter or a digit. The
 # middle dots and the arrow in the caveat line are not words; "31" is.
@@ -1220,7 +1298,8 @@ def test_home_page_word_budget(built):
 
 @pytest.mark.parametrize('slug', PARK_SLUGS)
 def test_park_page_word_budget(built, slug):
-    words = visible_words(built['pages'][slug], DETAILS_BODY, SCHEMATIC, TABLE)
+    words = visible_words(built['pages'][slug], DETAILS_BODY, SCHEMATIC, TABLE,
+                          CLUB_QUOTES)
     assert len(words) <= PARK_BUDGET, \
         f'{slug}: {len(words)} words visible: {" ".join(words)}'
 
@@ -1264,49 +1343,201 @@ def test_park_specific_detail_is_behind_the_details_disclosure(built, slug):
     table or the caveat is one click down, and all of it is still there."""
     text = built['pages'][slug]
     inside = text[text.index('<details class="more">'):text.index('</details>')]
-    for anchor in ('netting-source', 'model', 'readings', 'figures', 'labels'):
+    for anchor in ('netting-source', 'model', 'figures', 'labels'):
         assert f'id="{anchor}"' in inside, \
             f'{slug}: the {anchor} section is not inside Details'
-    assert re.search(r'rebuilt \d{4}-\d{2}-\d{2}', inside), \
-        f'{slug}: the build date is not on the page'
+    assert re.search(r'Model run on\s+\d{4}-\d{2}-\d{2}', inside), \
+        f'{slug}: the date the model ran is not on the page'
 
     outside = SCHEMATIC.sub(' ', DETAILS_BODY.sub(lambda m: m.group(1), text))
-    assert outside.count('<p') == 5, \
-        (f'{slug}: wordmark, team, netting sentence, caveat, footer — and '
-         f'nothing else')
+    mislabel = 'id="mislabel"' in outside
+    assert outside.count('<p') == 5 + mislabel, \
+        (f'{slug}: wordmark, team, netting sentence, the mislabelled-areas '
+         f'line where there is one, caveat, footer — and nothing else')
     for tag in ('<section', '<h2', '<h3', '<ol', '<ul', '<div'):
         assert tag not in outside, f'{slug}: {tag} outside Details'
 
 
 @pytest.mark.parametrize('slug', PARK_SLUGS)
-def test_a_row_of_the_distribution_table_is_three_things(built, slug):
-    """Which area, how many fouls a game, what the club says about netting.
+def test_a_row_of_the_distribution_table_is_two_things(built, slug):
+    """Which area, and which band. Nothing else, and no figure.
 
-    The row used to carry the deck, the share of the fouls that reach seats
-    and the speed off the bat as well, in a line of small grey type that ran
-    under every heading and that a reader scanning the figures had to read
-    past eleven times. Those three are checked here to have left the row and
-    to be inside Details, because a budget met by deleting something true
-    would be worse than no budget.
+    The row has lost three things over three steps: the deck, share and speed
+    (Step 23, to Details), what the club says about netting in front of the
+    area (Step 26 — it was this model's labels read against the club's
+    numbers), and the figure itself (Step 26 — to a tenth of a ball, which the
+    run cannot resolve). Everything that left is checked here to be inside
+    Details, because a budget met by deleting something true would be worse
+    than no budget.
     """
     text = built['pages'][slug]
     table = TABLE.search(DETAILS_BODY.sub(lambda m: m.group(1), text)).group(0)
-    for gone in ('mph', '%', 'of the fouls that reach seats'):
+    for gone in ('mph', '%', 'of the fouls that reach seats', 'class="tag'):
         assert gone not in table, f'{slug}: "{gone}" is still in the table'
+    assert not re.search(r'\d', re.sub(r'<[^>]+>', ' ', table)), \
+        f'{slug}: the table above the fold prints a figure'
 
     zones = built['parks'][slug]['zones']
     cells = re.findall(r'<tr><td class="k">(.*?)</td>'
                        r'<td class="n">(.*?)</td></tr>', table, re.S)
     assert len(cells) == len(zones)
-    for (label, figure), z in zip(cells, zones):
-        assert label.count('<span class="tag ') == 1, \
-            f'{slug}: a row carries {label.count("<span class=")} tags'
-        assert figure == site_build.fouls_str(z['fouls'])
+    for (_, band), z in zip(cells, zones):
+        assert band == site_build.band_cell(z)
 
-    inside = text[text.index('<details class="more">'):]
+    inside = flat(text[text.index('<details class="more">'):])
     assert 'Each area in full' in inside, \
         f'{slug}: the figures that left the row are not in Details'
     assert 'mph' in inside and 'of the fouls that reach' in inside
+    for z in zones:
+        assert f'<td class="n">{site_build.fouls_str(z["fouls"])}</td>' \
+            in inside, f'{slug}: {z["id"]}\'s figure is not under Details'
+
+
+TENTHS = re.compile(r'\d\.\d')
+
+
+@pytest.mark.parametrize('slug', PARK_SLUGS)
+def test_no_figure_to_a_tenth_is_shown_outside_details(built, slug):
+    """Step 26: the page above the fold carried every area's figure to a tenth
+    of a ball a game, from a model that cannot tell 2.1 from 2.3 and has never
+    seen a foul ball. Nothing visible may carry a decimal now — not the table,
+    not the drawing's legend, not its description for a screen reader. The
+    exact figures are inside Details and only there.
+    """
+    text = built['pages'][slug]
+    outside = DETAILS_BODY.sub(lambda m: m.group(1), HEAD.sub(' ', text))
+    outside = SCHEMATIC.sub(lambda m: SVG_GEOMETRY.sub(' ', m.group(0)),
+                            outside)
+    readable = html.unescape(re.sub(r'<(?!svg)[^>]+>', ' ', outside))
+    hit = TENTHS.search(readable)
+    assert hit is None, f'{slug}: "{readable[hit.start()-30:hit.end()+5]}"'
+    inside = DETAILS_BODY.search(text).group(0)
+    assert TENTHS.search(inside), f'{slug}: the exact figures are gone entirely'
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_a_mislabelled_park_says_so_under_its_table(built, key):
+    """Step 26, from `LIMITATIONS.md` P1: at 27 of the 30 parks whose seating
+    map was read, the map puts this model's areas somewhere else — at Truist
+    Park the row called "behind home plate" is up the third-base line — and
+    the page admitted it only two clicks down. A reader who takes the table
+    and leaves takes the wrong seats. So one visible line under the table says
+    so at every park whose map read disagrees, and at no other park.
+    """
+    slug = PARK_SOURCES[key]['slug']
+    text = built['pages'][slug]
+    mr = MAP_READS.get(key)
+    disagrees = bool(mr and mr['outcome'] == 'disagrees')
+    line = f'<p class="mislabel" id="mislabel">{site_build.MISLABEL_LINE}</p>'
+    assert (line in text) is disagrees, \
+        f'{slug}: map read {"disagrees" if disagrees else "does not"}, and ' \
+        f'the line is {"missing" if disagrees else "there anyway"}'
+    if disagrees:
+        after_table = text.split('</table>')[1]
+        assert after_table.lstrip().startswith(line), \
+            f'{slug}: the line is not directly under the table'
+        assert text.index(line) < text.index('<details'), \
+            f'{slug}: the line is hidden inside Details'
+    assert sum(1 for k, v in MAP_READS.items() if v['outcome'] == 'disagrees') \
+        == 27
+
+
+def test_no_page_calls_a_park_the_smallest_unless_it_is(built):
+    """Step 26: Fenway's page said its 18,100 sq ft was "the smallest foul
+    territory in the majors". This site's own figures put Wrigley Field at
+    16,500. Any superlative about foul territory anywhere on the site has to
+    agree with `PARK_PARAMS`, which is what the page prints and the model
+    uses."""
+    areas = sorted((p.foul_area_sqft, k) for k, p in PARK_PARAMS.items()
+                   if p.foul_area_sqft)
+    smallest, second = areas[0][1], areas[1][1]
+    assert smallest == 'wrigley_field' and second == 'fenway_park'
+    # The parks with a roof over the field, fixed or retractable — the one
+    # qualifier a foul-territory superlative on this site uses (Comerica's).
+    roofed = {'chase_field', 'minute_maid', 'tropicana_field', 'rogers_centre',
+              'loan_depot', 'american_family', 'globe_life', 'tmobile_park'}
+    open_air = max((a, k) for a, k in areas if k not in roofed)[1]
+    for key in STADIUMS:
+        text = flat(built['pages'][PARK_SOURCES[key]['slug']])
+        if re.search(r'(?<!second-)smallest foul territory', text):
+            assert key == smallest, f'{key} is called the smallest'
+        if 'second-smallest foul territory' in text:
+            assert key == second, f'{key} is called the second-smallest'
+        if 'largest foul territory of any open-air park' in text:
+            assert key == open_air, f'{key} is called the largest open-air'
+        elif 'largest foul territory' in text:
+            assert key == areas[-1][1], f'{key} is called the largest'
+    fenway = flat(built['pages']['fenway-park'])
+    assert 'smallest foul territory in the majors' not in fenway
+    assert 'second-smallest foul territory' in fenway and 'Wrigley' in fenway
+
+
+@pytest.mark.parametrize('key', sorted(STADIUMS))
+def test_a_description_promises_only_figures_that_are_published(built, key):
+    """Step 26: Las Vegas Ballpark's search description promised "the park's
+    sourced foul territory and backstop figures", and neither is published
+    anywhere; its page says so. A description may name a sourced figure only
+    where `PARK_SOURCES` has one."""
+    slug = PARK_SOURCES[key]['slug']
+    src = PARK_SOURCES[key]
+    desc = html.unescape(re.search(r'<meta name="description" content="(.*?)">',
+                                   built['pages'][slug]).group(1))
+    if src['foul_area'] is None:
+        assert 'sourced foul territory' not in desc, f'{slug}: {desc}'
+    if src['backstop'] is None:
+        assert not re.search(r'sourced[^.]*backstop', desc), f'{slug}: {desc}'
+    if src['foul_area'] is None and src['backstop'] is None:
+        assert 'sourced' not in desc, f'{slug}: {desc}'
+    las_vegas = html.unescape(re.search(
+        r'<meta name="description" content="(.*?)">',
+        built['pages']['las-vegas-ballpark']).group(1))
+    assert 'neither its foul territory nor its backstop is published' \
+        in las_vegas
+
+
+def test_a_fully_covered_deck_receives_no_foul_ball(built):
+    """Step 26: Wrigley Field's page printed a 100% upper-deck cover beside
+    "the covered part of that deck receives nothing here", and a table giving
+    that deck nearly three fouls a game. The cover was pulled in by the deck's
+    mean depth, floored at a foot, and enough survived to take balls.
+
+    Now a deck entirely under a blocking cover is `fully_covered`, no ball is
+    credited to it, every area on it shows "none", the drawing leaves it off,
+    and the page's sentence about the cover says the whole deck receives
+    nothing. Wrigley is the only such park, and the check is general.
+    """
+    full = []
+    for key in STADIUMS:
+        p = built['parks'][PARK_SOURCES[key]['slug']]
+        covered = [z for z in p['zones'] if z['covered']]
+        params = PARK_PARAMS[key]
+        if covered:
+            full.append(key)
+            assert params.upper_overhang >= 100 and params.upper_cover in (
+                'deck', 'canopy'), f'{key}: a deck is covered with no cover'
+            text = flat(built['pages'][p['slug']])
+            assert 'covers the whole deck' in text \
+                and 'no foul ball reaches the upper deck here' in text
+            for z in covered:
+                assert z['fouls'] == 0.0, f'{key}: {z["id"]} receives balls'
+                assert site_diagram.NONE_WORD in site_build.band_cell(z)
+        else:
+            assert 'covers the whole deck' not in flat(
+                built['pages'][p['slug']])
+    assert full == ['wrigley_field']
+
+    # And in the geometry the simulation itself matches against: the deck is
+    # still there for the dive-under test, and flagged so nothing lands on it.
+    stadium = STADIUMS['wrigley_field']()
+    upper = [s for s in stadium.sections if s.level == 'upper']
+    assert upper and all(s.fully_covered for s in upper)
+    assert not any(s.fully_covered for s in stadium.sections
+                   if s.level != 'upper')
+    assert any(sec.fully_covered
+               for a in range(0, 136, 5)
+               for sec, _, _ in exposed_bands(
+                   [s for s in stadium.sections if s.side in ('1B', 'HOME')],
+                   float(a)))
 
 
 @pytest.mark.parametrize('slug', PARK_SLUGS)
@@ -1352,16 +1583,19 @@ def test_the_about_page_holds_every_explanation(built):
     under its own anchor."""
     about = flat(built['pages']['about'])
     for anchor in ('validation', 'sourced', 'netting-words', 'parks', 'sides',
-                   'numbers', 'diagram', 'readings', 'method', 'limits',
-                   'sources'):
+                   'numbers', 'diagram', 'method', 'limits', 'sources'):
         assert f'id="{anchor}"' in about, f'about page has no {anchor} section'
     for heading, _ in MODEL_LIMITS:
         assert flat(html.escape(heading, quote=True)) in about, \
             f'about page is missing the limit "{heading}"'
     assert flat(site_build.NETTING_CLUB_CAVEAT) in about
     assert 'not to scale and not a seating chart' in about
-    assert 'No mark is not no net' in about
     assert 'No figure on this site is ever drawn as a length' in about
+    # Step 26: the bands, their boundaries, and the one exception to the rule
+    # against section numbers, each stated where the site explains itself.
+    assert '"most" is at least three quarters of that area' in about
+    assert 'only section numbers anywhere on this site are inside a ' \
+        'quotation from a club' in about
     assert 'simulations per batter, fixed seed' in about
     assert 'is not affiliated with Major League Baseball' in about
     assert 'nothing on it will keep a ball from reaching you' in about

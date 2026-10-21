@@ -189,6 +189,67 @@ def test_no_public_page_recommends_a_seat(client, url):
         assert phrase not in text.lower(), f'{url}: "{phrase}"'
 
 
+@pytest.mark.parametrize('url', VISITOR_PAGES)
+def test_every_page_declares_its_charset_once(client, url):
+    """Step 26: every HTML response went out as "text/html; charset=utf-8;
+    charset=utf-8" — the charset was handed to Werkzeug inside the mimetype,
+    and Werkzeug adds one of its own. Browsers coped; it was still wrong."""
+    resp = client.get(url)
+    assert resp.headers['Content-Type'] == 'text/html; charset=utf-8'
+
+
+NOT_FOUND = ['/parks/not-a-ballpark/', '/parks/fenway/', '/no/such/page',
+             '/api/predict']
+
+
+@pytest.mark.parametrize('url', NOT_FOUND)
+def test_an_unknown_path_gets_the_sites_own_404(client, url):
+    """Step 26: a mistyped park URL used to get Flask's unstyled default page,
+    which dropped the visitor out of the site with no way back. It is the
+    site's own page now, with the status still 404 and links that work from
+    any depth — and it is held to the same claims rules as every other page.
+    """
+    resp = client.get(url)
+    assert resp.status_code == 404
+    assert resp.headers['Content-Type'] == 'text/html; charset=utf-8'
+    body = resp.data.decode('utf-8')
+    assert '<p class="wm">' in body and '<style>' in body, \
+        'the 404 is not in the site\'s look'
+    assert 'href="/parks/"' in body and 'href="/parks/about/"' in body
+    assert ACCURACY_CLAIM.search(visible(resp.data)) is None
+    assert SAFE_WORD.search(visible(resp.data)) is None
+    assert 'max-age' not in resp.headers.get('Cache-Control', '')
+
+
+def test_the_original_demo_server_is_gone():
+    """`webapp.py` was the first demo: seat recommendations and the 0.986
+    "validation" on its front page. It was never in the image, but it ran if
+    anyone started it, and the audit found it still in the repository."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    assert not os.path.exists(os.path.join(here, '..', 'webapp.py'))
+
+
+def test_the_pitch_makes_no_claim_the_audit_found_unsupported():
+    """`PITCH.md` is the document a buyer would be handed. `LIMITATIONS.md`
+    found it opening with unsourced figures (30-40 fouls into the stands, a
+    10-15x better chance of a catch), carrying a distance correlation as
+    "validation", boasting of per-batter spray data the site never uses, and
+    selling seat recommendations and live predictions that were retired. None
+    of that may come back."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(here, '..', 'PITCH.md'), encoding='utf-8') as fh:
+        pitch = re.sub(r'\s+', ' ', fh.read())
+    for claim in ('30-40', '10-15x', '0.986', '15.6 feet', '497 MLB',
+                  '100M+', 'best sections', 'Best sections', 'heat map',
+                  'ready for licensing', 'Live demo', 'one-click predictions',
+                  'real section names', 'Section names and deck levels are real',
+                  'more reliable than absolute'):
+        assert claim not in pitch, f'PITCH.md: "{claim}"'
+    assert ACCURACY_CLAIM.search(pitch) is None, \
+        f'PITCH.md: "{ACCURACY_CLAIM.search(pitch).group(0)}"'
+    assert 'No foul ball has ever been compared with this model' in pitch
+
+
 def test_the_sitemap_names_only_the_site(client):
     """Whatever is reachable, this is what is advertised."""
     body = client.get('/sitemap.xml').data.decode('utf-8')

@@ -154,6 +154,13 @@ class SeatSection:
     num_seats: int = 200
     avg_ticket_price: float = 0.0
 
+    # Set by `_apply_sourced_params` on a deck that is entirely under a
+    # blocking cover — in the current registry, Wrigley Field's upper deck,
+    # under a 100% grandstand roof. Its surface still exists for working out
+    # whether a ball dived under its front edge, but no ball is ever credited
+    # to it: one that comes down on it has hit the roof.
+    fully_covered: bool = False
+
 
 @dataclass
 class Stadium:
@@ -350,6 +357,11 @@ def find_landing_section(
         if dist < best_dist:
             best = sec
             best_dist = dist
+    # A ball whose nearest surface is a deck entirely under a blocking cover
+    # came down on the cover, not in the seats. One that dived under that
+    # deck's front edge resolves to the seats in front and is unaffected.
+    if best is not None and best.fully_covered:
+        return None
     return best
 
 
@@ -513,8 +525,9 @@ _REF_BACKSTOP_FT = 52.0
 # from deleting their upper decks outright; classifying the cover (above)
 # removes those six from the calculation entirely, so the cap has nothing left
 # to protect and its cost — understating Wrigley's genuine 100% canopy — is
-# gone with it. A blocking cover of 100% now does what it says: that deck owns
-# no exposed ground.
+# gone with it. A blocking cover of 100% now does what it says: that deck
+# receives no ball (`SeatSection.fully_covered`, enforced since Step 26 — the
+# pull alone left it a residue that took nearly three fouls a game).
 
 
 PARK_PARAMS: dict[str, ParkParams] = {
@@ -524,7 +537,8 @@ PARK_PARAMS: dict[str, ParkParams] = {
     # Cover: split upper deck, 7+14 rows. The 55% is the rear portion sitting
     # over the front portion — grandstand height, blocks.
     'fenway_park': ParkParams(18_100, 52, 40, 60, 'canopy'),
-    # Smallest foul territory in MLB. Backstop 52 is Clem's park page
+    # Second-smallest foul territory of the 29 published, after Wrigley's
+    # 16,500 (Step 26 corrected "smallest"). Backstop 52 is Clem's park page
     # (2026-07-17), which supersedes his master table's 54; Wikipedia's 60 is
     # the pre-shortening figure and is not used.
     # Cover: the 1934 grandstand roof over the upper rows, the lowest roof
@@ -541,7 +555,7 @@ PARK_PARAMS: dict[str, ParkParams] = {
     # pre-2016, before ~2,000 sq ft of seats went in. Smallest in MLB.
     # Cover: THE canopy case. 100% is the 1922 upper-deck grandstand roof, a
     # low structure directly over the seats, not a stadium roof. Applied in
-    # full, which leaves Wrigley's upper deck owning no exposed ground — the
+    # full, which leaves no ball credited to Wrigley's upper deck — the
     # intended reading, and the reason the old flat cap was removed.
     'coors_field': ParkParams(24_900, 50, 20, 35, 'deck'),
     # Backstop 50 (Clem + Seamheads) over Wikipedia's 56.
@@ -833,6 +847,21 @@ def _mean_exposed_depth(sections: list[SeatSection], sec: SeatSection,
     return sum(depths) / len(depths) if depths else 0.0
 
 
+def _cover_pct_for_level(p: ParkParams) -> dict[str, float | None]:
+    """The cover percentage that applies to each deck level, or None.
+
+    Lower-deck cover is always the deck above and always blocks. Upper-deck
+    cover counts only where `upper_cover` says something at grandstand height
+    is casting it; at the roofed parks the published figure is whole-bowl
+    shade from 150+ ft up and does not apply at all. Read by the overhang
+    step, and by `_apply_sourced_params` to mark a deck `fully_covered`.
+    """
+    pct = {'lower': p.lower_overhang, 'upper': p.upper_overhang}
+    if p.upper_cover is not None and not _UPPER_COVER_BLOCKS[p.upper_cover]:
+        pct['upper'] = None
+    return pct
+
+
 # Adjusted (distance_min, distance_max) per section, per park. The template
 # geometry is a constant, so the adjustment is too; the factories rebuild
 # sections on every call and this keeps that cheap.
@@ -881,11 +910,19 @@ def _sourced_bands(park_key: str, sections: list[SeatSection], p: ParkParams,
     #    bowl instead (as this step used to) credits an upper deck with the
     #    wrong span, and the error is worst exactly where the cover is
     #    heaviest: at 100% the deck would keep whatever the lower deck's
-    #    retreat handed it, so a fully roofed deck stayed reachable. With the
-    #    walk in order, 100% means what it says and the deck owns nothing.
-    pct_for_level = {'lower': p.lower_overhang, 'upper': p.upper_overhang}
-    if p.upper_cover is not None and not _UPPER_COVER_BLOCKS[p.upper_cover]:
-        pct_for_level['upper'] = None
+    #    retreat handed it, so a fully roofed deck stayed reachable.
+    #
+    #    The walk in order was not enough on its own to make 100% mean what it
+    #    says, and Step 26 found out from the page rather than from here: the
+    #    pull is by the deck's *mean* exposed depth and floored at a foot, so
+    #    some of a 100% deck survived it. That residue is left alone here,
+    #    because it is doing a second job — a ball that dives under a deck's
+    #    front edge is found by testing against that deck's surface, and is
+    #    credited to the seats in front (`find_landing_section`). What a 100%
+    #    deck must not do is *receive* a ball, and that is enforced where a
+    #    ball is credited, through `fully_covered`, rather than by deleting
+    #    the surface the dive test needs.
+    pct_for_level = _cover_pct_for_level(p)
 
     front_to_back = sorted(sections, key=lambda s: (_deck_mid_height(s),
                                                     s.distance_min,
@@ -925,8 +962,11 @@ def _apply_sourced_params(stadium: Stadium, park_key: str) -> None:
 
     bands = _sourced_bands(park_key, stadium.sections, p,
                            stadium.backstop_distance)
+    cover = _cover_pct_for_level(p)
     for s in stadium.sections:
         s.distance_min, s.distance_max = bands[s.section_id]
+        pct = cover.get(s.level)
+        s.fully_covered = pct is not None and pct >= 100
 
     # Netting, joined last because the join reads the finished section table.
     # It moves no geometry: a netted zone occupies the same ground it always
@@ -4395,8 +4435,8 @@ def fenway_park() -> Stadium:
     )
     stadium.sections = _make_fenway_park_sections()
     # The old hand-tuned `scale = 0.85` here is gone. Fenway's 18,100 sq ft of
-    # foul territory — the smallest in MLB — now produces its own scale from
-    # the sourced area, which lands at 0.889.
+    # foul territory — second-smallest of the 29 published, after Wrigley —
+    # now produces its own scale from the sourced area, which lands at 0.889.
     _apply_sourced_params(stadium, 'fenway_park')
     return stadium
 

@@ -14,21 +14,25 @@ Three rules this file holds to, and the reasons they exist:
    of the 31 parks, and twenty-seven of those tables disagree with their own
    club's drawing. A printed section number on a public page would be
    the one claim on it most likely to be wrong, and the one a reader would most
-   reasonably act on. So zones are described in words, and where a source's own
-   wording is a section range, it is paraphrased rather than quoted.
+   reasonably act on. So zones are described in words.
 
-   This costs something and it is worth naming: it means a published netting
-   height that the club states per section ("31 ft behind Sections 018-021B")
-   has to be re-expressed positionally, which loses the club's precision. Those
-   rewrites are held in `NET_HEIGHT_WORDS` below, one per park, next to the
-   verbatim string they replace, so the two can be compared.
+   **One exception, since Step 26: a direct quotation from the club.** The
+   numbers that are wrong are *this model's*. A club's own sentence about its
+   own sections does not inherit that problem, and paraphrasing it to keep the
+   numbers out cost the reader the one thing they could check against their
+   ticket. So `CLUB_NETTING` below quotes each club verbatim, numbers and all,
+   and a section number may appear on the site inside such a quotation and
+   nowhere else. `tests/test_site.py` strips the quotations, holds them word
+   for word to this file and to `SOURCED_DATA.md`, and runs every
+   section-number check on what is left.
 
-2. **The word "safe" does not appear on the site.** Netting is not safety.
-   `SOURCED_DATA.md` records that almost every club's own wording is that fans
-   in netted sections "are still exposed to objects leaving the field of play",
-   and this model has never seen a real foul ball land. The site says "behind
-   netting" / "not behind netting" for what is sourced, and "higher risk" /
-   "lower risk" for what is modelled. `tests/test_site.py` enforces it.
+2. **The word "safe" does not appear on the site**, not even inside a
+   quotation. Netting is not safety. `SOURCED_DATA.md` records that almost
+   every club's own wording is that fans in netted sections "are still exposed
+   to objects leaving the field of play", and this model has never seen a real
+   foul ball land. The site quotes what each club says about where its netting
+   runs and never says, of any seat, that it is protected.
+   `tests/test_site.py` enforces it.
 
 3. **A figure with no source is a gap, not a default.** Two parks have no
    published foul territory (Sutter Health Park, Las Vegas Ballpark) and one has
@@ -142,7 +146,8 @@ PARK_SOURCES: dict[str, dict] = {
         clem_page='FenwayPark.html', seamheads='BOS07',
         foul_area=18_100,
         foul_area_basis="Clem, his park page and Seamheads all give 18,100 sq "
-                        "ft — the smallest foul territory in the majors.",
+                        "ft — the second-smallest foul territory of the 29 "
+                        "parks with a published figure, after Wrigley Field.",
         backstop=52,
         backstop_basis="Clem's park page, updated July 2026, which supersedes "
                        "his own master table's 54 ft.",
@@ -533,32 +538,617 @@ COVER_APPLIED = {
 
 
 # ============================================================
-# Published netting heights, re-expressed without section numbers
+# What each club says about its netting, in its own words
 # ============================================================
 #
-# Two clubs publish their net heights against section numbers. Rule 1 above
-# forbids printing those numbers, so both statements are re-expressed
-# positionally here, verbatim source alongside. Everything else either
-# publishes a single figure (safe to quote) or says only "varies by section".
+# Until Step 26 the site read each club's published section numbers onto this
+# model's own seat labels and marked every seating area "behind netting",
+# "partly netted" or "not behind netting". The seating maps say those labels
+# are in the wrong place at twenty-seven of the thirty parks read, so the
+# marks were arithmetic on the wrong seats — and the red one, "not behind
+# netting", was this project's inference from the edge of a club's sentence,
+# printed as though the club had said it. `LIMITATIONS.md` ("The netting
+# layer") counted the result: right at three parks of 31.
+#
+# What replaces it is the club's own sentence, quoted, with a link to the page
+# it came from. A reader holding a ticket can find their own section in it,
+# which is the one join this site was never in a position to make for them.
+#
+# Every string in `quotes` and `full` below is verbatim from the club's page
+# as read on `CLUB_NETTING_READ`, with only line breaks closed up into spaces.
+# Each is also written out in `SOURCED_DATA.md` Part 2b, and
+# `tests/test_site.py` holds the pages, this file and that record to one
+# another. The extents agree with the 2026-08-09 read (Part 2) at every park;
+# what changed in between is one dead link, the Mets' netting page.
+#
+# Two rules bind the choice of excerpt. The quotation is the one place on the
+# site where a section number may appear, because there it is the club's
+# number and not this model's (rule 1 above). And the word "safe" stays off
+# the site even inside a quotation (rule 2), so where a club's sentence opens
+# with its own "for your safety", the excerpt starts after it.
+#
+# Fields:
+#
+#   kind    'states'     the club says where its netting runs
+#           'conflicts'  the club's page says two things that cannot both be
+#                        true, and both are quoted
+#           'declines'   the club says it cannot or will not say
+#           'silent'     nothing the club publishes says where it runs
+#   page    the page quoted, as it resolved on the read date — linked from the
+#           sentence above the table
+#   link    the link's words, where "The club's page" would be wrong
+#   line    the one sentence above the table, with `{0}`, `{1}`... where each
+#           quotation goes; the words around the quotations are this site's
+#   quotes  the quotations, in order
+#   full    the club's statement at fuller length, one paragraph per line of
+#           the club's own page, for the panel under Details
+#   note    anything else a reader of that panel needs, in this site's words
+#   same_as_first_read
+#           False where the page has changed since the 2026-08-09 read; the
+#           note then says how
 
-NET_HEIGHT_WORDS = {
-    'yankee_stadium': (
-        'about 31 ft above the field wall directly behind the plate, stepping '
-        'down to roughly 11 ft 6 in above the wall on either side of that, '
-        '9 ft above each dugout — raised a further 3 ft before the game — and '
-        'about 14 ft above the field along the rest of the run',
-        # verbatim source string, for comparison:
-        "31 ft above the field wall behind the plate (Sections 018-021B); "
-        "11'6\" above the wall in front of 017B and 022; 9 ft above the "
-        "dugouts, retractable up 3 ft pregame; 11'6\" above the wall at 025 "
-        "and 015A; ~14 ft above field (~11'6\" above walls) from 014B->011 and "
-        "026->029",
+CLUB_NETTING_READ = '2026-10-20'
+
+# The two sentences most clubs build their netting statement from, each
+# checked word for word against every page that uses it.
+_FORMULA = ('There is some amount of netting or screening in front of the '
+            'following seating sections; the height and coverage of netting '
+            'or screening will vary by section:')
+_EXPOSED = ('Fans in these sections are still exposed to objects leaving the '
+            'field of play, including bats and bat fragments, and thrown or '
+            'batted balls; ticket holder assumes all risk of injury.')
+_SECOND_HAND = ('A second-hand figure for this park exists, from a ticketing '
+                'site, and has never been checked against anything the club '
+                'publishes, so it is not used here.')
+
+CLUB_NETTING: dict[str, dict] = {
+
+    'yankee_stadium': dict(
+        kind='states',
+        page='https://www.mlb.com/yankees/ballpark/netting',
+        line='The Yankees say {0}',
+        quotes=('protective netting is located between Section 011 on the 1st '
+                'base/right field side of the Stadium and continues to Section '
+                '029 on the 3rd base/left field side of the Stadium.',),
+        full=(
+            'Please note that protective netting is located between Section '
+            '011 on the 1st base/right field side of the Stadium and continues '
+            'to Section 029 on the 3rd base/left field side of the Stadium. '
+            'Behind home plate, Section 018 to Section 021B, the protective '
+            'netting is 31 feet above the playing field wall and is reduced as '
+            'it approaches the inside of both dugouts. In front of Sections '
+            '017B and 022, the protective netting extends 11\'-6" from the top '
+            'of the wall. The protective netting is 9 feet above the dugouts '
+            'for the entire span of the dugouts and can retract up 3 feet at '
+            'designated times prior to the start of the game.',
+            'In front of Sections 025 on the left field side of the Stadium '
+            'and 015A on the right field side of the Stadium, the netting is '
+            '11\'-6" above the wall (behind the field-level photo wells). From '
+            'Section 014B to 011 on the right field side of the Stadium and '
+            'from Section 026 to 029 on the left field side of the Stadium, '
+            'the netting is approximately 14\' above the playing field '
+            '(approximately 11\'-6" above the walls surrounding the field of '
+            'play).',
+            _EXPOSED,
+        ),
     ),
-    'tmobile_park': (
-        '27 ft through the infield stretch behind and beside home plate, and '
-        '13.5 ft above field level along the rest of each line',
-        '27 ft in front of Sections 126-134; 13.5 ft above field level for '
-        '115-125 and 135-146',
+
+    'fenway_park': dict(
+        kind='states',
+        page='https://www.mlb.com/redsox/ballpark/netting',
+        line='The Red Sox say {0}',
+        quotes=('The protective netting at Fenway Park extends from Field Box '
+                'Section 79 to Field Box Section 9.',),
+        full=(
+            'The protective netting at Fenway Park extends from Field Box '
+            'Section 79 to Field Box Section 9. It is positioned with varying '
+            'heights all the way around, approximately 12 feet, 8 inches above '
+            'the playing field.',
+            'While the netting system offers protection, the club continues to '
+            'encourage all fans to be vigilant during games and to be on the '
+            'lookout for any objects leaving the field of play, including bats '
+            'and bat fragments, and thrown or batted balls; ticket holders '
+            'assume all risk of injury.',
+        ),
+    ),
+
+    'dodger_stadium': dict(
+        kind='states',
+        page='https://www.mlb.com/dodgers/ballpark/netting',
+        line='The Dodgers say their protective netting {0}',
+        quotes=('extends from behind home plate to the end of baseline section '
+                '40 (first base side) and baseline section 41 (third base '
+                'side).',),
+        full=(
+            'The Dodgers have protective netting which extends from behind '
+            'home plate to the end of baseline section 40 (first base side) '
+            'and baseline section 41 (third base side). The coverage of '
+            'netting or screening will vary by section. Fans are still exposed '
+            'to objects leaving the field of play, including bats and bat '
+            'fragments, and thrown or batted balls; ticket holder assumes all '
+            'risk of injury.',
+        ),
+    ),
+
+    'wrigley_field': dict(
+        kind='states',
+        page='https://www.mlb.com/cubs/ballpark/information/guide',
+        link="The club's guide",
+        line='The Cubs say {0}',
+        quotes=('Netting extends along the first and third base lines to the '
+                'outfield edge of each dugout.',),
+        full=(
+            'Netting extends along the first and third base lines to the '
+            'outfield edge of each dugout. The height and coverage of netting '
+            'or screening varies. Regardless of the location of netting, it is '
+            'still possible for balls, bats and other objects to leave the '
+            'field of play and enter the stands. No seat in Wrigley Field is '
+            'free from the risk of injury inherent in attending a live '
+            'baseball game.',
+        ),
+        note=('Reporting from 2020 had this netting extended well past the '
+              'dugouts toward both corners. The club\'s own guide still says '
+              'what is quoted here, and the club\'s guide is what this page '
+              'quotes.'),
+    ),
+
+    'coors_field': dict(
+        kind='states',
+        page='https://www.mlb.com/rockies/ballpark/seating-chart',
+        line='The Rockies say {0}',
+        quotes=('Netting runs from the front of Sections 112-147.',),
+        full=('Netting runs from the front of Sections 112-147.',),
+    ),
+
+    'chase_field': dict(
+        kind='states',
+        page='https://www.mlb.com/dbacks/ballpark/netting',
+        line='The Diamondbacks say there is {0} in front of {1}.',
+        quotes=('some amount of netting or screening', 'Sections 111-133'),
+        full=(
+            'There is some amount of netting or screening in front of the '
+            'following seating sections; approximately 30’ high:',
+            'Sections 111-133',
+            _EXPOSED,
+        ),
+    ),
+
+    'truist_park': dict(
+        kind='states',
+        page='https://www.mlb.com/braves/ballpark/information/guide',
+        link="The club's guide",
+        line='The Braves say {0}',
+        quotes=('Sections 10 to 42 and sections 111-141 are behind protective '
+                'netting.',),
+        full=(
+            'Sections 10 to 42 and sections 111-141 are behind protective '
+            'netting. Guests who are concerned with their seat location should '
+            'contact any usher and inquire about the possibility of an '
+            'alternate seat location.',
+        ),
+    ),
+
+    'camden_yards': dict(
+        kind='states',
+        page='https://www.mlb.com/orioles/ballpark/seating-map',
+        line='The Orioles say {0}.',
+        quotes=('protective netting at Oriole Park at Camden Yards extends '
+                'from Section 6 through Section 70',),
+        full=(
+            'In a continuing effort to create the most fan and family-friendly '
+            'atmosphere in sports, protective netting at Oriole Park at Camden '
+            'Yards extends from Section 6 through Section 70.',
+            _EXPOSED,
+        ),
+    ),
+
+    'citizens_bank': dict(
+        kind='states',
+        page='https://www.mlb.com/phillies/ballpark/netting',
+        line='The Phillies say there is {0} in front of {1}',
+        quotes=('some amount of netting or screening',
+                'Diamond Club Sections A-G; Field Level Sections 109-138.'),
+        full=(
+            _FORMULA,
+            'Sections: Diamond Club Sections A-G; Field Level Sections '
+            '109-138.',
+            _EXPOSED,
+        ),
+    ),
+
+    'great_american': dict(
+        kind='states',
+        page='https://www.mlb.com/reds/ballpark/netting',
+        line='The Reds say there is {0} in front of {1}, {2} and {3}.',
+        quotes=('some amount of netting or screening', 'Sections: 1-5',
+                'Sections: 22-25', 'Sections: 111-135'),
+        full=(_FORMULA, 'Sections: 1-5', 'Sections: 22-25',
+              'Sections: 111-135', _EXPOSED),
+    ),
+
+    'progressive_field': dict(
+        kind='states',
+        page='https://www.mlb.com/guardians/ballpark/netting',
+        line='The Guardians say there is {0} in front of {1}',
+        quotes=('some amount of netting or screening',
+                'Sections: 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, '
+                '138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, '
+                '150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, '
+                '162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, '
+                '174'),
+        full=(
+            _FORMULA,
+            'Sections: 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, '
+            '139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, '
+            '152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, '
+            '165, 166, 167, 168, 169, 170, 171, 172, 173, 174',
+            _EXPOSED,
+        ),
+    ),
+
+    'comerica_park': dict(
+        kind='states',
+        page='https://www.mlb.com/tigers/ballpark/seat-map',
+        line='The Tigers say {0}',
+        quotes=('Netting runs from behind home plate through section 116 down '
+                'the First Base line, and section 142 on the Third Base '
+                'line.',),
+        full=(
+            'Netting runs from behind home plate through section 116 down the '
+            'First Base line, and section 142 on the Third Base line. The '
+            'netting is 20 percent more narrow, increasing transparency and '
+            'providing an enhanced view, particularly behind home plate.',
+            'Fans between Sections 116 and 142 are still exposed to objects '
+            'leaving the field of play, including bats and bat fragments, and '
+            'thrown or batted balls. Ticket holders assumes all risk of '
+            'injury.',
+        ),
+    ),
+
+    'minute_maid': dict(
+        kind='states',
+        page='https://www.mlb.com/astros/ballpark/seat-map',
+        line='The Astros say {0}',
+        quotes=('Sections with netting: 112 through 126 and the Diamond '
+                'Club.',),
+        full=('Sections with netting: 112 through 126 and the Diamond Club.',
+              _EXPOSED),
+    ),
+
+    'kauffman_stadium': dict(
+        kind='declines',
+        page='https://www.mlb.com/royals/ballpark/seating-map',
+        line='The Royals publish no list of sections, saying {0}',
+        quotes=('it is not possible for a map like this to show the precise '
+                'location of the netting.',),
+        full=(
+            'The above pictures show the general location where additional '
+            'netting has been installed. The height and coverage of netting or '
+            'screening varies. Please understand that it is not possible for a '
+            'map like this to show the precise location of the netting. In '
+            'addition, even if netting exists in a particular location, it is '
+            'still possible for balls, bats and other objects leaving the '
+            'field of play to strike fans. No seat in Kauffman Stadium is free '
+            'from the risk of injury inherent in attending a live baseball '
+            'game.',
+        ),
+        note=_SECOND_HAND,
+    ),
+
+    'angel_stadium': dict(
+        kind='states',
+        page='https://www.mlb.com/angels/ballpark/netting',
+        line='The Angels say {0}',
+        quotes=('protective netting is extended between Sections 103-133.',),
+        full=('protective netting is extended between Sections 103-133.',),
+    ),
+
+    'citi_field': dict(
+        kind='silent',
+        page='https://www.mlb.com/mets/ballpark/seat-map',
+        link="The club's seat map",
+        line='The Mets publish nothing that says where their netting runs.',
+        quotes=(),
+        full=(),
+        same_as_first_read=False,
+        note=('The club\'s seat map carries no netting text. The club\'s '
+              'netting page, which carried none either when it was read on '
+              '2026-08-09, no longer exists: it answered not-found on '
+              '2026-10-20. ' + _SECOND_HAND),
+    ),
+
+    'oakland_coliseum': dict(
+        kind='silent',
+        page='https://www.mlb.com/athletics/ballpark/information/guide',
+        link="The club's guide",
+        line='The Athletics’ guide to Sutter Health Park says nothing '
+             'about netting.',
+        quotes=(),
+        full=(),
+        note=('Nothing else the club or the ballpark publishes describes the '
+              'netting either. The one rule that reaches this park is a '
+              'league requirement placed on the club, not a description of '
+              'what is installed.'),
+    ),
+
+    'las_vegas_ballpark': dict(
+        kind='silent',
+        page='https://www.thelvballpark.com/a-to-z-guide',
+        link="The ballpark's guide",
+        line='Las Vegas Ballpark’s own guide tells guests they {0}, but '
+             'does not say where the netting runs.',
+        quotes=('must remain behind railings and protective netting at all '
+                'times',),
+        full=('Guests must remain behind railings and protective netting at '
+              'all times and may not lean over, reach through, or interfere '
+              'with player movement.',),
+        note=('The same guide places two openings in the netting for '
+              'autographs, so there is netting in front of at least some '
+              'seats; it does not say how far it runs. The one rule that '
+              'reaches this park is a league requirement placed on the club, '
+              'not a description of what is installed.'),
+    ),
+
+    'pnc_park': dict(
+        kind='states',
+        page='https://www.mlb.com/pirates/ballpark/seating-map/3d',
+        line='The Pirates say {0}',
+        quotes=('Protective netting extends from Section 101 through Section '
+                '130.',),
+        full=(
+            'Protective netting extends from Section 101 through Section 130. '
+            'The height and coverage of netting varies by section. It is not '
+            'possible for a map like this to show the precise location of the '
+            'netting and/or to what extent the netting may or may not impact '
+            'your view. In addition, even if netting exists in a particular '
+            'location, it is still possible for balls, bats and other objects '
+            'to leave the field of play and enter the stands. No seat at PNC '
+            'Park is free from the risk of injury inherent in attending a live '
+            'baseball game. Each ticket holder assumes all risk of injury.',
+        ),
+    ),
+
+    'petco_park': dict(
+        kind='states',
+        page='https://www.mlb.com/padres/ballpark/netting',
+        line='The Padres say there is {0} in front of {1}',
+        quotes=('some amount of netting or screening',
+                'All Lexus Home Plate Club sections. Field VIP: Field VIP '
+                '101-106. The full square net coverage is also from Sections '
+                '109-110 while angled net coverage is from Sections 111-115 on '
+                'the first base side and Sections 112-116 on the 3rd base '
+                'side.'),
+        full=(
+            _FORMULA,
+            'All Lexus Home Plate Club sections. Field VIP: Field VIP 101-106. '
+            'The full square net coverage is also from Sections 109-110 while '
+            'angled net coverage is from Sections 111-115 on the first base '
+            'side and Sections 112-116 on the 3rd base side.',
+            _EXPOSED,
+        ),
+    ),
+
+    'oracle_park': dict(
+        kind='states',
+        page='https://www.mlb.com/giants/ballpark/seat-map',
+        line='The Giants say {0}',
+        quotes=('The protective netting extends across Sections 101-135; the '
+                'height and coverage of netting will vary by section.',),
+        full=(
+            'The protective netting extends across Sections 101-135; the '
+            'height and coverage of netting will vary by section.',
+            _EXPOSED,
+        ),
+    ),
+
+    'tmobile_park': dict(
+        kind='states',
+        page='https://www.mlb.com/mariners/ballpark/seat-map',
+        line='The Mariners say {0}',
+        quotes=('Fans seated in Sections 115-146 will now be behind '
+                'netting.',),
+        full=(
+            'Fans seated in Sections 115-146 will now be behind netting. The '
+            'height and coverage vary by section. Netting in front of those '
+            'seated in Sections 126-134 is 27-feet high. For those seated in '
+            'Sections 115-125 and Sections 135-146, the netting will extend '
+            '13.5-feet above field level.',
+        ),
+    ),
+
+    'busch_stadium': dict(
+        kind='states',
+        page='https://www.mlb.com/cardinals/ballpark/netting',
+        line='The Cardinals say there is {0} in front of {1}',
+        quotes=('some amount of netting or screening',
+                'Cardinals Club sections 1, 2, 3, 4, 5, 6, 7, 8. Home Field '
+                'Box sections 145, 146, 147, 148, 149, 150, 151, 152, 153, '
+                '154, 155. Diamond Box sections 140, 141, 142, 143, 144, 145, '
+                '155, 156, 157, 158, 159, 160. Infield Field Box sections 141, '
+                '142, 143, 144, 156, 157, 158, 159, 160. Dugout Box sections '
+                '132, 135, 136, 137, 138, 139, 161, 162, 163, 164, 165. 1B '
+                'Field Box sections 135, 136, 137, 138, 139, 140. 3B Field Box '
+                'sections 161, 162, 163, 164, 165. Lower RF Box sections 132, '
+                '133, 134.'),
+        full=(
+            _FORMULA,
+            'Cardinals Club sections 1, 2, 3, 4, 5, 6, 7, 8.',
+            'Home Field Box sections 145, 146, 147, 148, 149, 150, 151, 152, '
+            '153, 154, 155.',
+            'Diamond Box sections 140, 141, 142, 143, 144, 145, 155, 156, 157, '
+            '158, 159, 160.',
+            'Infield Field Box sections 141, 142, 143, 144, 156, 157, 158, '
+            '159, 160.',
+            'Dugout Box sections 132, 135, 136, 137, 138, 139, 161, 162, 163, '
+            '164, 165.',
+            '1B Field Box sections 135, 136, 137, 138, 139, 140.',
+            '3B Field Box sections 161, 162, 163, 164, 165.',
+            'Lower RF Box sections 132, 133, 134.',
+            _EXPOSED,
+        ),
+    ),
+
+    'tropicana_field': dict(
+        kind='conflicts',
+        page='https://www.mlb.com/rays/ballpark/netting',
+        line='The Rays say both that {0} and that {1}, which cannot both be '
+             'true.',
+        quotes=('Protective netting extends from home plate to the foul poles '
+                'located in Sections 137 and 138',
+                'protective netting of varying heights is used in the Stadium '
+                'from Section 125 to behind home plate to Section 126'),
+        full=(
+            'Protective netting extends from home plate to the foul poles '
+            'located in Sections 137 and 138 at Tropicana Field.',
+            'There is some amount of netting in front of the seating sections '
+            'listed below; the height and coverage of the netting varies by '
+            'section.',
+            'Netting Sections: 101, 102, 103, 104, 105, 106, 107, 108, 109, '
+            '110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, '
+            '123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, '
+            '136, 137, and 138.',
+            'Please understand that it is not possible for a map to show the '
+            'precise location of the netting and/or to what extent netting may '
+            'or may not impact your view. In addition, regardless of the '
+            'location of netting, fans in the sections listed above are still '
+            'exposed to objects leaving the field of play, including bats and '
+            'bat fragments, and thrown or batted balls; ticket holders assume '
+            'all risk of injury. No seat in Tropicana Field is free from the '
+            'risk of injury inherent in attending a live baseball game.',
+            'Please note that protective netting of varying heights is used in '
+            'the Stadium from Section 125 to behind home plate to Section 126.',
+        ),
+        note=('The first statement runs the netting the length of both foul '
+              'lines and the last stops it close to the plate, so they cannot '
+              'describe the same installation. The second reads like text '
+              'nobody removed, but nothing on the page says which is current, '
+              'so this site does not choose.'),
+    ),
+
+    'globe_life': dict(
+        kind='states',
+        page='https://www.mlb.com/rangers/ballpark/seat-map',
+        line='The Rangers say there is {0} in front of {1}.',
+        quotes=('some amount of netting or screening', 'Sections 1-26'),
+        full=(
+            'There is some amount of netting or screening in front of the '
+            'following seating sections:',
+            'Sections 1-26. The height and coverage of netting or screening '
+            'varies by section.',
+            'Fans in the sections listed above are still exposed to objects '
+            'leaving the field of play, including bats and bat fragments and '
+            'thrown or batted balls. Ticket holder assumes all risk of '
+            'injury.',
+        ),
+    ),
+
+    'rogers_centre': dict(
+        kind='states',
+        page='https://www.mlb.com/bluejays/ballpark/netting',
+        line='The Blue Jays say {0}',
+        quotes=('The protective netting extends down the length of the first '
+                'and third baseline walls, to Sections 113C & 130C, '
+                'respectively, tapering off to the curve before the foul '
+                'poles.',),
+        full=(
+            'The protective netting extends down the length of the first and '
+            'third baseline walls, to Sections 113C & 130C, respectively, '
+            'tapering off to the curve before the foul poles. The height of '
+            'the extended netting matches what was in place behind home plate '
+            'previously (30 feet), and the colour and knotting is the same as '
+            'well.',
+        ),
+    ),
+
+    'target_field': dict(
+        kind='states',
+        page='https://www.mlb.com/twins/ballpark/seat-map',
+        line='The Twins say there is {0} in front of {1}, {2}, {3}, {4}, {5} '
+             'and {6}.',
+        quotes=('some amount of netting or screening', 'Sections 7 - 10',
+                'Sections 1 - 6 & 11 - 17', 'Sections 109 - 119',
+                'Sections 105 - 108 & 120 - 123',
+                'Sections 103 - 104 & 124 -125',
+                'Section 126 – Partially covered'),
+        full=(
+            _FORMULA,
+            'Sections 7 - 10',
+            'Sections 1 - 6 & 11 - 17',
+            'Sections 109 - 119',
+            'Sections 105 - 108 & 120 - 123',
+            'Sections 103 - 104 & 124 -125',
+            'Section 126 – Partially covered',
+            _EXPOSED,
+        ),
+    ),
+
+    'guaranteed_rate': dict(
+        kind='states',
+        page='https://www.mlb.com/whitesox/ballpark/seat-map',
+        line='The White Sox say {0}.',
+        quotes=('some amount of netting or screening is in front of 49 '
+                'sections (Sections 108-156)',),
+        full=(
+            'some amount of netting or screening is in front of 49 sections '
+            '(Sections 108-156); the height and coverage of netting or '
+            'screening will vary by section.',
+            'Sections: 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, '
+            '119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, '
+            '132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, '
+            '145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156.',
+            _EXPOSED,
+        ),
+    ),
+
+    'loan_depot': dict(
+        kind='silent',
+        page='https://www.mlb.com/marlins/ballpark/seating-map',
+        link="The club's seating map",
+        line='The Marlins show their netting only as a picture on their '
+             'seating map, with no list of sections.',
+        quotes=(),
+        full=(),
+        note=('The picture is headed as the park\'s netting and carries no '
+              'text a reader could quote. ' + _SECOND_HAND),
+    ),
+
+    'american_family': dict(
+        kind='states',
+        page='https://www.mlb.com/brewers/ballpark/netting',
+        line='The Brewers say there is {0}.',
+        quotes=('some amount of protective netting in front of Sections '
+                '108-128',),
+        full=(
+            'There is some amount of protective netting in front of Sections '
+            '108-128, with the top of the netting being approximately 33’ '
+            'high (measured from the warning-track surface). Fans in these '
+            'sections are still exposed to objects leaving the field of play, '
+            'including, without limitation, bats and bat fragments, thrown or '
+            'batted balls, and giveaway items.',
+        ),
+    ),
+
+    'nationals_park': dict(
+        kind='states',
+        page='https://www.mlb.com/nationals/ballpark/seatmap',
+        line='The Nationals say there is {0} in front of {1}, {2} and {3}.',
+        quotes=('some amount of netting or screening',
+                'Terra Club (sections A-E)',
+                'PNC Diamond Club (sections 119-126)',
+                'Sections 109-118 and 127-135'),
+        full=(
+            'There is some amount of netting or screening in front of the '
+            'following seating sections:',
+            'Terra Club (sections A-E)',
+            'PNC Diamond Club (sections 119-126)',
+            'Sections 109-118 and 127-135',
+            'The height and coverage of netting or screening varies by '
+            'section.',
+            'Fans in the sections listed above are still exposed to objects '
+            'leaving the field of play, including bats and bat fragments and '
+            'thrown or batted balls. Ticket holder assumes all risk of '
+            'injury.',
+        ),
     ),
 }
 
@@ -665,91 +1255,6 @@ AREA_WORDS = {
     'View Reserve': 'the View Reserved seats',
     'View': 'the View level',
     'Reserve': 'the Reserved level',
-}
-
-
-# ============================================================
-# Netting gap reasons, in words
-# ============================================================
-#
-# `netting.ParkJoin.gap_detail` states each reason precisely, and several of
-# those statements quote section numbers. These are the public rewrites: same
-# reason, no numbers, and no softening. A reader has to be able to tell the
-# difference between "nobody published this" and "somebody published it and it
-# does not fit".
-
-GAP_WORDS: dict[str, tuple[str, str]] = {
-    # gap_kind: (short label, the reason, in two sentences at most). The
-    # sentence every one of these used to end on — that nothing on the page is
-    # marked as behind netting — is said once, by the panel, rather than ten
-    # times here.
-    'club_publishes_no_sections': (
-        'The club describes its netting but names no seating areas',
-        "It states how far the netting runs in words, without saying which "
-        "seats that covers. There is no way to attach the statement to a part "
-        "of this ballpark without guessing.",
-    ),
-    'club_declines_to_publish': (
-        'The club declines to publish where its netting is',
-        "It states outright that it will not give the locations: its own map, "
-        "it says, shows only the general area, and \u201cit is not possible for "
-        "a map like this to show the precise location of the netting\u201d.",
-    ),
-    'no_primary_source': (
-        'The club publishes no netting information',
-        "Nothing on the club's own pages describes the netting. A second-hand "
-        "figure exists but has never been checked against a primary source, so "
-        "it is not used here.",
-    ),
-    'no_source_at_all': (
-        'No netting information exists for this park',
-        "Neither the club nor the ballpark publishes anything about the extent "
-        "of its netting. The one authority that reaches this park is a rule "
-        "placed on the club, not an observation of what is installed.",
-    ),
-    'source_conflict': (
-        "The club's own netting page contradicts itself",
-        "It carries two statements that cannot both describe the same "
-        "installation &mdash; one running the netting the full length of both "
-        "foul lines, the other stopping it near the plate. One of them appears "
-        "to be stale text nobody removed.",
-    ),
-    'arc_endpoints_unresolved': (
-        'The published endpoints sit on a numbering that wraps behind the plate',
-        "The club gives the two ends of its netting run, but this park's seat "
-        "numbering wraps behind home plate at a point nobody publishes. "
-        "Without that wrap point, the run between the endpoints cannot be read "
-        "off.",
-    ),
-    'labels_contradict_model': (
-        "The club's netting map and this model's seating labels disagree",
-        "The club does publish where its netting runs. Under the labels this "
-        "model carries, that netting would either miss the seats behind home "
-        "plate or skip a nearer area and resume at a further one, and netting "
-        "does neither &mdash; so the club's page is the sourced side of the "
-        "disagreement and this model is the unsourced one.",
-    ),
-    'labels_wrap_unpublished': (
-        "This model's own seating labels cannot describe a continuous bowl here",
-        "They put one foul line on both sides of the plate at once, so the "
-        "numbering has to wrap somewhere no source states. Any published range "
-        "read against them would net the far end of a foul line and leave the "
-        "near end open, which is not how netting is installed.",
-    ),
-    'sides_unverifiable': (
-        'Nothing establishes which side of this park is which',
-        "The labels run outward from the plate in both directions rather than "
-        "around the bowl, and no source says which of the two blocks is the "
-        "first-base side. The published netting stops short of the whole field "
-        "level, so the answer would change which seats came out behind it.",
-    ),
-    'sides_flipped': (
-        "This model has this park's two sides the wrong way round",
-        "The ballpark's own map numbers the lower bowl one way around the "
-        "plate and this model's labels run the opposite way, so every area it "
-        "calls first-base side is in fact on the third-base side. The map is "
-        "the sourced side of that disagreement.",
-    ),
 }
 
 
@@ -982,9 +1487,10 @@ MAP_READS: dict[str, dict] = {
              'model has it ascending toward first, on all three decks. Thirty '
              'anchored labels land on the opposite side from the map and none '
              'land on the named side, which is a mirror rather than a drift. '
-             'This is why the netting above is reported as a gap: the club '
-             'publishes a perfectly good netting range, and this model cannot '
-             'be trusted to say which line either end of it is on.'),
+             'This is why this model could not attach the club\'s netting, '
+             'quoted above, to its own areas: the club publishes a perfectly '
+             'good netting range, and this model cannot be trusted to say '
+             'which line either end of it is on.'),
             ('It was reported as matched, with a citation, until the map was '
              'read',
              'Every check this project had was blind to it. Every distance, '
@@ -1225,8 +1731,8 @@ MAP_READS: dict[str, dict] = {
              'club\'s published statement exactly',
              'So the netting claim for this park is sound as far as it goes. '
              'What the map contradicts is this model\'s labelling of the seats '
-             'that run is attached to, which is why the netting above is '
-             'reported as a gap rather than mapped onto areas.'),
+             'that run would be attached to, which is why this model could not '
+             'attach the club\'s statement, quoted above, to its own areas.'),
         ],
     ),
 
@@ -1271,7 +1777,7 @@ MAP_READS: dict[str, dict] = {
              'A drawn line along the field edge with a printed legend giving '
              'the same extent the club publishes in words. That is the club '
              'agreeing with itself. It says nothing about this model\'s '
-             'labelling, which is what the netting above is a gap for.'),
+             'labelling of the seats.'),
         ],
     ),
 
@@ -1353,8 +1859,8 @@ MAP_READS: dict[str, dict] = {
              'base of the switch the map\'s own suffixes put behind the plate. '
              'The second deck\'s behind-plate area is centred where the map '
              'has it.'),
-            ('The map draws no netting, so this park\'s netting gap is '
-             'unchanged',
+            ('The map draws no netting, so the club\'s written statement '
+             'above is the only netting source here',
              'Checked at six times magnification along the field-to-seat '
              'boundary on both foul lines: a plain band, no hatch, no dotted '
              'line, and no netting entry in a legend of thirty-four products. '
@@ -1397,11 +1903,11 @@ MAP_READS: dict[str, dict] = {
              'other, with the same statement printed in words alongside it. '
              'This is the first map read here to confirm a club\'s netting '
              'endpoints on both foul lines at once.'),
-            ('What the map does not close is why the netting above is still a '
-             'gap',
+            ('What the map does not close is why this model could not attach '
+             'the club\'s netting to its own areas',
              'The run the club publishes names seats on an inner ring this '
              'model does not number, so no label in any area falls '
-             'inside the published extent. That gap is about which series of '
+             'inside the published extent. That failure is about which series of '
              'seat labels this model chose to carry, not about the sides, and '
              'a map cannot fix it.'),
             ('This model\'s areas stop short of the outfield end on every ring',
@@ -1436,11 +1942,11 @@ MAP_READS: dict[str, dict] = {
              'is also why two of this model\'s areas having overlapping label '
              'ranges is not a contradiction.'),
             ('The map draws no netting, and corroborates the part of the '
-             'club\'s statement the netting above rests on',
+             'club\'s statement this model\'s netting join rested on',
              'The field-to-seat boundary is plain behind the plate and down '
              'both lines, and there is no legend. What the map does confirm is '
              'the parity — even to first base, odd to third — which is the '
-             'part of the club\'s published run this model actually uses.'),
+             'part of the club\'s published run that join used.'),
             ('This model\'s areas stop short of the outfield end on each ring, '
              'and one whole ring is unmodelled',
              'The middle ring runs about a third further toward the poles on '
@@ -1490,8 +1996,8 @@ MAP_READS: dict[str, dict] = {
              'Three named products in the club\'s published netting statement '
              'land on exactly the map\'s wedges of those names. The club is '
              'self-consistent about its own building. It is this model\'s '
-             'labelling that is out, which is what the netting above is a gap '
-             'for.'),
+             'labelling that is out, which is why this model could not attach '
+             'the club\'s statement, quoted above, to its own areas.'),
         ],
     ),
 
@@ -1582,8 +2088,8 @@ MAP_READS: dict[str, dict] = {
              'including a behind-plate one and a third-base one. On the third '
              'deck about a third of the labels this model carries are not '
              'printed either.'),
-            ('The netting gap already recorded for this park had half-noticed '
-             'this',
+            ('The note recorded when this model failed to attach the club\'s '
+             'netting had half-noticed this',
              'The note behind it says that this model has two separate runs '
              'both on the third-base side, so the club\'s published netting '
              'cannot be one continuous stretch of seats. The map says which of '
@@ -1747,8 +2253,9 @@ MAP_READS: dict[str, dict] = {
              'first-base areas, and finish inside another third-base area — a '
              'run that passes through one foul line to get from one end of the '
              'other to itself. On the map\'s numbering it is one continuous '
-             'stretch through the plate. That is the netting gap on this page, '
-             'stated as geometry.'),
+             'stretch through the plate. That is why this model could not '
+             'attach the club\'s netting to its own areas, stated as '
+             'geometry.'),
             ('Two areas on the upper rings are at the wrong end, or not in the '
              'building',
              'The area this model calls the third-base club level begins at '
@@ -1997,16 +2504,16 @@ MAP_READS: dict[str, dict] = {
              'carefully than the rest.'),
             ('This club declines to publish section numbers for its netting — '
              'and its own seating map draws the netting and labels it',
-             'That is why the netting above is a gap: the recorded reason is '
-             'that the club will not give the seats. The drawing has a heavy '
+             'The club will not give the seats, and the statement above says '
+             'so in its own words. The drawing has a heavy '
              'line along the field edge with the words "protective netting" '
              'printed along it twice, and both ends read cleanly at high '
              'magnification, eighteen positions one side of the plate and '
              'nineteen the other. This site does not treat that as a published '
              'extent and nothing here was changed on the strength of it: it is '
              'a line on a drawing whose ends were read off pixels, not a '
-             'sentence a club has committed to. The gap above is not closed. '
-             'But a reader of that gap should know the drawing exists.'),
+             'sentence a club has committed to. The club\'s refusal above '
+             'stands. But a reader of it should know the drawing exists.'),
         ],
     ),
 
@@ -2049,11 +2556,12 @@ MAP_READS: dict[str, dict] = {
              'line around the bowl edge. Its midpoint is the plate block the '
              'map draws, which corroborates the plate reading independently of '
              'the perspective tracing that produced it.'),
-            ('The recorded reason for this park\'s netting gap has changed',
+            ('The recorded reason this model could not attach the club\'s '
+             'netting here has changed',
              'It used to be that nothing could establish which foul line was '
              'which here, so the netting could not be attached to seats. Now '
-             'the check runs and this model fails it. The gap is the same '
-             'size; what is behind it is no longer an absence.'),
+             'the check runs and this model fails it. The result is the same; '
+             'what is behind it is no longer an absence.'),
         ],
     ),
 
@@ -2148,8 +2656,9 @@ MAP_READS: dict[str, dict] = {
              'about the same plate boundary the map draws',
              'It was arrived at by an unrelated route and it agrees, which is '
              'worth recording. It says nothing about which foul line is which, '
-             'and it does not close the netting gap above: this club publishes '
-             'nothing about its netting, and the compilation is not the club.'),
+             'and it does not change the statement above: this club publishes '
+             'nothing about where its netting runs, and the compilation is not '
+             'the club.'),
         ],
     ),
 }

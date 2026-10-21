@@ -287,6 +287,405 @@ Stadium, Citi Field, and loanDepot park have no current primary section list
 (secondary figures noted). Sutter Health Park and Las Vegas Ballpark have no
 park-specific netting source at all.
 
+### Part 2b — The clubs' own words, re-read 2026-10-20
+
+Step 26 replaced the site's per-area netting marks with a quotation of each
+club's own statement. Every page in the table above was fetched again on
+2026-10-20, as served text, and the netting statement copied out verbatim. Line
+breaks are closed up into spaces and nothing else is changed. Each excerpt stops
+before the club's ticket-office contact sentence, and where a sentence uses the
+word "safe" or "safety" the excerpt leaves that sentence or clause out, because
+the site never prints the word (`site_data.py` rule 2).
+
+What changed since 2026-08-09: **no extent changed at any park.** The Mets'
+netting page, which carried no netting text then, now returns not-found; their
+seat map still has no netting text. Several club URLs now redirect, and the
+address recorded below is where each one resolved. Las Vegas Ballpark's guide
+now also places two openings in the netting for autographs ("Between Sections
+102–105" and "Between Sections 117–120"), which shows netting in front of at
+least those seats and still not how far it runs.
+
+These excerpts are what the site quotes. `site_data.CLUB_NETTING` holds the same
+strings and `tests/test_site.py` holds the two to each other.
+
+**Yankee Stadium** (`yankee_stadium`) — the club says where its netting runs. <https://www.mlb.com/yankees/ballpark/netting>
+
+> Please note that protective netting is located between Section 011 on the
+> 1st base/right field side of the Stadium and continues to Section 029 on the
+> 3rd base/left field side of the Stadium. Behind home plate, Section 018 to
+> Section 021B, the protective netting is 31 feet above the playing field wall
+> and is reduced as it approaches the inside of both dugouts. In front of
+> Sections 017B and 022, the protective netting extends 11'-6" from the top of
+> the wall. The protective netting is 9 feet above the dugouts for the entire
+> span of the dugouts and can retract up 3 feet at designated times prior to
+> the start of the game.
+>
+> In front of Sections 025 on the left field side of the Stadium and 015A on
+> the right field side of the Stadium, the netting is 11'-6" above the wall
+> (behind the field-level photo wells). From Section 014B to 011 on the right
+> field side of the Stadium and from Section 026 to 029 on the left field side
+> of the Stadium, the netting is approximately 14' above the playing field
+> (approximately 11'-6" above the walls surrounding the field of play).
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Fenway Park** (`fenway_park`) — the club says where its netting runs. <https://www.mlb.com/redsox/ballpark/netting>
+
+> The protective netting at Fenway Park extends from Field Box Section 79 to
+> Field Box Section 9. It is positioned with varying heights all the way
+> around, approximately 12 feet, 8 inches above the playing field.
+>
+> While the netting system offers protection, the club continues to encourage
+> all fans to be vigilant during games and to be on the lookout for any
+> objects leaving the field of play, including bats and bat fragments, and
+> thrown or batted balls; ticket holders assume all risk of injury.
+
+**Dodger Stadium** (`dodger_stadium`) — the club says where its netting runs. <https://www.mlb.com/dodgers/ballpark/netting>
+
+> The Dodgers have protective netting which extends from behind home plate to
+> the end of baseline section 40 (first base side) and baseline section 41
+> (third base side). The coverage of netting or screening will vary by
+> section. Fans are still exposed to objects leaving the field of play,
+> including bats and bat fragments, and thrown or batted balls; ticket holder
+> assumes all risk of injury.
+
+**Wrigley Field** (`wrigley_field`) — the club says where its netting runs. <https://www.mlb.com/cubs/ballpark/information/guide>
+
+> Netting extends along the first and third base lines to the outfield edge of
+> each dugout. The height and coverage of netting or screening varies.
+> Regardless of the location of netting, it is still possible for balls, bats
+> and other objects to leave the field of play and enter the stands. No seat
+> in Wrigley Field is free from the risk of injury inherent in attending a
+> live baseball game.
+
+Reporting from 2020 had this netting extended well past the dugouts toward both
+corners. The club's own guide still says what is quoted here, and the club's
+guide is what this page quotes.
+
+**Coors Field** (`coors_field`) — the club says where its netting runs. <https://www.mlb.com/rockies/ballpark/seating-chart>
+
+> Netting runs from the front of Sections 112-147.
+
+**Chase Field** (`chase_field`) — the club says where its netting runs. <https://www.mlb.com/dbacks/ballpark/netting>
+
+> There is some amount of netting or screening in front of the following
+> seating sections; approximately 30’ high:
+>
+> Sections 111-133
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Truist Park** (`truist_park`) — the club says where its netting runs. <https://www.mlb.com/braves/ballpark/information/guide>
+
+> Sections 10 to 42 and sections 111-141 are behind protective netting. Guests
+> who are concerned with their seat location should contact any usher and
+> inquire about the possibility of an alternate seat location.
+
+**Oriole Park at Camden Yards** (`camden_yards`) — the club says where its netting runs. <https://www.mlb.com/orioles/ballpark/seating-map>
+
+> In a continuing effort to create the most fan and family-friendly atmosphere
+> in sports, protective netting at Oriole Park at Camden Yards extends from
+> Section 6 through Section 70.
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Citizens Bank Park** (`citizens_bank`) — the club says where its netting runs. <https://www.mlb.com/phillies/ballpark/netting>
+
+> There is some amount of netting or screening in front of the following
+> seating sections; the height and coverage of netting or screening will vary
+> by section:
+>
+> Sections: Diamond Club Sections A-G; Field Level Sections 109-138.
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Great American Ball Park** (`great_american`) — the club says where its netting runs. <https://www.mlb.com/reds/ballpark/netting>
+
+> There is some amount of netting or screening in front of the following
+> seating sections; the height and coverage of netting or screening will vary
+> by section:
+>
+> Sections: 1-5
+>
+> Sections: 22-25
+>
+> Sections: 111-135
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Progressive Field** (`progressive_field`) — the club says where its netting runs. <https://www.mlb.com/guardians/ballpark/netting>
+
+> There is some amount of netting or screening in front of the following
+> seating sections; the height and coverage of netting or screening will vary
+> by section:
+>
+> Sections: 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140,
+> 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155,
+> 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170,
+> 171, 172, 173, 174
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Comerica Park** (`comerica_park`) — the club says where its netting runs. <https://www.mlb.com/tigers/ballpark/seat-map>
+
+> Netting runs from behind home plate through section 116 down the First Base
+> line, and section 142 on the Third Base line. The netting is 20 percent more
+> narrow, increasing transparency and providing an enhanced view, particularly
+> behind home plate.
+>
+> Fans between Sections 116 and 142 are still exposed to objects leaving the
+> field of play, including bats and bat fragments, and thrown or batted balls.
+> Ticket holders assumes all risk of injury.
+
+**Daikin Park** (`minute_maid`) — the club says where its netting runs. <https://www.mlb.com/astros/ballpark/seat-map>
+
+> Sections with netting: 112 through 126 and the Diamond Club.
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Kauffman Stadium** (`kauffman_stadium`) — the club declines to say where its netting is. <https://www.mlb.com/royals/ballpark/seating-map>
+
+> The above pictures show the general location where additional netting has
+> been installed. The height and coverage of netting or screening varies.
+> Please understand that it is not possible for a map like this to show the
+> precise location of the netting. In addition, even if netting exists in a
+> particular location, it is still possible for balls, bats and other objects
+> leaving the field of play to strike fans. No seat in Kauffman Stadium is
+> free from the risk of injury inherent in attending a live baseball game.
+
+A second-hand figure for this park exists, from a ticketing site, and has never
+been checked against anything the club publishes, so it is not used here.
+
+**Angel Stadium** (`angel_stadium`) — the club says where its netting runs. <https://www.mlb.com/angels/ballpark/netting>
+
+> protective netting is extended between Sections 103-133.
+
+**Citi Field** (`citi_field`) — the club publishes nothing that says where its netting runs. <https://www.mlb.com/mets/ballpark/seat-map>
+
+The club's seat map carries no netting text. The club's netting page, which
+carried none either when it was read on 2026-08-09, no longer exists: it
+answered not-found on 2026-10-20. A second-hand figure for this park exists,
+from a ticketing site, and has never been checked against anything the club
+publishes, so it is not used here.
+
+**Sutter Health Park** (`oakland_coliseum`) — the club publishes nothing that says where its netting runs. <https://www.mlb.com/athletics/ballpark/information/guide>
+
+Nothing else the club or the ballpark publishes describes the netting either.
+The one rule that reaches this park is a league requirement placed on the club,
+not a description of what is installed.
+
+**Las Vegas Ballpark** (`las_vegas_ballpark`) — the club publishes nothing that says where its netting runs. <https://www.thelvballpark.com/a-to-z-guide>
+
+> Guests must remain behind railings and protective netting at all times and
+> may not lean over, reach through, or interfere with player movement.
+
+The same guide places two openings in the netting for autographs, so there is
+netting in front of at least some seats; it does not say how far it runs. The
+one rule that reaches this park is a league requirement placed on the club, not
+a description of what is installed.
+
+**PNC Park** (`pnc_park`) — the club says where its netting runs. <https://www.mlb.com/pirates/ballpark/seating-map/3d>
+
+> Protective netting extends from Section 101 through Section 130. The height
+> and coverage of netting varies by section. It is not possible for a map like
+> this to show the precise location of the netting and/or to what extent the
+> netting may or may not impact your view. In addition, even if netting exists
+> in a particular location, it is still possible for balls, bats and other
+> objects to leave the field of play and enter the stands. No seat at PNC Park
+> is free from the risk of injury inherent in attending a live baseball game.
+> Each ticket holder assumes all risk of injury.
+
+**Petco Park** (`petco_park`) — the club says where its netting runs. <https://www.mlb.com/padres/ballpark/netting>
+
+> There is some amount of netting or screening in front of the following
+> seating sections; the height and coverage of netting or screening will vary
+> by section:
+>
+> All Lexus Home Plate Club sections. Field VIP: Field VIP 101-106. The full
+> square net coverage is also from Sections 109-110 while angled net coverage
+> is from Sections 111-115 on the first base side and Sections 112-116 on the
+> 3rd base side.
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Oracle Park** (`oracle_park`) — the club says where its netting runs. <https://www.mlb.com/giants/ballpark/seat-map>
+
+> The protective netting extends across Sections 101-135; the height and
+> coverage of netting will vary by section.
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**T-Mobile Park** (`tmobile_park`) — the club says where its netting runs. <https://www.mlb.com/mariners/ballpark/seat-map>
+
+> Fans seated in Sections 115-146 will now be behind netting. The height and
+> coverage vary by section. Netting in front of those seated in Sections
+> 126-134 is 27-feet high. For those seated in Sections 115-125 and Sections
+> 135-146, the netting will extend 13.5-feet above field level.
+
+**Busch Stadium** (`busch_stadium`) — the club says where its netting runs. <https://www.mlb.com/cardinals/ballpark/netting>
+
+> There is some amount of netting or screening in front of the following
+> seating sections; the height and coverage of netting or screening will vary
+> by section:
+>
+> Cardinals Club sections 1, 2, 3, 4, 5, 6, 7, 8.
+>
+> Home Field Box sections 145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
+> 155.
+>
+> Diamond Box sections 140, 141, 142, 143, 144, 145, 155, 156, 157, 158, 159,
+> 160.
+>
+> Infield Field Box sections 141, 142, 143, 144, 156, 157, 158, 159, 160.
+>
+> Dugout Box sections 132, 135, 136, 137, 138, 139, 161, 162, 163, 164, 165.
+>
+> 1B Field Box sections 135, 136, 137, 138, 139, 140.
+>
+> 3B Field Box sections 161, 162, 163, 164, 165.
+>
+> Lower RF Box sections 132, 133, 134.
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Tropicana Field** (`tropicana_field`) — the club says two things that cannot both be true. <https://www.mlb.com/rays/ballpark/netting>
+
+> Protective netting extends from home plate to the foul poles located in
+> Sections 137 and 138 at Tropicana Field.
+>
+> There is some amount of netting in front of the seating sections listed
+> below; the height and coverage of the netting varies by section.
+>
+> Netting Sections: 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
+> 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126,
+> 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, and 138.
+>
+> Please understand that it is not possible for a map to show the precise
+> location of the netting and/or to what extent netting may or may not impact
+> your view. In addition, regardless of the location of netting, fans in the
+> sections listed above are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holders assume all risk of injury. No seat in Tropicana Field is free from
+> the risk of injury inherent in attending a live baseball game.
+>
+> Please note that protective netting of varying heights is used in the
+> Stadium from Section 125 to behind home plate to Section 126.
+
+The first statement runs the netting the length of both foul lines and the last
+stops it close to the plate, so they cannot describe the same installation. The
+second reads like text nobody removed, but nothing on the page says which is
+current, so this site does not choose.
+
+**Globe Life Field** (`globe_life`) — the club says where its netting runs. <https://www.mlb.com/rangers/ballpark/seat-map>
+
+> There is some amount of netting or screening in front of the following
+> seating sections:
+>
+> Sections 1-26. The height and coverage of netting or screening varies by
+> section.
+>
+> Fans in the sections listed above are still exposed to objects leaving the
+> field of play, including bats and bat fragments and thrown or batted balls.
+> Ticket holder assumes all risk of injury.
+
+**Rogers Centre** (`rogers_centre`) — the club says where its netting runs. <https://www.mlb.com/bluejays/ballpark/netting>
+
+> The protective netting extends down the length of the first and third
+> baseline walls, to Sections 113C & 130C, respectively, tapering off to the
+> curve before the foul poles. The height of the extended netting matches what
+> was in place behind home plate previously (30 feet), and the colour and
+> knotting is the same as well.
+
+**Target Field** (`target_field`) — the club says where its netting runs. <https://www.mlb.com/twins/ballpark/seat-map>
+
+> There is some amount of netting or screening in front of the following
+> seating sections; the height and coverage of netting or screening will vary
+> by section:
+>
+> Sections 7 - 10
+>
+> Sections 1 - 6 & 11 - 17
+>
+> Sections 109 - 119
+>
+> Sections 105 - 108 & 120 - 123
+>
+> Sections 103 - 104 & 124 -125
+>
+> Section 126 – Partially covered
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**Rate Field** (`guaranteed_rate`) — the club says where its netting runs. <https://www.mlb.com/whitesox/ballpark/seat-map>
+
+> some amount of netting or screening is in front of 49 sections (Sections
+> 108-156); the height and coverage of netting or screening will vary by
+> section.
+>
+> Sections: 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
+> 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
+> 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,
+> 151, 152, 153, 154, 155, 156.
+>
+> Fans in these sections are still exposed to objects leaving the field of
+> play, including bats and bat fragments, and thrown or batted balls; ticket
+> holder assumes all risk of injury.
+
+**loanDepot park** (`loan_depot`) — the club publishes nothing that says where its netting runs. <https://www.mlb.com/marlins/ballpark/seating-map>
+
+The picture is headed as the park's netting and carries no text a reader could
+quote. A second-hand figure for this park exists, from a ticketing site, and
+has never been checked against anything the club publishes, so it is not used
+here.
+
+**American Family Field** (`american_family`) — the club says where its netting runs. <https://www.mlb.com/brewers/ballpark/netting>
+
+> There is some amount of protective netting in front of Sections 108-128,
+> with the top of the netting being approximately 33’ high (measured from the
+> warning-track surface). Fans in these sections are still exposed to objects
+> leaving the field of play, including, without limitation, bats and bat
+> fragments, thrown or batted balls, and giveaway items.
+
+**Nationals Park** (`nationals_park`) — the club says where its netting runs. <https://www.mlb.com/nationals/ballpark/seatmap>
+
+> There is some amount of netting or screening in front of the following
+> seating sections:
+>
+> Terra Club (sections A-E)
+>
+> PNC Diamond Club (sections 119-126)
+>
+> Sections 109-118 and 127-135
+>
+> The height and coverage of netting or screening varies by section.
+>
+> Fans in the sections listed above are still exposed to objects leaving the
+> field of play, including bats and bat fragments and thrown or batted balls.
+> Ticket holder assumes all risk of injury.
+
+
 ### Historical netting compilations (for change detection only)
 
 Two secondary compilations cover all 30 MLB parks at a single point in time.

@@ -51,7 +51,7 @@ from collections import OrderedDict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Blueprint, Flask, redirect, request, jsonify
+from flask import Blueprint, Flask, abort, redirect, request, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 from foulball.log import get_logger
 
@@ -568,27 +568,51 @@ _site_cache: dict[str, str] = {}
 _site_lock = threading.Lock()
 
 
-def _site_html(rel_dir: str):
-    """Read one built page, cached. `rel_dir` is '' for the home page."""
+def _site_file(rel_path: str):
+    """Read one built file under ./site, cached. None if it is not there."""
     with _site_lock:
-        if rel_dir in _site_cache:
-            return _site_cache[rel_dir]
-    path = os.path.join(SITE_DIR, rel_dir, 'index.html') if rel_dir \
-        else os.path.join(SITE_DIR, 'index.html')
+        if rel_path in _site_cache:
+            return _site_cache[rel_path]
+    path = os.path.join(SITE_DIR, rel_path)
     if not os.path.exists(path):
         return None
     with open(path, encoding='utf-8') as fh:
         html = fh.read()
     with _site_lock:
-        _site_cache[rel_dir] = html
+        _site_cache[rel_path] = html
     return html
 
 
-def _site_response(html: str):
+def _site_html(rel_dir: str):
+    """Read one built page, cached. `rel_dir` is '' for the home page."""
+    return _site_file(os.path.join(rel_dir, 'index.html') if rel_dir
+                      else 'index.html')
+
+
+def _site_response(html: str, status: int = 200):
+    # `mimetype`, not a full content type: Werkzeug appends the charset to a
+    # text mimetype by itself, and handing it 'text/html; charset=utf-8' as
+    # the mimetype sent every page out as "charset=utf-8; charset=utf-8".
     from flask import Response
-    return Response(html, mimetype='text/html; charset=utf-8', headers={
-        'Cache-Control': 'public, max-age=3600',
-    })
+    headers = {'Cache-Control': 'public, max-age=3600'} if status == 200 else {}
+    return Response(html, status=status, mimetype='text/html', headers=headers)
+
+
+@app.errorhandler(404)
+def not_found(_error):
+    """Every unknown path, in the site's own look.
+
+    A mistyped park URL used to get Flask's unstyled default page, which
+    dropped a visitor out of the site with no way back in. `site_build.py`
+    writes `site/404.html` with absolute links to the home page and the
+    explanatory page, so it works at any depth. An error handler is not a URL
+    rule, so the public route list `tests/test_endpoints.py` holds is
+    unchanged by it.
+    """
+    html = _site_file('404.html')
+    if html is None:
+        return 'Not found', 404
+    return _site_response(html, status=404)
 
 
 @app.route('/')
@@ -624,7 +648,7 @@ def site_park(slug):
     # one page under /parks/ that is not a ballpark: the site's explanatory
     # page, which every park page's caveat line links to.
     if slug != 'about' and slug not in SITE_SLUGS:
-        return 'No such ballpark', 404
+        abort(404)
     html = _site_html(slug)
     if html is None:
         return 'Site not built. Run: python site_build.py', 404
