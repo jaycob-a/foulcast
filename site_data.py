@@ -2723,6 +2723,19 @@ MODEL_LIMITS = [
         "largest unvalidated number in the model, and it lands exactly there."
     ),
     (
+        'The ball flies with less lift than a real one',
+        "The flight model gives a spinning ball about a fifth of the lift that "
+        "wind-tunnel studies of a baseball measure, and makes up for it with "
+        "more drag, because the two were fitted together to Statcast's own "
+        "distance figure. The result is that each ball's distance is close to "
+        "that figure &mdash; long by about fifteen feet on average over six "
+        "thousand tracked fouls &mdash; while its arc is flatter and lower than "
+        "a real foul's, which decides whether it clears a deck's front edge. "
+        "Raising the lift would need the drag refitted against the same data, "
+        "and that has not been done. The direction of the lift was wrong until "
+        "Step 27 and is now perpendicular to the ball's path, as it should be."
+    ),
+    (
         'One foul line is not distinguishable from the other',
         "The mirror leaves the two lines at a park differing only by "
         "simulation noise, so read a matching pair of areas as one number "

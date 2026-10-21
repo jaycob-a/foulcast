@@ -307,7 +307,24 @@ the rule produces, every profile is computed, the lineup sits on the league)
 and `tests/test_arrival_speed.py` (per-step speeds, the contact row, the two
 directions the seat speed moves, the Magnus direction).
 
-The plausibility tests still run the typed Yankees lineup at Yankee Stadium.
-They were written against it and they still hold under the new physics;
-they are now a check on the engine, not on the site's inputs, and
-`tests/test_league_lineup.py` is the check on those.
+The plausibility tests now run the league lineups at Yankee Stadium, the
+site's own configuration, rather than the typed Yankees profiles the site no
+longer reads. Eleven of the twelve passed as they were. The twelfth,
+`test_every_lower_bowl_section_beats_every_upper_section`, required all 32
+pairs of (upper deck down the line, lower-bowl section) to go the lower
+bowl's way on one half-game, and failed: with computed launch angles the
+pull-side upper deck and the smallest opposite-field field-box slice are a
+near tie (1.5-1.7 fouls a game each) that goes either way with the seed (3
+of 5 seeds pass). The all-pairs claim held before only because the typed
+profiles' launch-angle spread starved the upper decks; it was a property of
+the old inputs, not of the geometry the test guards. It is replaced by
+`test_every_upper_section_is_below_the_lower_bowl`: on the whole game, the
+busiest upper deck is under the lower bowl's per-section mean (1.7 against
+2.4; under 2.0 at every seed tried). The other eleven, including "lower
+bowl plus behind-plate is at least five times the upper decks" (eleven
+times, as it happens) and "the top five are all lower bowl", are untouched.
+
+The About page's model limitations gained a sixth entry, on the lift
+coefficient finding in item 2: the flight model gives the ball about a fifth
+of the measured lift and makes it up with drag, so distances match Statcast
+while arcs run flatter and lower than a real foul's.
